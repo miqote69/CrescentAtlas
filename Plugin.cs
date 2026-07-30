@@ -46,6 +46,7 @@ public sealed class Plugin : IDalamudPlugin
     private HashSet<string> previousCarrotKeys = new(StringComparer.Ordinal);
     private DateTimeOffset nextPollUtc;
     private DateTimeOffset nextFlushUtc;
+    private DateTimeOffset nextLayoutScanUtc;
     private uint scannedTerritoryId;
     private bool wasActive;
 
@@ -181,7 +182,7 @@ public sealed class Plugin : IDalamudPlugin
         var instanceKey = $"territory-{territoryId}";
         atlasData.SetContext(territoryId, territoryName, ObjectTable.LocalPlayer?.Position);
 
-        if (scannedTerritoryId != territoryId)
+        if (scannedTerritoryId != territoryId && now >= nextLayoutScanUtc)
         {
             var candidates = layoutScanner.Scan(
                 observationStore.SessionId,
@@ -192,7 +193,10 @@ public sealed class Plugin : IDalamudPlugin
             atlasData.ReplaceSource(AtlasMarkerKind.TreasureCandidate, candidates);
             if (configuration.CollectionEnabled)
                 RecordAll(candidateObservations);
-            scannedTerritoryId = territoryId;
+            if (candidates.Count > 0)
+                scannedTerritoryId = territoryId;
+            else
+                nextLayoutScanUtc = now + TimeSpan.FromSeconds(5);
         }
 
         var objectMarkers = objectCollector.Collect(territoryId, territoryName, now);
@@ -349,6 +353,7 @@ public sealed class Plugin : IDalamudPlugin
     private void ResetTerritoryState()
     {
         scannedTerritoryId = 0;
+        nextLayoutScanUtc = DateTimeOffset.MinValue;
         previousTreasureKeys.Clear();
         previousCarrotKeys.Clear();
         fateDetector.Reset();
