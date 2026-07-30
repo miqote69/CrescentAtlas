@@ -2,14 +2,14 @@
   {
     "Author": "miqote69",
     "Name": "Crescent Atlas",
-    "Description": "Display-only Occult Crescent atlas, event notifier, and local field-data collector.",
+    "Description": "DEVELOPMENT PROTOTYPE. DO NOT USE outside active testing. May crash FFXIV or Dalamud. Display-only Occult Crescent atlas and local collector.",
     "InternalName": "CrescentAtlas",
     "AssemblyVersion": "0.1.0",
     "TestingAssemblyVersion": null,
     "RepoUrl": "https://github.com/miqote69/CrescentAtlas",
     "ApplicableVersion": "any",
     "DalamudApiLevel": 15,
-    "Punchline": "A passive atlas and observation collector for the Occult Crescent.",
+    "Punchline": "UNSTABLE TEST BUILD - may crash; do not use outside development testing.",
     "Tags": [
       "occult crescent",
       "map",

@@ -1,5 +1,10 @@
 # Crescent Atlas
 
+> [!CAUTION]
+> **Development prototype — do not use unless you are participating in testing.**
+> This plugin has not completed live North Horn validation and may crash FFXIV
+> or Dalamud, display incorrect information, or lose collected observations.
+
 Crescent Atlas is an independent Dalamud plugin for Final Fantasy XIV's
 Occult Crescent. It provides a passive field display, event notifications,
 and a local observation collector. No BOCCHI source code or data is included.
@@ -43,12 +48,6 @@ intentionally contain character names, account IDs, world names, or chat.
 - `/catlas flush` flushes observations to disk.
 - `/catlas folder` prints the collection output directory.
 - `/catlas status` prints current collection status.
-
-## Installation for data collection
-
-Build with the local Dalamud development environment, or download the release
-ZIP. For a local development install, point Dalamud's Dev Plugin Locations at
-`CrescentAtlas.dll`.
 
 ## Validation boundary
 

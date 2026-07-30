@@ -1,8 +1,8 @@
 {
   "Author": "miqote69",
   "Name": "Crescent Atlas",
-  "Punchline": "A display-only map, event notifier, and field-data collector for the Occult Crescent.",
-  "Description": "Collects local field observations and displays map markers and event notifications without automating movement or interaction.",
+  "Punchline": "UNSTABLE TEST BUILD - may crash; do not use outside development testing.",
+  "Description": "DEVELOPMENT PROTOTYPE. May crash FFXIV or Dalamud. Collects local field observations and displays map markers and event notifications without automating movement or interaction.",
   "ApplicableVersion": "any",
   "RepoUrl": "https://github.com/miqote69/CrescentAtlas",
   "Tags": [
