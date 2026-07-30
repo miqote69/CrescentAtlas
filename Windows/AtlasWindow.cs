@@ -562,20 +562,42 @@ public sealed class AtlasWindow : Window, IDisposable
         var remainingSeconds = Math.Max(0, marker.TimeRemainingSeconds);
         var minutes = remainingSeconds / 60;
         var seconds = remainingSeconds % 60;
-        var text = $"{minutes:00}:{seconds:00}  {Math.Clamp(marker.Progress, (byte)0, (byte)100)}%";
-        var textSize = ImGui.CalcTextSize(text);
+        var timeLabel = marker.Kind == AtlasMarkerKind.CriticalEncounter
+            ? marker.EventState switch
+            {
+                "Register" => "待機",
+                "Warmup" => "開始まで",
+                _ => "残り",
+            }
+            : "残り";
+        var firstLine = $"{timeLabel} {minutes:00}:{seconds:00}";
+        var secondLine = $"進捗 {Math.Clamp(marker.Progress, (byte)0, (byte)100)}%";
+        var firstLineSize = ImGui.CalcTextSize(firstLine);
+        var secondLineSize = ImGui.CalcTextSize(secondLine);
+        var lineHeight = Math.Max(firstLineSize.Y, secondLineSize.Y);
+        var textSize = new Vector2(
+            Math.Max(firstLineSize.X, secondLineSize.X),
+            lineHeight * 2.0f);
         var textPosition = point + new Vector2(-(textSize.X * 0.5f), 15.0f);
-        var padding = new Vector2(3.0f, 2.0f);
+        var padding = new Vector2(4.0f, 3.0f);
+        var background = marker.Kind == AtlasMarkerKind.CriticalEncounter
+                         && marker.EventState is "Register" or "Warmup"
+            ? new Vector4(0.20f, 0.13f, 0.02f, 0.88f)
+            : new Vector4(0.02f, 0.02f, 0.02f, 0.82f);
 
         drawList.AddRectFilled(
             textPosition - padding,
             textPosition + textSize + padding,
-            ImGui.GetColorU32(new Vector4(0.02f, 0.02f, 0.02f, 0.78f)),
+            ImGui.GetColorU32(background),
             3.0f);
         drawList.AddText(
-            textPosition,
+            textPosition + new Vector2((textSize.X - firstLineSize.X) * 0.5f, 0.0f),
+            ImGui.GetColorU32(new Vector4(1.0f, 0.88f, 0.46f, 1.0f)),
+            firstLine);
+        drawList.AddText(
+            textPosition + new Vector2((textSize.X - secondLineSize.X) * 0.5f, lineHeight),
             ImGui.GetColorU32(new Vector4(1.0f, 1.0f, 1.0f, 1.0f)),
-            text);
+            secondLine);
     }
 
     private bool TryDrawGameIcon(ImDrawListPtr drawList, Vector2 point, uint iconId)

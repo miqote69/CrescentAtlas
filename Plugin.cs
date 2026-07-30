@@ -384,7 +384,8 @@ public sealed class Plugin : IDalamudPlugin
             EventId: fate.FateId,
             IconId: ResolveFateMapIcon(fate.FateId),
             Progress: fate.Progress,
-            TimeRemainingSeconds: fate.TimeRemainingSeconds)).ToArray();
+            TimeRemainingSeconds: fate.TimeRemainingSeconds,
+            EventState: fate.State)).ToArray();
         atlasData.ReplaceSource(AtlasMarkerKind.Fate, markers.Where(marker => marker.Kind == AtlasMarkerKind.Fate));
         atlasData.ReplaceSource(AtlasMarkerKind.PotFate, markers.Where(marker => marker.Kind == AtlasMarkerKind.PotFate));
 
@@ -434,7 +435,8 @@ public sealed class Plugin : IDalamudPlugin
                 EventId: encounter.EventId,
                 IconId: encounter.IconId,
                 Progress: encounter.Progress,
-                TimeRemainingSeconds: encounter.SecondsLeft));
+                TimeRemainingSeconds: encounter.SecondsLeft,
+                EventState: encounter.State));
             atlasData.ReplaceSource(AtlasMarkerKind.CriticalEncounter, markers);
         }
 
