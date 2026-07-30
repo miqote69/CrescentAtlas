@@ -15,6 +15,18 @@ public sealed class Configuration : IPluginConfiguration
 
     public float MapOpacity { get; set; } = 0.92f;
 
+    public bool ShowBronzeTreasure { get; set; } = true;
+
+    public bool ShowSilverTreasure { get; set; } = true;
+
+    public bool ShowGoldTreasure { get; set; } = true;
+
+    public bool ShowFates { get; set; } = true;
+
+    public bool ShowCriticalEncounters { get; set; } = true;
+
+    public bool ShowPotPrediction { get; set; } = true;
+
     public bool FateNotificationsEnabled { get; set; } = true;
 
     public bool CriticalEncounterNotificationsEnabled { get; set; } = true;

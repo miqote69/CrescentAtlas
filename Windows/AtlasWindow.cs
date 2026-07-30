@@ -59,6 +59,7 @@ public sealed class AtlasWindow : Window, IDisposable
     private readonly System.Action saveConfiguration;
     private float mapZoom = MinimumMapZoom;
     private Vector2 mapCenter = new(0.5f, 0.5f);
+    private AtlasPage currentPage = AtlasPage.Map;
 
     public string MapDiagnostic { get; private set; } = "Map not checked.";
 
@@ -83,7 +84,8 @@ public sealed class AtlasWindow : Window, IDisposable
             | ImGuiWindowFlags.NoBringToFrontOnFocus
             | ImGuiWindowFlags.NoNav
             | ImGuiWindowFlags.NoScrollbar
-            | ImGuiWindowFlags.NoScrollWithMouse;
+            | ImGuiWindowFlags.NoScrollWithMouse
+            | ImGuiWindowFlags.MenuBar;
 
         SizeConstraints = new WindowSizeConstraints
         {
@@ -122,9 +124,20 @@ public sealed class AtlasWindow : Window, IDisposable
 
     private void DrawContents()
     {
+        DrawMenuBar();
+
         var markers = dataSource.GetMarkers() ?? Array.Empty<AtlasMarker>();
-        var visibleMarkers = markers
+        var territoryMarkers = markers
             .Where(marker => marker.TerritoryId == 0 || marker.TerritoryId == dataSource.TerritoryId)
+            .ToArray();
+        if (currentPage == AtlasPage.IconGuide)
+        {
+            DrawIconGuide(territoryMarkers);
+            return;
+        }
+
+        var visibleMarkers = territoryMarkers
+            .Where(IsMarkerVisible)
             .ToArray();
 
         var territoryName = string.IsNullOrWhiteSpace(dataSource.TerritoryName)
@@ -151,11 +164,11 @@ public sealed class AtlasWindow : Window, IDisposable
                 dataSource.ResetTreasureChecks();
         }
 
-        var legendHeight = DrawLegend(visibleMarkers);
+        DrawMapFilters();
         var available = ImGui.GetContentRegionAvail();
         var canvasSize = new Vector2(
             Math.Max(1.0f, available.X),
-            Math.Max(CanvasMinimumHeight, available.Y - legendHeight));
+            Math.Max(CanvasMinimumHeight, available.Y));
 
         var canvasMinimum = ImGui.GetCursorScreenPos();
         ImGui.InvisibleButton("##CrescentAtlasMapCanvas", canvasSize, ImGuiButtonFlags.MouseButtonLeft);
@@ -167,6 +180,139 @@ public sealed class AtlasWindow : Window, IDisposable
             dataSource.PlayerPosition,
             dataSource.PlayerRotation);
     }
+
+    private void DrawMenuBar()
+    {
+        if (!ImGui.BeginMenuBar())
+            return;
+
+        if (ImGui.MenuItem("Map###menu-map", string.Empty, currentPage == AtlasPage.Map))
+            currentPage = AtlasPage.Map;
+        if (ImGui.MenuItem(
+                "Icon guide###menu-icon-guide",
+                string.Empty,
+                currentPage == AtlasPage.IconGuide))
+        {
+            currentPage = AtlasPage.IconGuide;
+        }
+
+        ImGui.EndMenuBar();
+    }
+
+    private void DrawIconGuide(IReadOnlyList<AtlasMarker> markers)
+    {
+        ImGui.TextUnformatted("Icon guide");
+        ImGui.TextDisabled("Map symbols used by Crescent Atlas.");
+        ImGui.Separator();
+        DrawLegend(markers);
+    }
+
+    private void DrawMapFilters()
+    {
+        if (configuration.MapClickThrough)
+            return;
+
+        var showBronzeTreasure = configuration.ShowBronzeTreasure;
+        var showSilverTreasure = configuration.ShowSilverTreasure;
+        var showGoldTreasure = configuration.ShowGoldTreasure;
+        var showFates = configuration.ShowFates;
+        var showCriticalEncounters = configuration.ShowCriticalEncounters;
+        var showPotPrediction = configuration.ShowPotPrediction;
+        var changed = false;
+        var usedWidth = 0.0f;
+        var availableWidth = Math.Max(100.0f, ImGui.GetContentRegionAvail().X);
+        changed |= DrawFilterCheckbox(
+            "Bronze chest",
+            ref showBronzeTreasure,
+            ref usedWidth,
+            availableWidth);
+        changed |= DrawFilterCheckbox(
+            "Silver chest",
+            ref showSilverTreasure,
+            ref usedWidth,
+            availableWidth);
+        changed |= DrawFilterCheckbox(
+            "Gold chest",
+            ref showGoldTreasure,
+            ref usedWidth,
+            availableWidth);
+        changed |= DrawFilterCheckbox(
+            "FATE",
+            ref showFates,
+            ref usedWidth,
+            availableWidth);
+        changed |= DrawFilterCheckbox(
+            "CE",
+            ref showCriticalEncounters,
+            ref usedWidth,
+            availableWidth);
+        changed |= DrawFilterCheckbox(
+            "Pot prediction",
+            ref showPotPrediction,
+            ref usedWidth,
+            availableWidth);
+
+        if (changed)
+        {
+            configuration.ShowBronzeTreasure = showBronzeTreasure;
+            configuration.ShowSilverTreasure = showSilverTreasure;
+            configuration.ShowGoldTreasure = showGoldTreasure;
+            configuration.ShowFates = showFates;
+            configuration.ShowCriticalEncounters = showCriticalEncounters;
+            configuration.ShowPotPrediction = showPotPrediction;
+            saveConfiguration();
+        }
+    }
+
+    private static bool DrawFilterCheckbox(
+        string label,
+        ref bool value,
+        ref float usedWidth,
+        float availableWidth)
+    {
+        var style = ImGui.GetStyle();
+        var itemWidth = ImGui.GetFrameHeight()
+                        + style.ItemInnerSpacing.X
+                        + ImGui.CalcTextSize(label).X
+                        + style.ItemSpacing.X;
+        if (usedWidth > 0.0f && usedWidth + itemWidth <= availableWidth)
+            ImGui.SameLine();
+        else if (usedWidth > 0.0f)
+            usedWidth = 0.0f;
+
+        var changed = ImGui.Checkbox(label, ref value);
+        usedWidth += itemWidth;
+        return changed;
+    }
+
+    private bool IsMarkerVisible(AtlasMarker marker)
+    {
+        if (marker.Kind == AtlasMarkerKind.Fate)
+            return configuration.ShowFates;
+        if (marker.Kind == AtlasMarkerKind.CriticalEncounter)
+            return configuration.ShowCriticalEncounters;
+        if (IsGoldTreasure(marker))
+            return configuration.ShowGoldTreasure;
+        if (IsSilverTreasure(marker))
+            return configuration.ShowSilverTreasure;
+        if (IsBronzeTreasure(marker))
+            return configuration.ShowBronzeTreasure;
+
+        return true;
+    }
+
+    private static bool IsBronzeTreasure(AtlasMarker marker)
+        => marker.Kind is AtlasMarkerKind.TreasureCandidate or AtlasMarkerKind.ActiveTreasure
+           && !marker.TreasureType.Equals("silver", StringComparison.OrdinalIgnoreCase)
+           && !marker.TreasureType.Equals("gold", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsSilverTreasure(AtlasMarker marker)
+        => marker.Kind is AtlasMarkerKind.TreasureCandidate or AtlasMarkerKind.ActiveTreasure
+           && marker.TreasureType.Equals("silver", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsGoldTreasure(AtlasMarker marker)
+        => marker.Kind == AtlasMarkerKind.PotChest
+           || marker.TreasureType.Equals("gold", StringComparison.OrdinalIgnoreCase);
 
     private void UpdateMapInteraction(Vector2 canvasMinimum, Vector2 canvasSize)
     {
@@ -367,7 +513,8 @@ public sealed class AtlasWindow : Window, IDisposable
                 canvasMinimum,
                 canvasMaximum);
 
-        if (dataSource.PotPrediction is { } potPrediction)
+        if (configuration.ShowPotPrediction
+            && dataSource.PotPrediction is { } potPrediction)
             DrawPotPrediction(drawList, project(potPrediction.PredictedPosition), potPrediction);
 
         if (playerPosition is { } position)
@@ -821,6 +968,12 @@ public sealed class AtlasWindow : Window, IDisposable
         SilverTreasure,
         LiveGameIcon,
         PotPrediction,
+    }
+
+    private enum AtlasPage
+    {
+        Map,
+        IconGuide,
     }
 
     private readonly record struct LegendEntry(
