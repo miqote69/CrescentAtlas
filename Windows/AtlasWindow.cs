@@ -799,13 +799,65 @@ public sealed class AtlasWindow : Window, IDisposable
             return;
         }
 
-        if (!configuration.DetailedEventDisplay)
-            return;
-
         var hasRemainingTime = marker.TimeRemainingSeconds >= 0;
         var remainingSeconds = Math.Max(0, marker.TimeRemainingSeconds);
         var minutes = remainingSeconds / 60;
         var seconds = remainingSeconds % 60;
+        var progress = Math.Clamp(marker.Progress, (byte)0, (byte)100);
+        var background = marker.Kind == AtlasMarkerKind.CriticalEncounter
+                         && marker.EventState is "Register" or "Warmup"
+            ? new Vector4(0.20f, 0.13f, 0.02f, 0.88f)
+            : new Vector4(0.02f, 0.02f, 0.02f, 0.82f);
+
+        if (!configuration.DetailedEventDisplay)
+        {
+            var compactTime = hasRemainingTime
+                ? $"{minutes:00}:{seconds:00}"
+                : "--:--";
+            var compactProgress = $"{progress}%";
+            var compactTimeSize = ImGui.CalcTextSize(compactTime);
+            var compactProgressSize = ImGui.CalcTextSize(compactProgress);
+            var compactGap = ImGui.CalcTextSize(" ").X;
+            var compactSize = new Vector2(
+                compactTimeSize.X + compactGap + compactProgressSize.X,
+                Math.Max(compactTimeSize.Y, compactProgressSize.Y));
+            var compactPadding = new Vector2(4.0f, 3.0f);
+            var compactPosition = point + new Vector2(-(compactSize.X * 0.5f), 15.0f);
+            if (clipMinimum is { } compactMinimum && clipMaximum is { } compactMaximum)
+            {
+                if (compactPosition.Y + compactSize.Y + compactPadding.Y > compactMaximum.Y - 2.0f)
+                    compactPosition.Y = point.Y - 15.0f - compactSize.Y;
+
+                compactPosition.X = Math.Clamp(
+                    compactPosition.X,
+                    compactMinimum.X + compactPadding.X + 2.0f,
+                    Math.Max(
+                        compactMinimum.X + compactPadding.X + 2.0f,
+                        compactMaximum.X - compactSize.X - compactPadding.X - 2.0f));
+                compactPosition.Y = Math.Clamp(
+                    compactPosition.Y,
+                    compactMinimum.Y + compactPadding.Y + 2.0f,
+                    Math.Max(
+                        compactMinimum.Y + compactPadding.Y + 2.0f,
+                        compactMaximum.Y - compactSize.Y - compactPadding.Y - 2.0f));
+            }
+
+            drawList.AddRectFilled(
+                compactPosition - compactPadding,
+                compactPosition + compactSize + compactPadding,
+                ImGui.GetColorU32(background),
+                3.0f);
+            drawList.AddText(
+                compactPosition,
+                ImGui.GetColorU32(new Vector4(1.0f, 0.88f, 0.46f, 1.0f)),
+                compactTime);
+            drawList.AddText(
+                compactPosition + new Vector2(compactTimeSize.X + compactGap, 0.0f),
+                ImGui.GetColorU32(new Vector4(1.0f, 1.0f, 1.0f, 1.0f)),
+                compactProgress);
+            return;
+        }
+
         var timeLabel = marker.Kind == AtlasMarkerKind.CriticalEncounter
             ? marker.EventState switch
             {
@@ -817,7 +869,7 @@ public sealed class AtlasWindow : Window, IDisposable
         var timeLine = hasRemainingTime
             ? $"{timeLabel} {minutes:00}:{seconds:00}"
             : $"{timeLabel} --:--";
-        var progressLine = $"進捗 {Math.Clamp(marker.Progress, (byte)0, (byte)100)}%";
+        var progressLine = $"進捗 {progress}%";
         var nameLineSize = ImGui.CalcTextSize(nameLine);
         var timeLineSize = ImGui.CalcTextSize(timeLine);
         var progressLineSize = ImGui.CalcTextSize(progressLine);
@@ -846,11 +898,6 @@ public sealed class AtlasWindow : Window, IDisposable
                     minimum.Y + padding.Y + 2.0f,
                     maximum.Y - textSize.Y - padding.Y - 2.0f));
         }
-        var background = marker.Kind == AtlasMarkerKind.CriticalEncounter
-                         && marker.EventState is "Register" or "Warmup"
-            ? new Vector4(0.20f, 0.13f, 0.02f, 0.88f)
-            : new Vector4(0.02f, 0.02f, 0.02f, 0.82f);
-
         drawList.AddRectFilled(
             textPosition - padding,
             textPosition + textSize + padding,
