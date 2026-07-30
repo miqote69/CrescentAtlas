@@ -55,6 +55,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly HashSet<uint> potTargetDataIds = [];
     private readonly MutableAtlasDataSource atlasData = new();
     private readonly OccultCrescentContext crescentContext;
+    private readonly AetheryteMarkerProvider aetheryteMarkerProvider;
     private readonly LayoutTreasureCandidateScanner layoutScanner;
     private readonly ObjectTableCollector objectCollector;
     private readonly DalamudFateSnapshotSource fateSource;
@@ -72,6 +73,7 @@ public sealed class Plugin : IDalamudPlugin
     private DateTimeOffset nextFlushUtc;
     private DateTimeOffset nextLayoutScanUtc;
     private uint scannedTerritoryId;
+    private uint scannedAetheryteMapId;
     private bool wasActive;
     private bool firstUpdateLogged;
     private bool firstWindowDrawLogged;
@@ -107,6 +109,7 @@ public sealed class Plugin : IDalamudPlugin
             BootstrapDiagnostics.Write($"observation store initialized; session={observationStore.SessionId}");
             RestorePotObservations();
             crescentContext = new OccultCrescentContext(ClientState, DataManager, Log);
+            aetheryteMarkerProvider = new AetheryteMarkerProvider(DataManager);
             layoutScanner = new LayoutTreasureCandidateScanner(DataManager, Log);
             objectCollector = new ObjectTableCollector(
                 ObjectTable,
@@ -315,6 +318,14 @@ public sealed class Plugin : IDalamudPlugin
         var territoryName = crescentContext.TerritoryName;
         var instanceKey = $"territory-{territoryId}";
         atlasData.SetContext(territoryId, territoryName, localPlayer?.Position, localPlayer?.Rotation);
+
+        var mapId = ClientState.MapId;
+        if (scannedAetheryteMapId != mapId
+            && aetheryteMarkerProvider.TryRead(territoryId, mapId, now, out var aetherytes))
+        {
+            atlasData.ReplaceSource(AtlasMarkerKind.Aetheryte, aetherytes);
+            scannedAetheryteMapId = mapId;
+        }
 
         if (scannedTerritoryId != territoryId && now >= nextLayoutScanUtc)
         {
@@ -582,6 +593,7 @@ public sealed class Plugin : IDalamudPlugin
     private void ResetTerritoryState()
     {
         scannedTerritoryId = 0;
+        scannedAetheryteMapId = 0;
         nextLayoutScanUtc = DateTimeOffset.MinValue;
         previousTreasureKeys.Clear();
         previousCarrotKeys.Clear();

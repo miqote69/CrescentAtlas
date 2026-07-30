@@ -48,6 +48,7 @@ public sealed class AtlasWindow : Window, IDisposable
         new(AtlasMarkerKind.PotFate, "Magic pot", new Vector4(1.00f, 0.83f, 0.25f, 1.0f), LegendStyle.LiveGameIcon),
         new(AtlasMarkerKind.PotPrediction, "Magic pot prediction", new Vector4(1.00f, 0.72f, 0.08f, 1.0f), LegendStyle.PotPrediction),
         new(AtlasMarkerKind.PotTarget, "Magic Pot target", new Vector4(0.45f, 1.00f, 0.48f, 1.0f)),
+        new(AtlasMarkerKind.Aetheryte, "Aetheryte", new Vector4(0.42f, 0.90f, 1.00f, 1.0f), LegendStyle.LiveGameIcon),
     ];
 
     private readonly IAtlasDataSource dataSource;
@@ -694,6 +695,7 @@ public sealed class AtlasWindow : Window, IDisposable
         if (marker.Kind is AtlasMarkerKind.Fate
                 or AtlasMarkerKind.CriticalEncounter
                 or AtlasMarkerKind.PotFate
+                or AtlasMarkerKind.Aetheryte
             && marker.IconId != 0
             && TryDrawGameIcon(drawList, point, marker.IconId))
         {
@@ -1054,6 +1056,7 @@ public sealed class AtlasWindow : Window, IDisposable
             AtlasMarkerKind.PotFate => "\u2605",
             AtlasMarkerKind.PotPrediction => "\u25c8",
             AtlasMarkerKind.PotTarget => "\u25c6",
+            AtlasMarkerKind.Aetheryte => "\u25c6",
             _ => "\u2022",
         };
 

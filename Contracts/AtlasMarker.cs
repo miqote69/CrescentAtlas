@@ -10,6 +10,7 @@ public enum AtlasMarkerKind
     PotFate,
     PotPrediction,
     PotTarget,
+    Aetheryte,
     Player,
 }
 
