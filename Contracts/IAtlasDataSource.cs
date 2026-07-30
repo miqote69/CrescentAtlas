@@ -10,5 +10,7 @@ public interface IAtlasDataSource
 
     float? PlayerRotation { get; }
 
+    AtlasPotPrediction? PotPrediction { get; }
+
     IReadOnlyList<AtlasMarker> GetMarkers();
 }

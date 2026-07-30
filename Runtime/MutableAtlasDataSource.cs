@@ -15,6 +15,8 @@ public sealed class MutableAtlasDataSource : IAtlasDataSource
 
     public float? PlayerRotation { get; private set; }
 
+    public AtlasPotPrediction? PotPrediction { get; private set; }
+
     public IReadOnlyList<AtlasMarker> GetMarkers()
     {
         lock (sync)
@@ -46,6 +48,12 @@ public sealed class MutableAtlasDataSource : IAtlasDataSource
             PlayerPosition = playerPosition;
             PlayerRotation = playerRotation;
         }
+    }
+
+    public void SetPotPrediction(AtlasPotPrediction? prediction)
+    {
+        lock (sync)
+            PotPrediction = prediction;
     }
 
     public void ReplaceSource(AtlasMarkerKind kind, IEnumerable<AtlasMarker> replacement)

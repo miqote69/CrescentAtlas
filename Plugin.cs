@@ -17,8 +17,22 @@ namespace CrescentAtlas;
 public sealed class Plugin : IDalamudPlugin
 {
     private const string CommandName = "/catlas";
+    private const string NorthHornInstanceKey = "territory-1346";
     private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(500);
     private static readonly TimeSpan FlushInterval = TimeSpan.FromSeconds(30);
+    private static readonly PotObservation[] LearnedNorthHornPotObservations =
+    [
+        new(
+            NorthHornInstanceKey,
+            new DateTimeOffset(2026, 7, 30, 3, 16, 5, 206, TimeSpan.Zero),
+            2072,
+            new Vector3(233.0f, 7.729229f, -470.0f)),
+        new(
+            NorthHornInstanceKey,
+            new DateTimeOffset(2026, 7, 30, 3, 46, 9, 584, TimeSpan.Zero),
+            2073,
+            new Vector3(-505.2822f, 53.14409f, 244.041f)),
+    ];
 
     [PluginService] private static IDalamudPluginInterface PluginInterface { get; set; } = null!;
     [PluginService] private static ICommandManager CommandManager { get; set; } = null!;
@@ -66,6 +80,7 @@ public sealed class Plugin : IDalamudPlugin
             SaveConfiguration();
         }
 
+        SeedLearnedPotObservations();
         observationStore = new ObservationStore(PluginInterface);
         crescentContext = new OccultCrescentContext(ClientState, DataManager, Log);
         layoutScanner = new LayoutTreasureCandidateScanner(DataManager, Log);
@@ -242,6 +257,7 @@ public sealed class Plugin : IDalamudPlugin
         NotifyNewObjects(treasures, carrots);
 
         PollFates(territoryId, territoryName, instanceKey, now, entering);
+        UpdatePotPrediction(instanceKey, now);
         PollCriticalEncounters(territoryId, territoryName, instanceKey, now, entering);
 
         if (now >= nextFlushUtc)
@@ -360,8 +376,42 @@ public sealed class Plugin : IDalamudPlugin
 
     private bool IsPotFate(uint eventId, string name)
         => configuration.ConfirmedPotFateIds.Contains(eventId)
+           || eventId is 2072 or 2073
            || name.Contains("magic pot", StringComparison.OrdinalIgnoreCase)
            || name.Contains("マジックポット", StringComparison.Ordinal);
+
+    private void SeedLearnedPotObservations()
+    {
+        foreach (var observation in LearnedNorthHornPotObservations)
+            potPredictionTracker.Observe(observation);
+    }
+
+    private void UpdatePotPrediction(string instanceKey, DateTimeOffset now)
+    {
+        if (!StringComparer.Ordinal.Equals(instanceKey, NorthHornInstanceKey))
+        {
+            atlasData.SetPotPrediction(null);
+            return;
+        }
+
+        var prediction = potPredictionTracker.GetUpcomingPrediction(instanceKey, now);
+        if (prediction.NextOccurrenceUtc is not { } next
+            || prediction.EstimatedInterval is not { } interval
+            || prediction.PredictedEventId is not { } eventId
+            || prediction.PredictedPosition is not { } position)
+        {
+            atlasData.SetPotPrediction(null);
+            return;
+        }
+
+        atlasData.SetPotPrediction(new AtlasPotPrediction(
+            next,
+            interval,
+            eventId,
+            position,
+            prediction.ObservationCount,
+            prediction.Confidence == PotPredictionConfidence.Confirmed));
+    }
 
     private void PrintPotPrediction(PotPrediction prediction)
     {
@@ -390,6 +440,8 @@ public sealed class Plugin : IDalamudPlugin
         previousCarrotKeys.Clear();
         fateDetector.Reset();
         potPredictionTracker.ResetAll();
+        SeedLearnedPotObservations();
+        atlasData.SetPotPrediction(null);
         atlasData.SetContext(0, string.Empty, null, null);
     }
 

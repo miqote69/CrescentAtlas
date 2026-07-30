@@ -31,6 +31,9 @@ movement, interaction, or combat and never uploads observations.
 - Learns Magic Pot timing per field session: one observation produces a
   provisional estimate; two observations use the measured interval and
   alternating location.
+- Seeds the live Magic Pot predictor from two independently collected North
+  Horn observations, then shows the alternating predicted point and countdown
+  directly on the atlas.
 - Shows all confirmed markers in a dedicated click-through atlas without
   opening or controlling the standard game map.
 - Uses the current in-game map texture and Dalamud's standard map-coordinate

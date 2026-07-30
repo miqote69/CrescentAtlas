@@ -37,6 +37,7 @@ public sealed class AtlasWindow : Window, IDisposable
         new(AtlasMarkerKind.Fate, "FATE", new Vector4(0.78f, 0.42f, 1.00f, 1.0f)),
         new(AtlasMarkerKind.CriticalEncounter, "Critical encounter", new Vector4(1.00f, 0.24f, 0.31f, 1.0f)),
         new(AtlasMarkerKind.PotFate, "Magic pot", new Vector4(1.00f, 0.83f, 0.25f, 1.0f)),
+        new(AtlasMarkerKind.PotPrediction, "Magic pot prediction", new Vector4(1.00f, 0.72f, 0.08f, 1.0f)),
         new(AtlasMarkerKind.PotChest, "Pot chest", new Vector4(0.45f, 1.00f, 0.48f, 1.0f)),
     ];
 
@@ -257,6 +258,9 @@ public sealed class AtlasWindow : Window, IDisposable
         foreach (var marker in markers.Where(marker => marker.Kind != AtlasMarkerKind.Player))
             DrawMarker(drawList, project(marker.Position), marker);
 
+        if (dataSource.PotPrediction is { } potPrediction)
+            DrawPotPrediction(drawList, project(potPrediction.PredictedPosition), potPrediction);
+
         if (playerPosition is { } position)
             DrawPlayer(drawList, project(position), playerRotation);
         else
@@ -421,6 +425,34 @@ public sealed class AtlasWindow : Window, IDisposable
 
     }
 
+    private static void DrawPotPrediction(
+        ImDrawListPtr drawList,
+        Vector2 point,
+        AtlasPotPrediction prediction)
+    {
+        var color = MarkerColor(AtlasMarkerKind.PotPrediction);
+        var packedColor = ImGui.GetColorU32(color);
+        var shadow = ImGui.GetColorU32(new Vector4(0.02f, 0.02f, 0.01f, 0.94f));
+        drawList.AddCircleFilled(point, 12.0f, shadow);
+        DrawDiamond(drawList, point, 8.0f, packedColor);
+        drawList.AddCircle(point, 15.0f, packedColor, 0, 2.5f);
+
+        var remaining = prediction.NextOccurrenceUtc - DateTimeOffset.UtcNow;
+        var totalSeconds = Math.Max(0, (int)Math.Ceiling(remaining.TotalSeconds));
+        var countdown = totalSeconds >= 3600
+            ? $"{totalSeconds / 3600:00}:{(totalSeconds / 60) % 60:00}:{totalSeconds % 60:00}"
+            : $"{totalSeconds / 60:00}:{totalSeconds % 60:00}";
+        var label = $"POT {countdown}";
+        var textSize = ImGui.CalcTextSize(label);
+        var textMinimum = point + new Vector2(18.0f, -textSize.Y * 0.5f);
+        drawList.AddRectFilled(
+            textMinimum - new Vector2(4.0f, 2.0f),
+            textMinimum + textSize + new Vector2(4.0f, 2.0f),
+            shadow,
+            3.0f);
+        drawList.AddText(textMinimum, packedColor, label);
+    }
+
     private static void DrawPlayer(ImDrawListPtr drawList, Vector2 point, float? rotation)
     {
         var angle = rotation ?? 0.0f;
@@ -483,6 +515,7 @@ public sealed class AtlasWindow : Window, IDisposable
             AtlasMarkerKind.Fate => "\u25cf",
             AtlasMarkerKind.CriticalEncounter => "\u25cf",
             AtlasMarkerKind.PotFate => "\u2605",
+            AtlasMarkerKind.PotPrediction => "\u25c8",
             AtlasMarkerKind.PotChest => "\u25c6",
             _ => "\u2022",
         };

@@ -8,6 +8,7 @@ public enum AtlasMarkerKind
     Fate,
     CriticalEncounter,
     PotFate,
+    PotPrediction,
     PotChest,
     Player,
 }

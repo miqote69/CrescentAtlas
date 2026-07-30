@@ -21,6 +21,11 @@ Assert(confirmed.NextOccurrenceUtc == origin.AddMinutes(84), "next time uses mea
 Assert(confirmed.PredictedEventId == 100, "alternating event predicts preceding event");
 Assert(confirmed.PredictedPosition == firstPosition, "alternating location predicts preceding location");
 
+var advanced = tracker.GetUpcomingPrediction("instance-a", origin.AddMinutes(90));
+Assert(advanced.NextOccurrenceUtc == origin.AddMinutes(126), "elapsed prediction advances to the next future occurrence");
+Assert(advanced.PredictedEventId == 200, "advanced prediction alternates to the latest event");
+Assert(advanced.PredictedPosition == secondPosition, "advanced prediction alternates to the latest location");
+
 var isolated = tracker.GetPrediction("instance-b");
 Assert(isolated.Confidence == PotPredictionConfidence.Unknown, "instances remain isolated");
 
