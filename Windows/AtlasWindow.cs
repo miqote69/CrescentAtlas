@@ -61,6 +61,7 @@ public sealed class AtlasWindow : Window, IDisposable
     private readonly ITextureProvider textureProvider;
     private readonly Func<IReadOnlyList<IslandVisitRecord>> visitHistoryProvider;
     private readonly System.Action saveConfiguration;
+    private readonly string versionLabel;
     private float mapZoom = MinimumMapZoom;
     private Vector2 mapCenter = new(0.5f, 0.5f);
     private AtlasPage currentPage = AtlasPage.Map;
@@ -84,6 +85,7 @@ public sealed class AtlasWindow : Window, IDisposable
         this.textureProvider = textureProvider;
         this.visitHistoryProvider = visitHistoryProvider;
         this.saveConfiguration = saveConfiguration;
+        versionLabel = FormatVersionLabel(typeof(AtlasWindow).Assembly.GetName().Version);
         IsOpen = configuration.MapVisible;
 
         Flags |= ImGuiWindowFlags.NoFocusOnAppearing
@@ -253,8 +255,22 @@ public sealed class AtlasWindow : Window, IDisposable
             currentPage = AtlasPage.VisitHistory;
         }
 
+        var versionSize = ImGui.CalcTextSize(versionLabel);
+        var versionX = ImGui.GetWindowContentRegionMax().X - versionSize.X;
+        if (versionX > ImGui.GetCursorPosX() + ImGui.GetStyle().ItemSpacing.X)
+        {
+            ImGui.SameLine();
+            ImGui.SetCursorPosX(versionX);
+            ImGui.TextDisabled(versionLabel);
+        }
+
         ImGui.EndMenuBar();
     }
+
+    private static string FormatVersionLabel(Version? version)
+        => version is null
+            ? "v?"
+            : $"v{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
 
     private void DrawIconGuide(IReadOnlyList<AtlasMarker> markers)
     {
