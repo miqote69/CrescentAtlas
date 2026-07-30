@@ -25,6 +25,8 @@ public sealed class Configuration : IPluginConfiguration
 
     public bool ShowCriticalEncounters { get; set; } = true;
 
+    public bool ShowForkedTower { get; set; } = true;
+
     public bool ShowPotPrediction { get; set; } = true;
 
     public bool FateNotificationsEnabled { get; set; } = true;

@@ -46,6 +46,7 @@ public sealed class AtlasWindow : Window, IDisposable
         new(AtlasMarkerKind.Carrot, "Carrot", new Vector4(1.00f, 0.55f, 0.18f, 1.0f)),
         new(AtlasMarkerKind.Fate, "FATE", new Vector4(0.78f, 0.42f, 1.00f, 1.0f), LegendStyle.LiveGameIcon),
         new(AtlasMarkerKind.CriticalEncounter, "Critical encounter", new Vector4(1.00f, 0.24f, 0.31f, 1.0f), LegendStyle.LiveGameIcon),
+        new(AtlasMarkerKind.CriticalEncounter, "Forked Tower", new Vector4(0.38f, 0.88f, 1.00f, 1.0f), LegendStyle.ForkedTower),
         new(AtlasMarkerKind.PotFate, "Magic pot", new Vector4(1.00f, 0.83f, 0.25f, 1.0f), LegendStyle.LiveGameIcon),
         new(AtlasMarkerKind.PotPrediction, "Magic pot prediction", new Vector4(1.00f, 0.72f, 0.08f, 1.0f), LegendStyle.PotPrediction),
         new(AtlasMarkerKind.PotChest, "Pot chest", new Vector4(0.45f, 1.00f, 0.48f, 1.0f)),
@@ -217,6 +218,7 @@ public sealed class AtlasWindow : Window, IDisposable
         var showGoldTreasure = configuration.ShowGoldTreasure;
         var showFates = configuration.ShowFates;
         var showCriticalEncounters = configuration.ShowCriticalEncounters;
+        var showForkedTower = configuration.ShowForkedTower;
         var showPotPrediction = configuration.ShowPotPrediction;
         var changed = false;
         var usedWidth = 0.0f;
@@ -247,6 +249,11 @@ public sealed class AtlasWindow : Window, IDisposable
             ref usedWidth,
             availableWidth);
         changed |= DrawFilterCheckbox(
+            "Forked Tower",
+            ref showForkedTower,
+            ref usedWidth,
+            availableWidth);
+        changed |= DrawFilterCheckbox(
             "Pot prediction",
             ref showPotPrediction,
             ref usedWidth,
@@ -259,6 +266,7 @@ public sealed class AtlasWindow : Window, IDisposable
             configuration.ShowGoldTreasure = showGoldTreasure;
             configuration.ShowFates = showFates;
             configuration.ShowCriticalEncounters = showCriticalEncounters;
+            configuration.ShowForkedTower = showForkedTower;
             configuration.ShowPotPrediction = showPotPrediction;
             saveConfiguration();
         }
@@ -289,6 +297,8 @@ public sealed class AtlasWindow : Window, IDisposable
     {
         if (marker.Kind == AtlasMarkerKind.Fate)
             return configuration.ShowFates;
+        if (IsForkedTower(marker))
+            return configuration.ShowForkedTower;
         if (marker.Kind == AtlasMarkerKind.CriticalEncounter)
             return configuration.ShowCriticalEncounters;
         if (IsGoldTreasure(marker))
@@ -300,6 +310,12 @@ public sealed class AtlasWindow : Window, IDisposable
 
         return true;
     }
+
+    private static bool IsForkedTower(AtlasMarker marker)
+        => marker.Kind == AtlasMarkerKind.CriticalEncounter
+           && (marker.EventId == 64
+               || marker.Label.Contains("フォークタワー", StringComparison.OrdinalIgnoreCase)
+               || marker.Label.Contains("Forked Tower", StringComparison.OrdinalIgnoreCase));
 
     private static bool IsBronzeTreasure(AtlasMarker marker)
         => marker.Kind is AtlasMarkerKind.TreasureCandidate or AtlasMarkerKind.ActiveTreasure
@@ -431,9 +447,17 @@ public sealed class AtlasWindow : Window, IDisposable
             return;
         }
 
-        var representative = entry.Style == LegendStyle.LiveGameIcon
-            ? markers.LastOrDefault(marker => marker.Kind == entry.Kind && marker.IconId != 0)
-            : null;
+        var representative = entry.Style switch
+        {
+            LegendStyle.LiveGameIcon => markers.LastOrDefault(marker =>
+                marker.Kind == entry.Kind
+                && marker.IconId != 0
+                && !IsForkedTower(marker)),
+            LegendStyle.ForkedTower => markers.LastOrDefault(marker =>
+                IsForkedTower(marker)
+                && marker.IconId != 0),
+            _ => null,
+        };
         if (representative is not null)
         {
             DrawMarker(drawList, point, representative, false);
@@ -1011,6 +1035,7 @@ public sealed class AtlasWindow : Window, IDisposable
         SilverTreasure,
         LiveGameIcon,
         PotPrediction,
+        ForkedTower,
     }
 
     private enum AtlasPage
