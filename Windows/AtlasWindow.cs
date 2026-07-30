@@ -155,6 +155,11 @@ public sealed class AtlasWindow : Window, IDisposable
             DrawVisitHistory();
             return;
         }
+        if (!dataSource.IsInOccultCrescent)
+        {
+            DrawOutsideAreaNotice();
+            return;
+        }
 
         var visibleMarkers = territoryMarkers
             .Where(IsMarkerVisible)
@@ -194,6 +199,26 @@ public sealed class AtlasWindow : Window, IDisposable
             visibleMarkers,
             dataSource.PlayerPosition,
             dataSource.PlayerRotation);
+    }
+
+    private static void DrawOutsideAreaNotice()
+    {
+        const string message = "\u30A8\u30EA\u30A2\u5916";
+        var available = ImGui.GetContentRegionAvail();
+        var canvasSize = new Vector2(
+            Math.Max(1.0f, available.X),
+            Math.Max(CanvasMinimumHeight, available.Y));
+        var canvasMinimum = ImGui.GetCursorScreenPos();
+        var textSize = ImGui.CalcTextSize(message);
+        var textPosition = canvasMinimum + new Vector2(
+            Math.Max(0.0f, (canvasSize.X - textSize.X) * 0.5f),
+            Math.Max(0.0f, (canvasSize.Y - textSize.Y) * 0.5f));
+
+        ImGui.GetWindowDrawList().AddText(
+            textPosition,
+            ImGui.GetColorU32(new Vector4(0.72f, 0.76f, 0.80f, 1.0f)),
+            message);
+        ImGui.Dummy(canvasSize);
     }
 
     private void ToggleMapControls()

@@ -66,7 +66,7 @@ Assert(restoredPot.EventId == 2072, "history restores event id");
 Assert(restoredPot.Position == new Vector3(233, 7.729229f, -470), "history restores position");
 
 var atlas = new MutableAtlasDataSource();
-atlas.SetContext(1346, "North Horn", Vector3.Zero, 0.0f);
+atlas.SetContext(true, 1346, "North Horn", Vector3.Zero, 0.0f);
 atlas.ReplaceSource(
     AtlasMarkerKind.TreasureCandidate,
     [
@@ -89,6 +89,10 @@ Assert(!atlas.GetMarkers().Single().IsChecked, "reset spot stays unchecked until
 atlas.MarkAbsentNearbyTreasureCandidatesChecked(new Vector3(20, 0, 0), 10.0f, [], 2.0f);
 atlas.MarkAbsentNearbyTreasureCandidatesChecked(Vector3.Zero, 10.0f, [], 2.0f);
 Assert(atlas.GetMarkers().Single().IsChecked, "spot can be checked again after revisiting");
+Assert(atlas.IsInOccultCrescent, "active Crescent context is exposed to the map");
+atlas.SetContext(false, 999, "Outside", Vector3.Zero, 0.0f);
+Assert(!atlas.IsInOccultCrescent, "outside-area context is exposed to the map");
+Assert(atlas.GetMarkers().Count == 0, "leaving Crescent clears stale map markers");
 
 Assert(
     DynamicEventTimeResolver.Resolve(

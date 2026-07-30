@@ -2,6 +2,8 @@ namespace CrescentAtlas.Contracts;
 
 public interface IAtlasDataSource
 {
+    bool IsInOccultCrescent { get; }
+
     uint TerritoryId { get; }
 
     string TerritoryName { get; }

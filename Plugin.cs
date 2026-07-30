@@ -324,6 +324,7 @@ public sealed class Plugin : IDalamudPlugin
             }
             wasActive = false;
             atlasData.SetContext(
+                false,
                 ClientState.TerritoryType,
                 crescentContext.TerritoryName,
                 localPlayer?.Position,
@@ -353,7 +354,12 @@ public sealed class Plugin : IDalamudPlugin
         {
             islandVisitStore.Touch(now, instanceSnapshot);
         }
-        atlasData.SetContext(territoryId, territoryName, localPlayer?.Position, localPlayer?.Rotation);
+        atlasData.SetContext(
+            true,
+            territoryId,
+            territoryName,
+            localPlayer?.Position,
+            localPlayer?.Rotation);
 
         var mapId = ClientState.MapId;
         if (scannedAetheryteMapId != mapId
@@ -638,7 +644,7 @@ public sealed class Plugin : IDalamudPlugin
         previousPotTargetKeys.Clear();
         fateDetector.Reset();
         atlasData.SetPotPrediction(null);
-        atlasData.SetContext(0, string.Empty, null, null);
+        atlasData.SetContext(false, 0, string.Empty, null, null);
     }
 
     private static bool ParseToggle(string? value, bool current)

@@ -8,6 +8,8 @@ public sealed class MutableAtlasDataSource : IAtlasDataSource
     private readonly Dictionary<string, AtlasMarker> markers = new(StringComparer.Ordinal);
     private readonly HashSet<string> resetBlockedTreasureKeys = new(StringComparer.Ordinal);
 
+    public bool IsInOccultCrescent { get; private set; }
+
     public uint TerritoryId { get; private set; }
 
     public string TerritoryName { get; private set; } = string.Empty;
@@ -25,6 +27,7 @@ public sealed class MutableAtlasDataSource : IAtlasDataSource
     }
 
     public void SetContext(
+        bool isInOccultCrescent,
         uint territoryId,
         string territoryName,
         Vector3? playerPosition,
@@ -32,12 +35,13 @@ public sealed class MutableAtlasDataSource : IAtlasDataSource
     {
         lock (sync)
         {
-            if (TerritoryId != territoryId)
+            if (IsInOccultCrescent != isInOccultCrescent || TerritoryId != territoryId)
             {
                 markers.Clear();
                 resetBlockedTreasureKeys.Clear();
             }
 
+            IsInOccultCrescent = isInOccultCrescent;
             TerritoryId = territoryId;
             TerritoryName = territoryName;
             PlayerPosition = playerPosition;
