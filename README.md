@@ -34,6 +34,8 @@ movement, interaction, or combat and never uploads observations.
 - Uses the current in-game map texture and Dalamud's standard map-coordinate
   conversion so north, south, scale, and offsets match the game map.
 - Zooms the atlas from 100% to 400% with the mouse wheel in layout mode.
+- Starts upgraded installations in layout mode so dragging any window edge or
+  corner resizes the atlas directly.
 - Keeps the atlas field free of marker-name and distance text; marker meanings
   remain available in the compact legend.
 

@@ -5,13 +5,13 @@ namespace CrescentAtlas;
 [Serializable]
 public sealed class Configuration : IPluginConfiguration
 {
-    public int Version { get; set; } = 1;
+    public int Version { get; set; } = 2;
 
     public bool CollectionEnabled { get; set; } = true;
 
     public bool MapVisible { get; set; } = true;
 
-    public bool MapClickThrough { get; set; } = true;
+    public bool MapClickThrough { get; set; }
 
     public float MapOpacity { get; set; } = 0.92f;
 

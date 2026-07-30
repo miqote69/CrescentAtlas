@@ -57,6 +57,15 @@ public sealed class Plugin : IDalamudPlugin
     public Plugin()
     {
         configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+        if (configuration.Version < 2)
+        {
+            // Existing builds defaulted to click-through, which also prevented
+            // ImGui's window border from receiving resize drags.
+            configuration.MapClickThrough = false;
+            configuration.Version = 2;
+            SaveConfiguration();
+        }
+
         observationStore = new ObservationStore(PluginInterface);
         crescentContext = new OccultCrescentContext(ClientState, DataManager, Log);
         layoutScanner = new LayoutTreasureCandidateScanner(DataManager, Log);

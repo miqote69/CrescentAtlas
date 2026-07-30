@@ -118,7 +118,9 @@ public sealed class AtlasWindow : Window, IDisposable
             : dataSource.TerritoryName;
         ImGui.TextUnformatted($"{territoryName}  (Territory {dataSource.TerritoryId})");
         ImGui.SameLine();
-        ImGui.TextDisabled(configuration.MapClickThrough ? "Display only / click-through" : "Layout mode");
+        ImGui.TextDisabled(configuration.MapClickThrough
+            ? "Click-through mode"
+            : "Drag edge to resize / wheel to zoom");
 
         var legendHeight = DrawLegend();
         var available = ImGui.GetContentRegionAvail();
