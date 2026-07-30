@@ -312,13 +312,11 @@ public sealed class AtlasWindow : Window, IDisposable
 
                     configuration.PotSoundEffect = effectId;
                     saveConfiguration();
+                    playChatSoundEffect(effectId);
                 }
 
                 ImGui.EndMenu();
             }
-
-            if (ImGui.MenuItem($"{T("Test sound", "試聴")}###pot-sound-test"))
-                playChatSoundEffect(selectedEffect);
 
             ImGui.EndMenu();
         }
