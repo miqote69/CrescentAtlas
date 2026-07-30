@@ -131,7 +131,12 @@ public sealed class AtlasWindow : Window, IDisposable
         var canvasMinimum = ImGui.GetCursorScreenPos();
         ImGui.Dummy(canvasSize);
         UpdateMapZoom(canvasMinimum, canvasSize);
-        DrawField(canvasMinimum, canvasSize, visibleMarkers, dataSource.PlayerPosition);
+        DrawField(
+            canvasMinimum,
+            canvasSize,
+            visibleMarkers,
+            dataSource.PlayerPosition,
+            dataSource.PlayerRotation);
     }
 
     private void UpdateMapZoom(Vector2 canvasMinimum, Vector2 canvasSize)
@@ -207,7 +212,8 @@ public sealed class AtlasWindow : Window, IDisposable
         Vector2 canvasMinimum,
         Vector2 canvasSize,
         IReadOnlyList<AtlasMarker> markers,
-        Vector3? playerPosition)
+        Vector3? playerPosition,
+        float? playerRotation)
     {
         var canvasMaximum = canvasMinimum + canvasSize;
         var drawList = ImGui.GetWindowDrawList();
@@ -252,7 +258,7 @@ public sealed class AtlasWindow : Window, IDisposable
             DrawMarker(drawList, project(marker.Position), marker);
 
         if (playerPosition is { } position)
-            DrawPlayer(drawList, project(position));
+            DrawPlayer(drawList, project(position), playerRotation);
         else
             DrawMissingPlayerNotice(drawList, canvasMinimum);
 
@@ -415,16 +421,35 @@ public sealed class AtlasWindow : Window, IDisposable
 
     }
 
-    private static void DrawPlayer(ImDrawListPtr drawList, Vector2 point)
+    private static void DrawPlayer(ImDrawListPtr drawList, Vector2 point, float? rotation)
     {
-        var color = ImGui.GetColorU32(MarkerColor(AtlasMarkerKind.Player));
-        var shadow = ImGui.GetColorU32(new Vector4(0.02f, 0.03f, 0.04f, 0.85f));
-        var top = point + new Vector2(0.0f, -8.0f);
-        var left = point + new Vector2(-6.0f, 7.0f);
-        var right = point + new Vector2(6.0f, 7.0f);
+        var angle = rotation ?? 0.0f;
+        var forward = new Vector2(MathF.Sin(angle), MathF.Cos(angle));
+        var right = new Vector2(forward.Y, -forward.X);
+        var shadow = ImGui.GetColorU32(new Vector4(0.01f, 0.02f, 0.03f, 0.92f));
+        var border = ImGui.GetColorU32(new Vector4(0.98f, 0.98f, 1.00f, 1.0f));
+        var fill = ImGui.GetColorU32(new Vector4(1.00f, 0.76f, 0.18f, 1.0f));
 
-        drawList.AddCircleFilled(point, 10.0f, shadow);
-        drawList.AddTriangleFilled(top, right, left, color);
+        var outerTip = point + (forward * 14.0f);
+        var outerBack = point - (forward * 8.0f);
+        var outerLeft = outerBack - (right * 8.5f);
+        var outerRight = outerBack + (right * 8.5f);
+        drawList.AddCircleFilled(point - (forward * 2.0f), 9.5f, shadow);
+        drawList.AddTriangleFilled(outerTip, outerRight, outerLeft, shadow);
+
+        var borderTip = point + (forward * 12.0f);
+        var borderBack = point - (forward * 6.5f);
+        var borderLeft = borderBack - (right * 7.0f);
+        var borderRight = borderBack + (right * 7.0f);
+        drawList.AddCircleFilled(point - (forward * 1.5f), 7.5f, border);
+        drawList.AddTriangleFilled(borderTip, borderRight, borderLeft, border);
+
+        var fillTip = point + (forward * 9.5f);
+        var fillBack = point - (forward * 4.5f);
+        var fillLeft = fillBack - (right * 4.8f);
+        var fillRight = fillBack + (right * 4.8f);
+        drawList.AddCircleFilled(point - forward, 5.2f, fill);
+        drawList.AddTriangleFilled(fillTip, fillRight, fillLeft, fill);
     }
 
     private static void DrawDiamond(ImDrawListPtr drawList, Vector2 point, float radius, uint color)

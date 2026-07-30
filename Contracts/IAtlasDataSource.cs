@@ -8,5 +8,7 @@ public interface IAtlasDataSource
 
     Vector3? PlayerPosition { get; }
 
+    float? PlayerRotation { get; }
+
     IReadOnlyList<AtlasMarker> GetMarkers();
 }

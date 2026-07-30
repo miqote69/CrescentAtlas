@@ -13,13 +13,19 @@ public sealed class MutableAtlasDataSource : IAtlasDataSource
 
     public Vector3? PlayerPosition { get; private set; }
 
+    public float? PlayerRotation { get; private set; }
+
     public IReadOnlyList<AtlasMarker> GetMarkers()
     {
         lock (sync)
             return markers.Values.ToArray();
     }
 
-    public void SetContext(uint territoryId, string territoryName, Vector3? playerPosition)
+    public void SetContext(
+        uint territoryId,
+        string territoryName,
+        Vector3? playerPosition,
+        float? playerRotation)
     {
         lock (sync)
         {
@@ -29,13 +35,17 @@ public sealed class MutableAtlasDataSource : IAtlasDataSource
             TerritoryId = territoryId;
             TerritoryName = territoryName;
             PlayerPosition = playerPosition;
+            PlayerRotation = playerRotation;
         }
     }
 
-    public void SetPlayerPosition(Vector3? playerPosition)
+    public void SetPlayerState(Vector3? playerPosition, float? playerRotation)
     {
         lock (sync)
+        {
             PlayerPosition = playerPosition;
+            PlayerRotation = playerRotation;
+        }
     }
 
     public void ReplaceSource(AtlasMarkerKind kind, IEnumerable<AtlasMarker> replacement)

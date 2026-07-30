@@ -19,6 +19,8 @@ movement, interaction, or combat and never uploads observations.
 - Draws a bright direct line and distance from the player to loaded treasures
   within 120 yalms, both on the dedicated atlas and over the game view.
 - Updates guide-line player tracking every rendered frame for smooth movement.
+- Draws an FFXIV-style player arrow that rotates with the character's live
+  facing direction.
 - Always highlights the nearest known treasure candidate with an orange guide
   line, even when no treasure is currently present at that spot.
 - Emphasizes treasure candidate points with bright filled markers and rings.

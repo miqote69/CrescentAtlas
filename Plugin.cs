@@ -172,7 +172,8 @@ public sealed class Plugin : IDalamudPlugin
     {
         // Keep display-only guides tied to the live per-frame position. The
         // heavier scanners remain throttled by PollInterval below.
-        atlasData.SetPlayerPosition(ObjectTable.LocalPlayer?.Position);
+        var localPlayer = ObjectTable.LocalPlayer;
+        atlasData.SetPlayerState(localPlayer?.Position, localPlayer?.Rotation);
 
         var now = DateTimeOffset.UtcNow;
         if (now < nextPollUtc)
@@ -191,13 +192,18 @@ public sealed class Plugin : IDalamudPlugin
 
     private void Poll(DateTimeOffset now)
     {
+        var localPlayer = ObjectTable.LocalPlayer;
         var active = OccultCrescentContext.IsActive();
         if (!active)
         {
             if (wasActive)
                 ResetTerritoryState();
             wasActive = false;
-            atlasData.SetContext(ClientState.TerritoryType, crescentContext.TerritoryName, ObjectTable.LocalPlayer?.Position);
+            atlasData.SetContext(
+                ClientState.TerritoryType,
+                crescentContext.TerritoryName,
+                localPlayer?.Position,
+                localPlayer?.Rotation);
             return;
         }
 
@@ -206,7 +212,7 @@ public sealed class Plugin : IDalamudPlugin
         var territoryId = crescentContext.TerritoryId;
         var territoryName = crescentContext.TerritoryName;
         var instanceKey = $"territory-{territoryId}";
-        atlasData.SetContext(territoryId, territoryName, ObjectTable.LocalPlayer?.Position);
+        atlasData.SetContext(territoryId, territoryName, localPlayer?.Position, localPlayer?.Rotation);
 
         if (scannedTerritoryId != territoryId && now >= nextLayoutScanUtc)
         {
@@ -384,7 +390,7 @@ public sealed class Plugin : IDalamudPlugin
         previousCarrotKeys.Clear();
         fateDetector.Reset();
         potPredictionTracker.ResetAll();
-        atlasData.SetContext(0, string.Empty, null);
+        atlasData.SetContext(0, string.Empty, null, null);
     }
 
     private static bool ParseToggle(string? value, bool current)
