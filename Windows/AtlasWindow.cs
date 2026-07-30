@@ -42,7 +42,7 @@ public sealed class AtlasWindow : Window, IDisposable
         new(AtlasMarkerKind.Carrot, "Carrot", new Vector4(1.00f, 0.55f, 0.18f, 1.0f)),
         new(AtlasMarkerKind.Fate, "FATE", new Vector4(0.78f, 0.42f, 1.00f, 1.0f), LegendStyle.LiveGameIcon),
         new(AtlasMarkerKind.CriticalEncounter, "Critical encounter", new Vector4(1.00f, 0.24f, 0.31f, 1.0f), LegendStyle.LiveGameIcon),
-        new(AtlasMarkerKind.PotFate, "Magic pot", new Vector4(1.00f, 0.83f, 0.25f, 1.0f)),
+        new(AtlasMarkerKind.PotFate, "Magic pot", new Vector4(1.00f, 0.83f, 0.25f, 1.0f), LegendStyle.LiveGameIcon),
         new(AtlasMarkerKind.PotPrediction, "Magic pot prediction", new Vector4(1.00f, 0.72f, 0.08f, 1.0f), LegendStyle.PotPrediction),
         new(AtlasMarkerKind.PotChest, "Pot chest", new Vector4(0.45f, 1.00f, 0.48f, 1.0f)),
     ];
@@ -502,7 +502,9 @@ public sealed class AtlasWindow : Window, IDisposable
         var packedColor = ImGui.GetColorU32(color);
         var radius = marker.Kind == AtlasMarkerKind.TreasureCandidate ? MarkerRadius + 1.5f : MarkerRadius;
 
-        if (marker.Kind is AtlasMarkerKind.Fate or AtlasMarkerKind.CriticalEncounter
+        if (marker.Kind is AtlasMarkerKind.Fate
+                or AtlasMarkerKind.CriticalEncounter
+                or AtlasMarkerKind.PotFate
             && marker.IconId != 0
             && TryDrawGameIcon(drawList, point, marker.IconId))
         {
