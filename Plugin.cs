@@ -19,6 +19,7 @@ public sealed class Plugin : IDalamudPlugin
     private const string CommandName = "/catlas";
     private const string NorthHornInstanceKey = "territory-1346";
     private const float TreasureCandidateCheckRadius = 70.0f;
+    private const float TreasureCandidateObjectMatchRadius = 12.0f;
     private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(500);
     private static readonly TimeSpan FlushInterval = TimeSpan.FromSeconds(30);
     private static readonly PotObservation[] LearnedNorthHornPotObservations =
@@ -332,9 +333,11 @@ public sealed class Plugin : IDalamudPlugin
         atlasData.ReplaceSource(AtlasMarkerKind.ActiveTreasure, treasures);
         atlasData.ReplaceSource(AtlasMarkerKind.Carrot, carrots);
         if (localPlayer is not null)
-            atlasData.MarkNearbyTreasureCandidatesChecked(
+            atlasData.MarkAbsentNearbyTreasureCandidatesChecked(
                 localPlayer.Position,
-                TreasureCandidateCheckRadius);
+                TreasureCandidateCheckRadius,
+                treasures,
+                TreasureCandidateObjectMatchRadius);
         NotifyNewObjects(treasures, carrots);
 
         PollFates(territoryId, territoryName, instanceKey, now, entering);

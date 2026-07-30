@@ -56,16 +56,24 @@ public sealed class MutableAtlasDataSource : IAtlasDataSource
             PotPrediction = prediction;
     }
 
-    public void MarkNearbyTreasureCandidatesChecked(Vector3 playerPosition, float radius)
+    public void MarkAbsentNearbyTreasureCandidatesChecked(
+        Vector3 playerPosition,
+        float visibilityRadius,
+        IReadOnlyCollection<AtlasMarker> visibleTreasures,
+        float objectMatchRadius)
     {
-        var radiusSquared = radius * radius;
+        var visibilityRadiusSquared = visibilityRadius * visibilityRadius;
+        var objectMatchRadiusSquared = objectMatchRadius * objectMatchRadius;
         lock (sync)
         {
             foreach (var key in markers
                          .Where(pair =>
                              pair.Value.Kind == AtlasMarkerKind.TreasureCandidate
                              && !pair.Value.IsChecked
-                             && HorizontalDistanceSquared(playerPosition, pair.Value.Position) <= radiusSquared)
+                             && HorizontalDistanceSquared(playerPosition, pair.Value.Position) <= visibilityRadiusSquared
+                             && !visibleTreasures.Any(treasure =>
+                                 HorizontalDistanceSquared(treasure.Position, pair.Value.Position)
+                                 <= objectMatchRadiusSquared))
                          .Select(pair => pair.Key)
                          .ToArray())
             {
