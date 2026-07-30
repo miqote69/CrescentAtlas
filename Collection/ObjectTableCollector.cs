@@ -25,6 +25,11 @@ public sealed record ObjectTableCollectionOptions
     public IReadOnlySet<uint> SilverTreasureDataIds { get; init; } = new HashSet<uint>();
 
     /// <summary>
+    /// Event-object Data IDs confirmed to represent Magic Pot reward coffers.
+    /// </summary>
+    public IReadOnlySet<uint> PotChestDataIds { get; init; } = new HashSet<uint>();
+
+    /// <summary>
     /// Optional game-version-specific classifier. It runs only for EventObj objects.
     /// </summary>
     public Func<IGameObject, bool>? CarrotPredicate { get; init; }
@@ -63,7 +68,7 @@ public sealed class ObjectTableCollector(
             AtlasMarker? marker = gameObject.ObjectKind switch
             {
                 ObjectKind.Treasure => CreateTreasureMarker(gameObject, territoryId, observedAt),
-                ObjectKind.EventObj => CreateCarrotCandidateMarker(gameObject, territoryId, observedAt),
+                ObjectKind.EventObj => CreateEventObjectMarker(gameObject, territoryId, observedAt),
                 _ => null,
             };
 
@@ -113,13 +118,34 @@ public sealed class ObjectTableCollector(
             TreasureType: treasureType);
     }
 
-    private AtlasMarker? CreateCarrotCandidateMarker(
+    private AtlasMarker? CreateEventObjectMarker(
         IGameObject gameObject,
         uint territoryId,
         DateTimeOffset observedAt)
     {
         var dataId = gameObject.BaseId;
         var eventId = TryReadEventId(gameObject);
+        if (options.PotChestDataIds.Contains(dataId))
+        {
+            var potChestKey = ObservationIdentity.PositionKey(
+                territoryId,
+                "pot-chest",
+                dataId,
+                eventId,
+                gameObject.Position);
+            return new AtlasMarker(
+                potChestKey,
+                AtlasMarkerKind.PotChest,
+                DisplayName(gameObject, "Magic Pot gold chest"),
+                gameObject.Position,
+                observedAt,
+                IsActive: true,
+                territoryId,
+                dataId,
+                eventId,
+                TreasureType: "gold");
+        }
+
         var confirmed = options.CarrotDataIds.Contains(dataId)
                         || options.CarrotEventIds.Contains(eventId)
                         || options.CarrotPredicate?.Invoke(gameObject) == true;
@@ -152,11 +178,13 @@ public sealed class ObjectTableCollector(
             SessionId = string.Empty,
             ObservedAtUtc = marker.ObservedAtUtc,
             Source = ObservationSource.ObjectTable,
-            Kind = marker.Kind == AtlasMarkerKind.ActiveTreasure
-                ? "active-treasure"
-                : marker.Label.Contains("candidate", StringComparison.OrdinalIgnoreCase)
-                    ? "carrot-candidate"
-                    : "carrot",
+            Kind = marker.Kind switch
+            {
+                AtlasMarkerKind.ActiveTreasure => "active-treasure",
+                AtlasMarkerKind.PotChest => "pot-chest",
+                _ when marker.Label.Contains("candidate", StringComparison.OrdinalIgnoreCase) => "carrot-candidate",
+                _ => "carrot",
+            },
             Key = marker.Key,
             TerritoryId = marker.TerritoryId,
             TerritoryName = territoryName,
@@ -180,6 +208,8 @@ public sealed class ObjectTableCollector(
         };
         if (!string.IsNullOrWhiteSpace(marker.TreasureType))
             properties["cofferType"] = marker.TreasureType;
+        if (marker.Kind == AtlasMarkerKind.PotChest)
+            properties["rewardSource"] = "magic-pot";
         return properties;
     }
 
