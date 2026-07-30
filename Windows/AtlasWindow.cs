@@ -359,7 +359,13 @@ public sealed class AtlasWindow : Window, IDisposable
         DrawNearbyTreasureLines(drawList, project, markers, playerPosition);
 
         foreach (var marker in markers.Where(marker => marker.Kind != AtlasMarkerKind.Player))
-            DrawMarker(drawList, project(marker.Position), marker);
+            DrawMarker(
+                drawList,
+                project(marker.Position),
+                marker,
+                true,
+                canvasMinimum,
+                canvasMaximum);
 
         if (dataSource.PotPrediction is { } potPrediction)
             DrawPotPrediction(drawList, project(potPrediction.PredictedPosition), potPrediction);
@@ -506,7 +512,9 @@ public sealed class AtlasWindow : Window, IDisposable
         ImDrawListPtr drawList,
         Vector2 point,
         AtlasMarker marker,
-        bool drawEventStatus = true)
+        bool drawEventStatus = true,
+        Vector2? clipMinimum = null,
+        Vector2? clipMaximum = null)
     {
         var isSilverTreasure = marker.Kind == AtlasMarkerKind.TreasureCandidate
                                && marker.TreasureType.Equals("silver", StringComparison.OrdinalIgnoreCase);
@@ -532,7 +540,7 @@ public sealed class AtlasWindow : Window, IDisposable
             && TryDrawGameIcon(drawList, point, marker.IconId))
         {
             if (drawEventStatus)
-                DrawEventStatus(drawList, point, marker);
+                DrawEventStatus(drawList, point, marker, clipMinimum, clipMaximum);
             return;
         }
 
@@ -575,10 +583,15 @@ public sealed class AtlasWindow : Window, IDisposable
         }
 
         if (drawEventStatus)
-            DrawEventStatus(drawList, point, marker);
+            DrawEventStatus(drawList, point, marker, clipMinimum, clipMaximum);
     }
 
-    private static void DrawEventStatus(ImDrawListPtr drawList, Vector2 point, AtlasMarker marker)
+    private static void DrawEventStatus(
+        ImDrawListPtr drawList,
+        Vector2 point,
+        AtlasMarker marker,
+        Vector2? clipMinimum,
+        Vector2? clipMaximum)
     {
         if (marker.Kind is not (AtlasMarkerKind.Fate
             or AtlasMarkerKind.CriticalEncounter
@@ -587,6 +600,7 @@ public sealed class AtlasWindow : Window, IDisposable
             return;
         }
 
+        var hasRemainingTime = marker.TimeRemainingSeconds >= 0;
         var remainingSeconds = Math.Max(0, marker.TimeRemainingSeconds);
         var minutes = remainingSeconds / 60;
         var seconds = remainingSeconds % 60;
@@ -598,7 +612,9 @@ public sealed class AtlasWindow : Window, IDisposable
             }
             : "残り";
         var nameLine = CompactMarkerLabel(marker.Label, 18);
-        var timeLine = $"{timeLabel} {minutes:00}:{seconds:00}";
+        var timeLine = hasRemainingTime
+            ? $"{timeLabel} {minutes:00}:{seconds:00}"
+            : $"{timeLabel} --:--";
         var progressLine = $"進捗 {Math.Clamp(marker.Progress, (byte)0, (byte)100)}%";
         var nameLineSize = ImGui.CalcTextSize(nameLine);
         var timeLineSize = ImGui.CalcTextSize(timeLine);
@@ -607,8 +623,27 @@ public sealed class AtlasWindow : Window, IDisposable
         var textSize = new Vector2(
             Math.Max(nameLineSize.X, Math.Max(timeLineSize.X, progressLineSize.X)),
             lineHeight * 3.0f);
-        var textPosition = point + new Vector2(-(textSize.X * 0.5f), 15.0f);
         var padding = new Vector2(4.0f, 3.0f);
+        var textPosition = point + new Vector2(-(textSize.X * 0.5f), 15.0f);
+        if (clipMinimum is { } minimum && clipMaximum is { } maximum)
+        {
+            var lowerEdge = textPosition.Y + textSize.Y + padding.Y;
+            if (lowerEdge > maximum.Y - 2.0f)
+                textPosition.Y = point.Y - 15.0f - textSize.Y;
+
+            textPosition.X = Math.Clamp(
+                textPosition.X,
+                minimum.X + padding.X + 2.0f,
+                Math.Max(
+                    minimum.X + padding.X + 2.0f,
+                    maximum.X - textSize.X - padding.X - 2.0f));
+            textPosition.Y = Math.Clamp(
+                textPosition.Y,
+                minimum.Y + padding.Y + 2.0f,
+                Math.Max(
+                    minimum.Y + padding.Y + 2.0f,
+                    maximum.Y - textSize.Y - padding.Y - 2.0f));
+        }
         var background = marker.Kind == AtlasMarkerKind.CriticalEncounter
                          && marker.EventState is "Register" or "Warmup"
             ? new Vector4(0.20f, 0.13f, 0.02f, 0.88f)

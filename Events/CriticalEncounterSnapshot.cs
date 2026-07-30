@@ -5,7 +5,7 @@ public sealed record CriticalEncounterSnapshot(
     string Name,
     Vector3 Position,
     string State,
-    uint SecondsLeft,
+    long SecondsLeft,
     byte Progress,
     byte Participants,
     uint IconId = 0);
