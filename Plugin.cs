@@ -93,6 +93,10 @@ public sealed class Plugin : IDalamudPlugin
 
             SeedLearnedPotObservations();
             BootstrapDiagnostics.Write("Magic Pot seed initialized");
+            silverTreasureDataIds.UnionWith(
+                ConfirmedSilverTreasureSpots.NorthHorn.Select(spot => spot.DataId));
+            BootstrapDiagnostics.Write(
+                $"confirmed silver treasure spots initialized; count={silverTreasureDataIds.Count}");
             observationStore = new ObservationStore(PluginInterface);
             BootstrapDiagnostics.Write($"observation store initialized; session={observationStore.SessionId}");
             crescentContext = new OccultCrescentContext(ClientState, DataManager, Log);
