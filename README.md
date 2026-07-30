@@ -28,8 +28,12 @@ movement, interaction, or combat and never uploads observations.
 - Tracks the current field-entry route: treasure candidates become checked
   after the player comes within 35 yalms, with unchecked points shown in cyan
   and checked points in green.
+- Marks fixed silver-coffer points with a separate silver diamond and records
+  discovered silver treasures with `cofferType: silver`.
 - Emphasizes treasure candidate points with bright filled markers and rings.
 - Reads active FATEs through Dalamud's public `IFateTable` API.
+- Draws active FATE and Critical Encounter markers with their native game map
+  icons when the client exposes a valid icon ID.
 - Reads active Critical Encounters through a read-only, fail-closed client view.
 - Records Event Objects as discovery candidates so carrot IDs can be confirmed
   from live North Horn sessions.

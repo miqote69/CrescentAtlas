@@ -34,7 +34,8 @@ public sealed unsafe class DynamicEventSnapshotSource : ICriticalEncounterSnapsh
                     dynamicEvent.State.ToString(),
                     dynamicEvent.SecondsLeft,
                     dynamicEvent.Progress,
-                    dynamicEvent.Participants));
+                    dynamicEvent.Participants,
+                    dynamicEvent.MapMarker.IconId));
             }
 
             encounters = result;

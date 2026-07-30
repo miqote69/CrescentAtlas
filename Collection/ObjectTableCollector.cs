@@ -20,6 +20,11 @@ public sealed record ObjectTableCollectionOptions
     public IReadOnlySet<uint> CarrotEventIds { get; init; } = new HashSet<uint>();
 
     /// <summary>
+    /// Treasure Base IDs identified by the active layout as fixed silver-coffer points.
+    /// </summary>
+    public IReadOnlySet<uint> SilverTreasureDataIds { get; init; } = new HashSet<uint>();
+
+    /// <summary>
     /// Optional game-version-specific classifier. It runs only for EventObj objects.
     /// </summary>
     public Func<IGameObject, bool>? CarrotPredicate { get; init; }
@@ -77,12 +82,13 @@ public sealed class ObjectTableCollector(
             .ToArray();
     }
 
-    private static AtlasMarker CreateTreasureMarker(
+    private AtlasMarker CreateTreasureMarker(
         IGameObject gameObject,
         uint territoryId,
         DateTimeOffset observedAt)
     {
         var dataId = gameObject.BaseId;
+        var treasureType = options.SilverTreasureDataIds.Contains(dataId) ? "silver" : string.Empty;
         var key = ObservationIdentity.PositionKey(
             territoryId,
             "active-treasure",
@@ -98,7 +104,8 @@ public sealed class ObjectTableCollector(
             observedAt,
             IsActive: true,
             territoryId,
-            dataId);
+            dataId,
+            TreasureType: treasureType);
     }
 
     private AtlasMarker? CreateCarrotCandidateMarker(
@@ -155,13 +162,21 @@ public sealed class ObjectTableCollector(
             Y = marker.Position.Y,
             Z = marker.Position.Z,
             IsActive = marker.IsActive,
-            Properties = new Dictionary<string, string>
-            {
-                ["objectKind"] = marker.Kind == AtlasMarkerKind.ActiveTreasure
-                    ? nameof(ObjectKind.Treasure)
-                    : nameof(ObjectKind.EventObj),
-            },
+            Properties = BuildProperties(marker),
         };
+
+    private static Dictionary<string, string> BuildProperties(AtlasMarker marker)
+    {
+        var properties = new Dictionary<string, string>
+        {
+            ["objectKind"] = marker.Kind == AtlasMarkerKind.ActiveTreasure
+                ? nameof(ObjectKind.Treasure)
+                : nameof(ObjectKind.EventObj),
+        };
+        if (!string.IsNullOrWhiteSpace(marker.TreasureType))
+            properties["cofferType"] = marker.TreasureType;
+        return properties;
+    }
 
     private static string DisplayName(IGameObject gameObject, string fallback)
     {

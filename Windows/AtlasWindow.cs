@@ -1,5 +1,6 @@
 using CrescentAtlas.Contracts;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Textures;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
@@ -28,12 +29,14 @@ public sealed class AtlasWindow : Window, IDisposable
     private static readonly Vector4 GridColor = new(0.28f, 0.34f, 0.39f, 0.23f);
     private static readonly Vector4 BorderColor = new(0.55f, 0.64f, 0.69f, 0.62f);
     private static readonly Vector4 CheckedTreasureColor = new(0.30f, 1.00f, 0.42f, 1.0f);
+    private static readonly Vector4 SilverTreasureColor = new(0.88f, 0.94f, 1.00f, 1.0f);
 
     private static readonly LegendEntry[] Legend =
     [
         new(AtlasMarkerKind.Player, "Player", new Vector4(0.96f, 0.96f, 1.00f, 1.0f)),
         new(AtlasMarkerKind.TreasureCandidate, "Unchecked treasure", new Vector4(0.20f, 0.92f, 1.00f, 1.0f)),
         new(AtlasMarkerKind.TreasureCandidate, "Checked treasure", CheckedTreasureColor),
+        new(AtlasMarkerKind.TreasureCandidate, "Silver treasure", SilverTreasureColor),
         new(AtlasMarkerKind.ActiveTreasure, "Active treasure", new Vector4(0.26f, 0.92f, 1.00f, 1.0f)),
         new(AtlasMarkerKind.Carrot, "Carrot", new Vector4(1.00f, 0.55f, 0.18f, 1.0f)),
         new(AtlasMarkerKind.Fate, "FATE", new Vector4(0.78f, 0.42f, 1.00f, 1.0f)),
@@ -415,8 +418,10 @@ public sealed class AtlasWindow : Window, IDisposable
         }
     }
 
-    private static void DrawMarker(ImDrawListPtr drawList, Vector2 point, AtlasMarker marker)
+    private void DrawMarker(ImDrawListPtr drawList, Vector2 point, AtlasMarker marker)
     {
+        var isSilverTreasure = marker.Kind == AtlasMarkerKind.TreasureCandidate
+                               && marker.TreasureType.Equals("silver", StringComparison.OrdinalIgnoreCase);
         var color = marker.Kind == AtlasMarkerKind.TreasureCandidate && marker.IsChecked
             ? CheckedTreasureColor
             : MarkerColor(marker.Kind);
@@ -426,6 +431,13 @@ public sealed class AtlasWindow : Window, IDisposable
         var packedColor = ImGui.GetColorU32(color);
         var radius = marker.Kind == AtlasMarkerKind.TreasureCandidate ? MarkerRadius + 1.5f : MarkerRadius;
 
+        if (marker.Kind is AtlasMarkerKind.Fate or AtlasMarkerKind.CriticalEncounter
+            && marker.IconId != 0
+            && TryDrawGameIcon(drawList, point, marker.IconId))
+        {
+            return;
+        }
+
         if (marker.Kind == AtlasMarkerKind.TreasureCandidate)
         {
             var shadowColor = ImGui.GetColorU32(new Vector4(0.01f, 0.04f, 0.06f, 0.92f));
@@ -433,6 +445,8 @@ public sealed class AtlasWindow : Window, IDisposable
             drawList.AddCircleFilled(point, radius + 2.5f, shadowColor);
             drawList.AddCircleFilled(point, radius, packedColor);
             drawList.AddCircle(point, radius + 3.5f, ringColor, 0, 2.0f);
+            if (isSilverTreasure)
+                DrawDiamond(drawList, point, radius - 1.0f, ImGui.GetColorU32(SilverTreasureColor));
             if (marker.IsChecked)
             {
                 var checkColor = ImGui.GetColorU32(new Vector4(0.03f, 0.12f, 0.05f, 1.0f));
@@ -449,6 +463,27 @@ public sealed class AtlasWindow : Window, IDisposable
             drawList.AddCircleFilled(point, radius, packedColor);
         }
 
+    }
+
+    private bool TryDrawGameIcon(ImDrawListPtr drawList, Vector2 point, uint iconId)
+    {
+        try
+        {
+            var texture = textureProvider.GetFromGameIcon(new GameIconLookup(iconId)).GetWrapOrEmpty();
+            if (texture.Width <= 1 || texture.Height <= 1)
+                return false;
+
+            const float halfSize = 13.0f;
+            var minimum = point - new Vector2(halfSize);
+            var maximum = point + new Vector2(halfSize);
+            drawList.AddCircleFilled(point, halfSize + 2.0f, ImGui.GetColorU32(new Vector4(0.02f, 0.02f, 0.03f, 0.92f)));
+            drawList.AddImage(texture.Handle, minimum, maximum);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private static void DrawPotPrediction(

@@ -49,6 +49,7 @@ public sealed class Plugin : IDalamudPlugin
 
     private readonly Configuration configuration;
     private readonly ObservationStore observationStore;
+    private readonly HashSet<uint> silverTreasureDataIds = [];
     private readonly MutableAtlasDataSource atlasData = new();
     private readonly OccultCrescentContext crescentContext;
     private readonly LayoutTreasureCandidateScanner layoutScanner;
@@ -94,6 +95,7 @@ public sealed class Plugin : IDalamudPlugin
             {
                 CarrotDataIds = configuration.ConfirmedCarrotDataIds,
                 CarrotEventIds = configuration.ConfirmedCarrotEventIds,
+                SilverTreasureDataIds = silverTreasureDataIds,
                 IncludeUnclassifiedEventObjects = true,
             });
         fateSource = new DalamudFateSnapshotSource(FateTable);
@@ -240,6 +242,9 @@ public sealed class Plugin : IDalamudPlugin
                 now,
                 out var candidateObservations);
             atlasData.ReplaceSource(AtlasMarkerKind.TreasureCandidate, candidates);
+            foreach (var candidate in candidates.Where(candidate =>
+                         candidate.TreasureType.Equals("silver", StringComparison.OrdinalIgnoreCase)))
+                silverTreasureDataIds.Add(candidate.DataId);
             if (configuration.CollectionEnabled)
                 RecordAll(candidateObservations);
             if (candidates.Count > 0)
@@ -291,7 +296,8 @@ public sealed class Plugin : IDalamudPlugin
             now,
             true,
             territoryId,
-            EventId: fate.FateId)).ToArray();
+            EventId: fate.FateId,
+            IconId: ResolveFateMapIcon(fate.FateId))).ToArray();
         atlasData.ReplaceSource(AtlasMarkerKind.Fate, markers.Where(marker => marker.Kind == AtlasMarkerKind.Fate));
         atlasData.ReplaceSource(AtlasMarkerKind.PotFate, markers.Where(marker => marker.Kind == AtlasMarkerKind.PotFate));
 
@@ -338,7 +344,8 @@ public sealed class Plugin : IDalamudPlugin
                 now,
                 true,
                 territoryId,
-                EventId: encounter.EventId));
+                EventId: encounter.EventId,
+                IconId: encounter.IconId));
             atlasData.ReplaceSource(AtlasMarkerKind.CriticalEncounter, markers);
         }
 
@@ -354,6 +361,20 @@ public sealed class Plugin : IDalamudPlugin
         {
             foreach (var observation in batch.Observations)
                 ChatGui.Print($"[Crescent Atlas] Critical Encounter: {observation.Name}");
+        }
+    }
+
+    private static uint ResolveFateMapIcon(ushort fateId)
+    {
+        try
+        {
+            if (!DataManager.GetExcelSheet<Lumina.Excel.Sheets.Fate>().TryGetRow(fateId, out var row))
+                return 0;
+            return row.MapIcon != 0 ? row.MapIcon : row.Icon;
+        }
+        catch
+        {
+            return 0;
         }
     }
 

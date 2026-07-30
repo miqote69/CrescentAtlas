@@ -73,7 +73,8 @@ public sealed class LayoutTreasureCandidateScanner(IDataManager dataManager, IPl
                     observedAtUtc,
                     false,
                     territoryId,
-                    treasureRowId));
+                    treasureRowId,
+                    TreasureType: type));
 
                 records.Add(new ObservationRecord
                 {

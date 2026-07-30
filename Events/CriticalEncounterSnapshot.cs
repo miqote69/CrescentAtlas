@@ -7,7 +7,8 @@ public sealed record CriticalEncounterSnapshot(
     string State,
     uint SecondsLeft,
     byte Progress,
-    byte Participants);
+    byte Participants,
+    uint IconId = 0);
 
 public interface ICriticalEncounterSnapshotSource
 {
