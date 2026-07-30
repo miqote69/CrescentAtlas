@@ -32,6 +32,18 @@ Assert(advanced.PredictedPosition == secondPosition, "advanced prediction altern
 
 var isolated = tracker.GetPrediction("instance-b");
 Assert(isolated.Confidence == PotPredictionConfidence.Unknown, "instances remain isolated");
+var newIslandPrediction = tracker.GetUpcomingPrediction("island-visit:new", origin);
+Assert(
+    newIslandPrediction.Confidence == PotPredictionConfidence.Unknown,
+    "a new island has no prediction before its first live observation");
+var firstNewIslandObservation = tracker.Observe(new PotObservation(
+    "island-visit:new",
+    origin.AddMinutes(5),
+    100,
+    firstPosition));
+Assert(
+    firstNewIslandObservation.Confidence == PotPredictionConfidence.Provisional,
+    "a new island unlocks a provisional prediction after one live observation");
 
 var missedTracker = new PotPredictionTracker();
 missedTracker.Observe(new PotObservation("missed", origin, 100, firstPosition));
@@ -167,9 +179,11 @@ try
 {
     var entry = origin.AddHours(1);
     var firstInstance = new OccultCrescentInstanceSnapshot("0xABC", 10_800);
+    string firstVisitId;
     using (var visits = new IslandVisitStore(visitRoot))
     {
         var started = visits.StartOrResume(1346, "North Horn", entry, firstInstance);
+        firstVisitId = started.VisitId;
         Assert(started.ExitedAtUtc is null, "new visit starts active");
         Assert(started.IslandKey.Contains("expires-", StringComparison.Ordinal), "countdown forms island key");
         visits.Touch(entry.AddMinutes(1), new OccultCrescentInstanceSnapshot("0xABC", 10_740));
@@ -185,6 +199,7 @@ try
             new OccultCrescentInstanceSnapshot("0xDEF", 10_680));
         Assert(resumedStore.GetVisitsDescending().Count == 1, "plugin reload resumes same live island visit");
         Assert(resumed.EnteredAtUtc == entry, "resumed visit retains original entry time");
+        Assert(resumed.VisitId == firstVisitId, "same live island retains its pot prediction scope");
         resumedStore.EndVisit(entry.AddMinutes(12));
         resumedStore.Flush();
     }
@@ -192,6 +207,18 @@ try
     using var reloadedStore = new IslandVisitStore(visitRoot);
     var completed = reloadedStore.GetVisitsDescending().Single();
     Assert(completed.ExitedAtUtc == entry.AddMinutes(12), "exit time persists");
+
+    var changedRoot = Path.Combine(visitRoot, "changed");
+    using var changedStore = new IslandVisitStore(changedRoot);
+    var previousIsland = changedStore.StartOrResume(1346, "North Horn", entry, firstInstance);
+    var differentIsland = changedStore.StartOrResume(
+        1346,
+        "North Horn",
+        entry.AddMinutes(1),
+        new OccultCrescentInstanceSnapshot("0xDEF", 3_600));
+    Assert(
+        differentIsland.VisitId != previousIsland.VisitId,
+        "a different island receives a fresh pot prediction scope");
 
     var orphanRoot = Path.Combine(visitRoot, "orphan");
     using var orphanStore = new IslandVisitStore(orphanRoot);

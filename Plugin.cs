@@ -17,26 +17,12 @@ namespace CrescentAtlas;
 public sealed class Plugin : IDalamudPlugin
 {
     private const string CommandName = "/catlas";
-    private const string NorthHornInstanceKey = "territory-1346";
+    private const string LegacyNorthHornInstanceKey = "territory-1346";
     private const float TreasureCandidateCheckRadius = 70.0f;
     private const float TreasureCandidateObjectMatchRadius = 12.0f;
     private static readonly HashSet<uint> MagicPotEventIds = [2072, 2073];
     private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(500);
     private static readonly TimeSpan FlushInterval = TimeSpan.FromSeconds(30);
-    private static readonly PotObservation[] LearnedNorthHornPotObservations =
-    [
-        new(
-            NorthHornInstanceKey,
-            new DateTimeOffset(2026, 7, 30, 3, 16, 5, 206, TimeSpan.Zero),
-            2072,
-            new Vector3(233.0f, 7.729229f, -470.0f)),
-        new(
-            NorthHornInstanceKey,
-            new DateTimeOffset(2026, 7, 30, 3, 46, 9, 584, TimeSpan.Zero),
-            2073,
-            new Vector3(-505.2822f, 53.14409f, 244.041f)),
-    ];
-
     [PluginService] private static IDalamudPluginInterface PluginInterface { get; set; } = null!;
     [PluginService] private static ICommandManager CommandManager { get; set; } = null!;
     [PluginService] private static IFramework Framework { get; set; } = null!;
@@ -97,8 +83,6 @@ public sealed class Plugin : IDalamudPlugin
                 SaveConfiguration();
             }
 
-            SeedLearnedPotObservations();
-            BootstrapDiagnostics.Write("Magic Pot seed initialized");
             silverTreasureDataIds.UnionWith(
                 ConfirmedSilverTreasureSpots.NorthHorn.Select(spot => spot.DataId));
             silverTreasureDataIds.UnionWith(ConfirmedSilverTreasureSpots.EventObjectDataIds);
@@ -336,7 +320,6 @@ public sealed class Plugin : IDalamudPlugin
         wasActive = true;
         var territoryId = crescentContext.TerritoryId;
         var territoryName = crescentContext.TerritoryName;
-        var instanceKey = $"territory-{territoryId}";
         var instanceSnapshot = OccultCrescentContext.ReadInstanceSnapshot();
         if (entering)
         {
@@ -354,6 +337,9 @@ public sealed class Plugin : IDalamudPlugin
         {
             islandVisitStore.Touch(now, instanceSnapshot);
         }
+        var instanceKey = islandVisitStore.ActiveVisit is { } activeVisit
+            ? $"island-visit:{activeVisit.VisitId}"
+            : $"territory-{territoryId}:unidentified";
         atlasData.SetContext(
             true,
             territoryId,
@@ -567,34 +553,22 @@ public sealed class Plugin : IDalamudPlugin
            || name.Contains("magic pot", StringComparison.OrdinalIgnoreCase)
            || name.Contains("マジックポット", StringComparison.Ordinal);
 
-    private void SeedLearnedPotObservations()
-    {
-        foreach (var observation in LearnedNorthHornPotObservations)
-            potPredictionTracker.Observe(observation);
-    }
-
     private void RestorePotObservations()
     {
         var restored = PotObservationHistoryReader.Load(
             observationStore.OutputDirectory,
             MagicPotEventIds,
-            NorthHornInstanceKey);
+            LegacyNorthHornInstanceKey);
         foreach (var observation in restored)
             potPredictionTracker.Observe(observation);
 
         BootstrapDiagnostics.Write(
             $"Magic Pot history restored; source={restored.Count}; " +
-            $"accepted={potPredictionTracker.GetObservations(NorthHornInstanceKey).Count}");
+            $"legacy={potPredictionTracker.GetObservations(LegacyNorthHornInstanceKey).Count}");
     }
 
     private void UpdatePotPrediction(string instanceKey, DateTimeOffset now)
     {
-        if (!StringComparer.Ordinal.Equals(instanceKey, NorthHornInstanceKey))
-        {
-            atlasData.SetPotPrediction(null);
-            return;
-        }
-
         var prediction = potPredictionTracker.GetUpcomingPrediction(instanceKey, now);
         if (prediction.NextOccurrenceUtc is not { } next
             || prediction.EstimatedInterval is not { } interval
