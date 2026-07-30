@@ -201,6 +201,7 @@ public sealed class AtlasWindow : Window, IDisposable
         }
 
         DrawTreasureCandidateRoute(drawList, project, markers, playerPosition);
+        DrawNearestTreasureSpot(drawList, project, markers, playerPosition);
         DrawNearbyTreasureLines(drawList, project, markers, playerPosition);
 
         foreach (var marker in markers.Where(marker => marker.Kind != AtlasMarkerKind.Player))
@@ -344,6 +345,38 @@ public sealed class AtlasWindow : Window, IDisposable
             drawList.AddText(midpoint, lineColor, $"{distance:F0}y");
         }
     }
+
+    private static void DrawNearestTreasureSpot(
+        ImDrawListPtr drawList,
+        Func<Vector3, Vector2> project,
+        IReadOnlyList<AtlasMarker> markers,
+        Vector3? playerPosition)
+    {
+        if (playerPosition is not { } player)
+            return;
+
+        var nearest = markers
+            .Where(marker => marker.Kind == AtlasMarkerKind.TreasureCandidate)
+            .MinBy(marker => HorizontalDistanceSquared(player, marker.Position));
+        if (nearest is null)
+            return;
+
+        var playerScreen = project(player);
+        var spotScreen = project(nearest.Position);
+        var spotColor = ImGui.GetColorU32(new Vector4(1.00f, 0.67f, 0.18f, 0.96f));
+        drawList.AddLine(playerScreen, spotScreen, spotColor, 3.5f);
+        drawList.AddCircle(spotScreen, MarkerRadius + 7.0f, spotColor, 0, 2.5f);
+
+        var distance = MathF.Sqrt(HorizontalDistanceSquared(player, nearest.Position));
+        drawList.AddText(
+            (playerScreen + spotScreen) * 0.5f,
+            spotColor,
+            $"Nearest spot {distance:F0}y");
+    }
+
+    private static float HorizontalDistanceSquared(Vector3 left, Vector3 right)
+        => ((left.X - right.X) * (left.X - right.X))
+           + ((left.Z - right.Z) * (left.Z - right.Z));
 
     private static void DrawGrid(ImDrawListPtr drawList, Vector2 minimum, Vector2 maximum)
     {

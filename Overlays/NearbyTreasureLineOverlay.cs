@@ -26,8 +26,9 @@ public sealed class NearbyTreasureLineOverlay(
         var drawList = ImGui.GetForegroundDrawList();
         var lineColor = ImGui.GetColorU32(new Vector4(0.18f, 0.95f, 1.00f, 0.92f));
         var shadowColor = ImGui.GetColorU32(new Vector4(0.01f, 0.03f, 0.04f, 0.78f));
+        var markers = dataSource.GetMarkers();
 
-        foreach (var treasure in dataSource.GetMarkers().Where(marker =>
+        foreach (var treasure in markers.Where(marker =>
                      marker.Kind == AtlasMarkerKind.ActiveTreasure
                      && marker.IsActive
                      && Vector3.DistanceSquared(player, marker.Position) <= maximumDistanceSquared))
@@ -46,5 +47,40 @@ public sealed class NearbyTreasureLineOverlay(
                 lineColor,
                 $"{treasure.Label}  {distance:F0}y");
         }
+
+        DrawNearestKnownSpot(drawList, markers, player, playerScreen, shadowColor);
     }
+
+    private void DrawNearestKnownSpot(
+        ImDrawListPtr drawList,
+        IReadOnlyList<AtlasMarker> markers,
+        Vector3 player,
+        Vector2 playerScreen,
+        uint shadowColor)
+    {
+        var nearest = markers
+            .Where(marker => marker.Kind == AtlasMarkerKind.TreasureCandidate)
+            .MinBy(marker => HorizontalDistanceSquared(player, marker.Position));
+        if (nearest is null
+            || !gameGui.WorldToScreen(nearest.Position, out var spotScreen))
+        {
+            return;
+        }
+
+        var spotColor = ImGui.GetColorU32(new Vector4(1.00f, 0.67f, 0.18f, 0.94f));
+        drawList.AddLine(playerScreen, spotScreen, shadowColor, 6.0f);
+        drawList.AddLine(playerScreen, spotScreen, spotColor, 3.0f);
+        drawList.AddCircle(spotScreen, 13.0f, shadowColor, 0, 5.0f);
+        drawList.AddCircle(spotScreen, 12.0f, spotColor, 0, 2.5f);
+
+        var distance = MathF.Sqrt(HorizontalDistanceSquared(player, nearest.Position));
+        drawList.AddText(
+            spotScreen + new Vector2(15.0f, 9.0f),
+            spotColor,
+            $"Nearest treasure spot  {distance:F0}y");
+    }
+
+    private static float HorizontalDistanceSquared(Vector3 left, Vector3 right)
+        => ((left.X - right.X) * (left.X - right.X))
+           + ((left.Z - right.Z) * (left.Z - right.Z));
 }
