@@ -51,6 +51,7 @@ public sealed class Plugin : IDalamudPlugin
 
     private readonly Configuration configuration;
     private readonly ObservationStore observationStore;
+    private readonly IslandVisitStore islandVisitStore;
     private readonly HashSet<uint> silverTreasureDataIds = [];
     private readonly HashSet<uint> potTargetDataIds = [];
     private readonly MutableAtlasDataSource atlasData = new();
@@ -100,6 +101,7 @@ public sealed class Plugin : IDalamudPlugin
             BootstrapDiagnostics.Write("Magic Pot seed initialized");
             silverTreasureDataIds.UnionWith(
                 ConfirmedSilverTreasureSpots.NorthHorn.Select(spot => spot.DataId));
+            silverTreasureDataIds.UnionWith(ConfirmedSilverTreasureSpots.EventObjectDataIds);
             potTargetDataIds.UnionWith(
                 ConfirmedPotTargetObservations.NorthHorn.Select(observation => observation.DataId));
             BootstrapDiagnostics.Write(
@@ -107,6 +109,8 @@ public sealed class Plugin : IDalamudPlugin
                 $"potTarget={potTargetDataIds.Count}");
             observationStore = new ObservationStore(PluginInterface);
             BootstrapDiagnostics.Write($"observation store initialized; session={observationStore.SessionId}");
+            islandVisitStore = new IslandVisitStore(observationStore.OutputDirectory);
+            BootstrapDiagnostics.Write($"island visit store initialized; path={islandVisitStore.OutputPath}");
             RestorePotObservations();
             crescentContext = new OccultCrescentContext(ClientState, DataManager, Log);
             aetheryteMarkerProvider = new AetheryteMarkerProvider(DataManager);
@@ -136,6 +140,7 @@ public sealed class Plugin : IDalamudPlugin
                 DataManager,
                 ClientState,
                 TextureProvider,
+                islandVisitStore.GetVisitsDescending,
                 SaveConfiguration);
             treasureLineOverlay = new NearbyTreasureLineOverlay(GameGui, atlasData);
             windowSystem.AddWindow(atlasWindow);
@@ -175,6 +180,7 @@ public sealed class Plugin : IDalamudPlugin
         CommandManager.RemoveHandler(CommandName);
         windowSystem.RemoveAllWindows();
         atlasWindow.Dispose();
+        islandVisitStore.Dispose();
         observationStore.Dispose();
         BootstrapDiagnostics.Write("dispose completed");
     }
@@ -252,9 +258,13 @@ public sealed class Plugin : IDalamudPlugin
                 ChatGui.Print($"[Crescent Atlas] Collection folder: {observationStore.OutputDirectory}");
                 break;
             case "status":
+                var activeVisit = islandVisitStore.ActiveVisit;
                 ChatGui.Print(
                     $"[Crescent Atlas] active={OccultCrescentContext.IsActive()}, territory={ClientState.TerritoryType}, " +
                     $"observations={observationStore.SessionObservationCount}, collection={configuration.CollectionEnabled}");
+                ChatGui.Print(
+                    $"[Crescent Atlas] visit={activeVisit?.VisitId ?? "none"}, " +
+                    $"island={activeVisit?.IslandKey ?? "unknown"}");
                 ChatGui.Print($"[Crescent Atlas] {atlasWindow.MapDiagnostic}");
                 ChatGui.Print($"[Crescent Atlas] Diagnostic log: {BootstrapDiagnostics.LogPath}");
                 break;
@@ -302,7 +312,16 @@ public sealed class Plugin : IDalamudPlugin
         if (!active)
         {
             if (wasActive)
+            {
+                islandVisitStore.EndVisit(now);
+                islandVisitStore.Flush();
                 ResetTerritoryState();
+            }
+            else if (ClientState.TerritoryType != 1346
+                     && islandVisitStore.CloseUnfinishedVisitsAtLastSeen("not-in-content-on-start"))
+            {
+                islandVisitStore.Flush();
+            }
             wasActive = false;
             atlasData.SetContext(
                 ClientState.TerritoryType,
@@ -317,6 +336,23 @@ public sealed class Plugin : IDalamudPlugin
         var territoryId = crescentContext.TerritoryId;
         var territoryName = crescentContext.TerritoryName;
         var instanceKey = $"territory-{territoryId}";
+        var instanceSnapshot = OccultCrescentContext.ReadInstanceSnapshot();
+        if (entering)
+        {
+            var visit = islandVisitStore.StartOrResume(
+                territoryId,
+                territoryName,
+                now,
+                instanceSnapshot);
+            islandVisitStore.Flush();
+            BootstrapDiagnostics.Write(
+                $"Occult Crescent visit entered; visit={visit.VisitId}; island={visit.IslandKey}; " +
+                $"instance={visit.InstancePointer}");
+        }
+        else
+        {
+            islandVisitStore.Touch(now, instanceSnapshot);
+        }
         atlasData.SetContext(territoryId, territoryName, localPlayer?.Position, localPlayer?.Rotation);
 
         var mapId = ClientState.MapId;
@@ -373,6 +409,7 @@ public sealed class Plugin : IDalamudPlugin
         {
             if (configuration.CollectionEnabled)
                 observationStore.Flush();
+            islandVisitStore.Flush();
             nextFlushUtc = now + FlushInterval;
         }
     }

@@ -15,5 +15,8 @@
     <Compile Include="..\..\Contracts\IAtlasDataSource.cs" Link="IAtlasDataSource.cs" />
     <Compile Include="..\..\Runtime\MutableAtlasDataSource.cs" Link="MutableAtlasDataSource.cs" />
     <Compile Include="..\..\Events\DynamicEventTimeResolver.cs" Link="DynamicEventTimeResolver.cs" />
+    <Compile Include="..\..\Data\IslandVisitRecord.cs" Link="IslandVisitRecord.cs" />
+    <Compile Include="..\..\Collection\IslandVisitStore.cs" Link="IslandVisitStore.cs" />
+    <Compile Include="..\..\Runtime\OccultCrescentInstanceSnapshot.cs" Link="OccultCrescentInstanceSnapshot.cs" />
   </ItemGroup>
 </Project>

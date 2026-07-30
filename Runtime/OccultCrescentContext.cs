@@ -38,4 +38,26 @@ public sealed class OccultCrescentContext(IClientState clientState, IDataManager
             return false;
         }
     }
+
+    public static unsafe OccultCrescentInstanceSnapshot ReadInstanceSnapshot()
+    {
+        try
+        {
+            var instance = PublicContentOccultCrescent.GetInstance();
+            if (instance == null)
+                return OccultCrescentInstanceSnapshot.Empty;
+
+            var contentDirector = (ContentDirector*)instance;
+            var secondsLeft = contentDirector->ContentTimeLeft;
+            return new OccultCrescentInstanceSnapshot(
+                $"0x{(nuint)instance:X}",
+                float.IsFinite(secondsLeft) && secondsLeft > 0.0f
+                    ? secondsLeft
+                    : null);
+        }
+        catch
+        {
+            return OccultCrescentInstanceSnapshot.Empty;
+        }
+    }
 }

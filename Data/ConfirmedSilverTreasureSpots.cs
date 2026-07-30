@@ -8,6 +8,9 @@ public sealed record ConfirmedSilverTreasureSpot(
 
 public static class ConfirmedSilverTreasureSpots
 {
+    public static IReadOnlySet<uint> EventObjectDataIds { get; } =
+        new HashSet<uint> { 2014742 };
+
     public static IReadOnlyList<ConfirmedSilverTreasureSpot> NorthHorn { get; } =
     [
         new(1346, 2006, new Vector3(383.29138f, 32.97461f, -175.67712f),

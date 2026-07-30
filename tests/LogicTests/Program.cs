@@ -1,5 +1,6 @@
 using System.Numerics;
 using CrescentAtlas.Contracts;
+using CrescentAtlas.Collection;
 using CrescentAtlas.Events;
 using CrescentAtlas.Notifications;
 using CrescentAtlas.Runtime;
@@ -129,6 +130,55 @@ Assert(
         120,
         null) == -1,
     "CE active battle does not reuse the start countdown formula");
+
+var visitRoot = Path.Combine(
+    Path.GetTempPath(),
+    $"CrescentAtlas-visit-tests-{Guid.NewGuid():N}");
+try
+{
+    var entry = origin.AddHours(1);
+    var firstInstance = new OccultCrescentInstanceSnapshot("0xABC", 10_800);
+    using (var visits = new IslandVisitStore(visitRoot))
+    {
+        var started = visits.StartOrResume(1346, "North Horn", entry, firstInstance);
+        Assert(started.ExitedAtUtc is null, "new visit starts active");
+        Assert(started.IslandKey.Contains("expires-", StringComparison.Ordinal), "countdown forms island key");
+        visits.Touch(entry.AddMinutes(1), new OccultCrescentInstanceSnapshot("0xABC", 10_740));
+        visits.Flush();
+    }
+
+    using (var resumedStore = new IslandVisitStore(visitRoot))
+    {
+        var resumed = resumedStore.StartOrResume(
+            1346,
+            "North Horn",
+            entry.AddMinutes(2),
+            new OccultCrescentInstanceSnapshot("0xDEF", 10_680));
+        Assert(resumedStore.GetVisitsDescending().Count == 1, "plugin reload resumes same live island visit");
+        Assert(resumed.EnteredAtUtc == entry, "resumed visit retains original entry time");
+        resumedStore.EndVisit(entry.AddMinutes(12));
+        resumedStore.Flush();
+    }
+
+    using var reloadedStore = new IslandVisitStore(visitRoot);
+    var completed = reloadedStore.GetVisitsDescending().Single();
+    Assert(completed.ExitedAtUtc == entry.AddMinutes(12), "exit time persists");
+
+    var orphanRoot = Path.Combine(visitRoot, "orphan");
+    using var orphanStore = new IslandVisitStore(orphanRoot);
+    var orphan = orphanStore.StartOrResume(1346, "North Horn", entry, firstInstance);
+    Assert(
+        orphanStore.CloseUnfinishedVisitsAtLastSeen("not-in-content-on-start"),
+        "unfinished visit closes after next startup outside content");
+    Assert(
+        orphanStore.GetVisitsDescending().Single().ExitedAtUtc == orphan.LastSeenAtUtc,
+        "unfinished visit uses last observed time as exit");
+}
+finally
+{
+    if (Directory.Exists(visitRoot))
+        Directory.Delete(visitRoot, recursive: true);
+}
 
 Console.WriteLine("CrescentAtlas logic smoke tests: PASS");
 return;

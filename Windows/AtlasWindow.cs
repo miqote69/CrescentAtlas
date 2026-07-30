@@ -1,4 +1,5 @@
 using CrescentAtlas.Contracts;
+using CrescentAtlas.Data;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Textures.TextureWraps;
@@ -56,6 +57,7 @@ public sealed class AtlasWindow : Window, IDisposable
     private readonly IDataManager dataManager;
     private readonly IClientState clientState;
     private readonly ITextureProvider textureProvider;
+    private readonly Func<IReadOnlyList<IslandVisitRecord>> visitHistoryProvider;
     private readonly System.Action saveConfiguration;
     private float mapZoom = MinimumMapZoom;
     private Vector2 mapCenter = new(0.5f, 0.5f);
@@ -69,6 +71,7 @@ public sealed class AtlasWindow : Window, IDisposable
         IDataManager dataManager,
         IClientState clientState,
         ITextureProvider textureProvider,
+        Func<IReadOnlyList<IslandVisitRecord>> visitHistoryProvider,
         System.Action saveConfiguration)
         : base("Crescent Atlas###CrescentAtlasMap")
     {
@@ -77,6 +80,7 @@ public sealed class AtlasWindow : Window, IDisposable
         this.dataManager = dataManager;
         this.clientState = clientState;
         this.textureProvider = textureProvider;
+        this.visitHistoryProvider = visitHistoryProvider;
         this.saveConfiguration = saveConfiguration;
         IsOpen = configuration.MapVisible;
 
@@ -122,6 +126,11 @@ public sealed class AtlasWindow : Window, IDisposable
         if (currentPage == AtlasPage.IconGuide)
         {
             DrawIconGuide(territoryMarkers);
+            return;
+        }
+        if (currentPage == AtlasPage.VisitHistory)
+        {
+            DrawVisitHistory();
             return;
         }
 
@@ -175,6 +184,13 @@ public sealed class AtlasWindow : Window, IDisposable
         {
             currentPage = AtlasPage.IconGuide;
         }
+        if (ImGui.MenuItem(
+                "突入履歴###menu-visit-history",
+                string.Empty,
+                currentPage == AtlasPage.VisitHistory))
+        {
+            currentPage = AtlasPage.VisitHistory;
+        }
 
         ImGui.EndMenuBar();
     }
@@ -185,6 +201,91 @@ public sealed class AtlasWindow : Window, IDisposable
         ImGui.TextDisabled("Map symbols used by Crescent Atlas.");
         ImGui.Separator();
         DrawLegend(markers);
+    }
+
+    private void DrawVisitHistory()
+    {
+        var visits = visitHistoryProvider()
+            .OrderByDescending(static visit => visit.EnteredAtUtc)
+            .ToArray();
+
+        ImGui.TextUnformatted("クレセントアイル 突入履歴");
+        ImGui.TextDisabled("突入・退出時刻を新しい順に表示します。時刻はローカル時刻です。");
+        ImGui.Separator();
+
+        if (visits.Length == 0)
+        {
+            ImGui.TextDisabled("突入履歴はまだありません。");
+            return;
+        }
+
+        if (!ImGui.BeginChild(
+                "##CrescentAtlasVisitHistory",
+                Vector2.Zero,
+                false,
+                ImGuiWindowFlags.AlwaysVerticalScrollbar))
+        {
+            ImGui.EndChild();
+            return;
+        }
+
+        var flags = ImGuiTableFlags.Borders
+                    | ImGuiTableFlags.RowBg
+                    | ImGuiTableFlags.Resizable
+                    | ImGuiTableFlags.SizingStretchProp;
+        if (ImGui.BeginTable("##CrescentAtlasVisitHistoryTable", 5, flags))
+        {
+            ImGui.TableSetupColumn("突入", ImGuiTableColumnFlags.WidthFixed, 132.0f);
+            ImGui.TableSetupColumn("退出", ImGuiTableColumnFlags.WidthFixed, 132.0f);
+            ImGui.TableSetupColumn("滞在", ImGuiTableColumnFlags.WidthFixed, 72.0f);
+            ImGui.TableSetupColumn("エリア");
+            ImGui.TableSetupColumn("島識別");
+            ImGui.TableHeadersRow();
+
+            foreach (var visit in visits)
+            {
+                var enteredLocal = visit.EnteredAtUtc.ToLocalTime();
+                var exitedLocal = visit.ExitedAtUtc?.ToLocalTime();
+                var durationEnd = visit.ExitedAtUtc ?? DateTimeOffset.UtcNow;
+
+                ImGui.TableNextRow();
+                ImGui.TableSetColumnIndex(0);
+                ImGui.TextUnformatted(enteredLocal.ToString("yyyy/MM/dd HH:mm:ss"));
+                ImGui.TableSetColumnIndex(1);
+                if (exitedLocal is { } exited)
+                    ImGui.TextUnformatted(exited.ToString("yyyy/MM/dd HH:mm:ss"));
+                else
+                    ImGui.TextColored(new Vector4(0.42f, 1.00f, 0.52f, 1.0f), "滞在中");
+                ImGui.TableSetColumnIndex(2);
+                ImGui.TextUnformatted(FormatVisitDuration(durationEnd - visit.EnteredAtUtc));
+                ImGui.TableSetColumnIndex(3);
+                ImGui.TextUnformatted(string.IsNullOrWhiteSpace(visit.TerritoryName)
+                    ? $"Territory {visit.TerritoryId}"
+                    : visit.TerritoryName);
+                ImGui.TableSetColumnIndex(4);
+                ImGui.TextUnformatted(visit.IslandKey);
+                if (!string.IsNullOrWhiteSpace(visit.InstancePointer)
+                    && ImGui.IsItemHovered())
+                {
+                    ImGui.SetTooltip(
+                        $"Visit ID: {visit.VisitId}\n" +
+                        $"Instance pointer: {visit.InstancePointer}\n" +
+                        $"Last seen: {visit.LastSeenAtUtc.ToLocalTime():yyyy/MM/dd HH:mm:ss}");
+                }
+            }
+
+            ImGui.EndTable();
+        }
+
+        ImGui.EndChild();
+    }
+
+    private static string FormatVisitDuration(TimeSpan duration)
+    {
+        var totalMinutes = Math.Max(0, (int)duration.TotalMinutes);
+        return totalMinutes >= 60
+            ? $"{totalMinutes / 60}:{totalMinutes % 60:00}"
+            : $"{totalMinutes}分";
     }
 
     private void DrawMapFilters()
@@ -1076,6 +1177,7 @@ public sealed class AtlasWindow : Window, IDisposable
     {
         Map,
         IconGuide,
+        VisitHistory,
     }
 
     private readonly record struct LegendEntry(

@@ -125,6 +125,31 @@ public sealed class ObjectTableCollector(
     {
         var dataId = gameObject.BaseId;
         var eventId = TryReadEventId(gameObject);
+        var displayName = DisplayName(gameObject, "EventObj candidate");
+        if (IsSilverCoffer(dataId, displayName))
+        {
+            if (!gameObject.IsTargetable)
+                return null;
+
+            var silverKey = ObservationIdentity.PositionKey(
+                territoryId,
+                "active-treasure",
+                dataId,
+                eventId,
+                gameObject.Position);
+            return new AtlasMarker(
+                silverKey,
+                AtlasMarkerKind.ActiveTreasure,
+                displayName,
+                gameObject.Position,
+                observedAt,
+                IsActive: true,
+                territoryId,
+                dataId,
+                eventId,
+                TreasureType: "silver");
+        }
+
         if (options.PotTargetDataIds.Contains(dataId))
         {
             var potTargetKey = ObservationIdentity.PositionKey(
@@ -171,6 +196,11 @@ public sealed class ObjectTableCollector(
             eventId);
     }
 
+    private bool IsSilverCoffer(uint dataId, string displayName)
+        => options.SilverTreasureDataIds.Contains(dataId)
+           || displayName.Contains("白銀の財宝箱", StringComparison.Ordinal)
+           || displayName.Contains("silver treasure", StringComparison.OrdinalIgnoreCase);
+
     private static ObservationRecord ToObservation(AtlasMarker marker, string territoryName)
         => new()
         {
@@ -202,6 +232,7 @@ public sealed class ObjectTableCollector(
         var properties = new Dictionary<string, string>
         {
             ["objectKind"] = marker.Kind == AtlasMarkerKind.ActiveTreasure
+                             && !ConfirmedSilverTreasureSpots.EventObjectDataIds.Contains(marker.DataId)
                 ? nameof(ObjectKind.Treasure)
                 : nameof(ObjectKind.EventObj),
         };
