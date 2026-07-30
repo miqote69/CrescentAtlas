@@ -5,15 +5,13 @@ namespace CrescentAtlas;
 [Serializable]
 public sealed class Configuration : IPluginConfiguration
 {
-    public int Version { get; set; } = 2;
+    public int Version { get; set; } = 3;
 
     public bool CollectionEnabled { get; set; } = true;
 
     public bool MapVisible { get; set; } = true;
 
     public bool MapClickThrough { get; set; }
-
-    public float MapOpacity { get; set; } = 0.92f;
 
     public bool ShowBronzeTreasure { get; set; } = true;
 
@@ -24,6 +22,8 @@ public sealed class Configuration : IPluginConfiguration
     public bool ShowFates { get; set; } = true;
 
     public bool ShowCriticalEncounters { get; set; } = true;
+
+    public bool DetailedEventDisplay { get; set; }
 
     public bool ShowForkedTower { get; set; } = true;
 

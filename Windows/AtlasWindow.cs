@@ -24,8 +24,6 @@ public sealed class AtlasWindow : Window, IDisposable
     private const float MinimumMapZoom = 1.0f;
     private const float MaximumMapZoom = 4.0f;
     private const float MapZoomStep = 0.25f;
-    private const float MinimumMapOpacity = 0.03f;
-
     private static readonly Vector4 BackgroundColor = new(0.035f, 0.045f, 0.055f, 0.96f);
     private static readonly Vector4 GridColor = new(0.28f, 0.34f, 0.39f, 0.23f);
     private static readonly Vector4 BorderColor = new(0.55f, 0.64f, 0.69f, 0.62f);
@@ -110,18 +108,7 @@ public sealed class AtlasWindow : Window, IDisposable
     }
 
     public override void Draw()
-    {
-        var opacity = Math.Clamp(configuration.MapOpacity, MinimumMapOpacity, 1.0f);
-        ImGui.PushStyleVar(ImGuiStyleVar.Alpha, opacity);
-        try
-        {
-            DrawContents();
-        }
-        finally
-        {
-            ImGui.PopStyleVar();
-        }
-    }
+        => DrawContents();
 
     private void DrawContents()
     {
@@ -152,15 +139,6 @@ public sealed class AtlasWindow : Window, IDisposable
 
         if (!configuration.MapClickThrough)
         {
-            var opacity = Math.Clamp(configuration.MapOpacity, MinimumMapOpacity, 1.0f);
-            ImGui.SetNextItemWidth(180.0f);
-            if (ImGui.SliderFloat("Map opacity", ref opacity, MinimumMapOpacity, 1.0f, "%.2f"))
-            {
-                configuration.MapOpacity = opacity;
-                saveConfiguration();
-            }
-
-            ImGui.SameLine();
             if (ImGui.Button("Reset treasure checks"))
                 dataSource.ResetTreasureChecks();
         }
@@ -218,6 +196,7 @@ public sealed class AtlasWindow : Window, IDisposable
         var showGoldTreasure = configuration.ShowGoldTreasure;
         var showFates = configuration.ShowFates;
         var showCriticalEncounters = configuration.ShowCriticalEncounters;
+        var detailedEventDisplay = configuration.DetailedEventDisplay;
         var showForkedTower = configuration.ShowForkedTower;
         var showPotPrediction = configuration.ShowPotPrediction;
         var changed = false;
@@ -249,6 +228,11 @@ public sealed class AtlasWindow : Window, IDisposable
             ref usedWidth,
             availableWidth);
         changed |= DrawFilterCheckbox(
+            "FATE/CE details",
+            ref detailedEventDisplay,
+            ref usedWidth,
+            availableWidth);
+        changed |= DrawFilterCheckbox(
             "Forked Tower",
             ref showForkedTower,
             ref usedWidth,
@@ -266,6 +250,7 @@ public sealed class AtlasWindow : Window, IDisposable
             configuration.ShowGoldTreasure = showGoldTreasure;
             configuration.ShowFates = showFates;
             configuration.ShowCriticalEncounters = showCriticalEncounters;
+            configuration.DetailedEventDisplay = detailedEventDisplay;
             configuration.ShowForkedTower = showForkedTower;
             configuration.ShowPotPrediction = showPotPrediction;
             saveConfiguration();
@@ -800,7 +785,7 @@ public sealed class AtlasWindow : Window, IDisposable
         }
     }
 
-    private static void DrawEventStatus(
+    private void DrawEventStatus(
         ImDrawListPtr drawList,
         Vector2 point,
         AtlasMarker marker,
@@ -813,6 +798,9 @@ public sealed class AtlasWindow : Window, IDisposable
         {
             return;
         }
+
+        if (!configuration.DetailedEventDisplay)
+            return;
 
         var hasRemainingTime = marker.TimeRemainingSeconds >= 0;
         var remainingSeconds = Math.Max(0, marker.TimeRemainingSeconds);
