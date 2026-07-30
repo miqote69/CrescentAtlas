@@ -191,10 +191,6 @@ public sealed class AtlasWindow : Window, IDisposable
         else
         {
             DrawGrid(drawList, canvasMinimum, canvasMaximum);
-            drawList.AddText(
-                canvasMinimum + new Vector2(12.0f, canvasSize.Y - ImGui.GetTextLineHeight() - 8.0f),
-                ImGui.GetColorU32(new Vector4(1.0f, 0.52f, 0.28f, 0.92f)),
-                $"Game map unavailable: {MapDiagnostic}");
             var bounds = FieldBounds.Create(markers, playerPosition);
             var fallback = new FieldProjection(bounds, canvasMinimum, canvasSize, CanvasPadding);
             project = fallback.Project;
@@ -235,11 +231,14 @@ public sealed class AtlasWindow : Window, IDisposable
             return false;
         }
 
-        var textureName = mapId.Replace('/', '_');
+        var compactTextureName = mapId.Replace("/", string.Empty, StringComparison.Ordinal);
+        var legacyTextureName = mapId.Replace('/', '_');
         var paths = new[]
         {
-            $"ui/map/{mapId}/{textureName}_m.tex",
-            $"ui/map/{mapId}/{textureName}_s.tex",
+            $"ui/map/{mapId}/{compactTextureName}_m.tex",
+            $"ui/map/{mapId}/{compactTextureName}_s.tex",
+            $"ui/map/{mapId}/{legacyTextureName}_m.tex",
+            $"ui/map/{mapId}/{legacyTextureName}_s.tex",
         };
 
         foreach (var path in paths)
@@ -339,10 +338,6 @@ public sealed class AtlasWindow : Window, IDisposable
             var treasureScreen = project(marker.Position);
             drawList.AddLine(playerScreen, treasureScreen, lineColor, 3.0f);
             drawList.AddCircle(treasureScreen, MarkerRadius + 5.0f, lineColor, 0, 2.0f);
-
-            var distance = Vector3.Distance(player, marker.Position);
-            var midpoint = (playerScreen + treasureScreen) * 0.5f;
-            drawList.AddText(midpoint, lineColor, $"{distance:F0}y");
         }
     }
 
@@ -366,12 +361,6 @@ public sealed class AtlasWindow : Window, IDisposable
         var spotColor = ImGui.GetColorU32(new Vector4(1.00f, 0.67f, 0.18f, 0.96f));
         drawList.AddLine(playerScreen, spotScreen, spotColor, 3.5f);
         drawList.AddCircle(spotScreen, MarkerRadius + 7.0f, spotColor, 0, 2.5f);
-
-        var distance = MathF.Sqrt(HorizontalDistanceSquared(player, nearest.Position));
-        drawList.AddText(
-            (playerScreen + spotScreen) * 0.5f,
-            spotColor,
-            $"Nearest spot {distance:F0}y");
     }
 
     private static float HorizontalDistanceSquared(Vector3 left, Vector3 right)
@@ -415,11 +404,6 @@ public sealed class AtlasWindow : Window, IDisposable
             drawList.AddCircleFilled(point, radius, packedColor);
         }
 
-        if (!string.IsNullOrWhiteSpace(marker.Label))
-        {
-            var labelPosition = point + new Vector2(radius + 4.0f, -ImGui.GetTextLineHeight() * 0.5f);
-            drawList.AddText(labelPosition, packedColor, marker.Label);
-        }
     }
 
     private static void DrawPlayer(ImDrawListPtr drawList, Vector2 point)
@@ -432,7 +416,6 @@ public sealed class AtlasWindow : Window, IDisposable
 
         drawList.AddCircleFilled(point, 10.0f, shadow);
         drawList.AddTriangleFilled(top, right, left, color);
-        drawList.AddText(point + new Vector2(10.0f, -ImGui.GetTextLineHeight() * 0.5f), color, "Player");
     }
 
     private static void DrawDiamond(ImDrawListPtr drawList, Vector2 point, float radius, uint color)

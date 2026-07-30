@@ -32,6 +32,8 @@ movement, interaction, or combat and never uploads observations.
   opening or controlling the standard game map.
 - Uses the current in-game map texture and Dalamud's standard map-coordinate
   conversion so north, south, scale, and offsets match the game map.
+- Keeps the atlas field free of marker-name and distance text; marker meanings
+  remain available in the compact legend.
 
 ## Collection data
 
