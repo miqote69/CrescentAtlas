@@ -13,6 +13,8 @@ public sealed class Configuration : IPluginConfiguration
 
     public bool MapClickThrough { get; set; }
 
+    public bool MapControlsExpanded { get; set; } = true;
+
     public bool ShowBronzeTreasure { get; set; } = true;
 
     public bool ShowSilverTreasure { get; set; } = true;

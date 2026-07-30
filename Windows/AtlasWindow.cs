@@ -1,6 +1,7 @@
 using CrescentAtlas.Contracts;
 using CrescentAtlas.Data;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Interface.Windowing;
@@ -96,6 +97,21 @@ public sealed class AtlasWindow : Window, IDisposable
             MinimumSize = new Vector2(440.0f, 420.0f),
             MaximumSize = new Vector2(1600.0f, 1200.0f),
         };
+
+        TitleBarButtons.Add(new TitleBarButton
+        {
+            Icon = FontAwesomeIcon.Bars,
+            IconOffset = new Vector2(2.0f, 1.0f),
+            Click = _ => ToggleMapControls(),
+            ShowTooltip = () =>
+            {
+                ImGui.BeginTooltip();
+                ImGui.TextUnformatted(configuration.MapControlsExpanded
+                    ? "Hide map controls"
+                    : "Show map controls");
+                ImGui.EndTooltip();
+            },
+        });
     }
 
     public void Dispose()
@@ -110,6 +126,11 @@ public sealed class AtlasWindow : Window, IDisposable
             Flags |= ImGuiWindowFlags.NoInputs;
         else
             Flags &= ~ImGuiWindowFlags.NoInputs;
+
+        if (configuration.MapControlsExpanded)
+            Flags |= ImGuiWindowFlags.MenuBar;
+        else
+            Flags &= ~ImGuiWindowFlags.MenuBar;
     }
 
     public override void Draw()
@@ -117,7 +138,8 @@ public sealed class AtlasWindow : Window, IDisposable
 
     private void DrawContents()
     {
-        DrawMenuBar();
+        if (configuration.MapControlsExpanded)
+            DrawMenuBar();
 
         var markers = dataSource.GetMarkers() ?? Array.Empty<AtlasMarker>();
         var territoryMarkers = markers
@@ -138,22 +160,26 @@ public sealed class AtlasWindow : Window, IDisposable
             .Where(IsMarkerVisible)
             .ToArray();
 
-        var territoryName = string.IsNullOrWhiteSpace(dataSource.TerritoryName)
-            ? "Unknown territory"
-            : dataSource.TerritoryName;
-        ImGui.TextUnformatted($"{territoryName}  (Territory {dataSource.TerritoryId})");
-        ImGui.SameLine();
-        ImGui.TextDisabled(configuration.MapClickThrough
-            ? "Click-through mode"
-            : "Drag map to pan / wheel to zoom / drag edge to resize");
-
-        if (!configuration.MapClickThrough)
+        if (configuration.MapControlsExpanded)
         {
-            if (ImGui.Button("Reset treasure checks"))
-                dataSource.ResetTreasureChecks();
+            var territoryName = string.IsNullOrWhiteSpace(dataSource.TerritoryName)
+                ? "Unknown territory"
+                : dataSource.TerritoryName;
+            ImGui.TextUnformatted($"{territoryName}  (Territory {dataSource.TerritoryId})");
+            ImGui.SameLine();
+            ImGui.TextDisabled(configuration.MapClickThrough
+                ? "Click-through mode"
+                : "Drag map to pan / wheel to zoom / drag edge to resize");
+
+            if (!configuration.MapClickThrough)
+            {
+                if (ImGui.Button("Reset treasure checks"))
+                    dataSource.ResetTreasureChecks();
+            }
+
+            DrawMapFilters();
         }
 
-        DrawMapFilters();
         var available = ImGui.GetContentRegionAvail();
         var canvasSize = new Vector2(
             Math.Max(1.0f, available.X),
@@ -168,6 +194,15 @@ public sealed class AtlasWindow : Window, IDisposable
             visibleMarkers,
             dataSource.PlayerPosition,
             dataSource.PlayerRotation);
+    }
+
+    private void ToggleMapControls()
+    {
+        configuration.MapControlsExpanded = !configuration.MapControlsExpanded;
+        if (!configuration.MapControlsExpanded)
+            currentPage = AtlasPage.Map;
+
+        saveConfiguration();
     }
 
     private void DrawMenuBar()
