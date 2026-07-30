@@ -3,6 +3,7 @@ using CrescentAtlas.Contracts;
 using CrescentAtlas.Data;
 using CrescentAtlas.Events;
 using CrescentAtlas.Notifications;
+using CrescentAtlas.Overlays;
 using CrescentAtlas.Runtime;
 using CrescentAtlas.Windows;
 using Dalamud.Game.Command;
@@ -26,6 +27,7 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] private static IDataManager DataManager { get; set; } = null!;
     [PluginService] private static IObjectTable ObjectTable { get; set; } = null!;
     [PluginService] private static IFateTable FateTable { get; set; } = null!;
+    [PluginService] private static IGameGui GameGui { get; set; } = null!;
     [PluginService] private static IChatGui ChatGui { get; set; } = null!;
     [PluginService] private static IPluginLog Log { get; set; } = null!;
 
@@ -42,6 +44,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly PotPredictionTracker potPredictionTracker = new();
     private readonly WindowSystem windowSystem = new("CrescentAtlas");
     private readonly AtlasWindow atlasWindow;
+    private readonly NearbyTreasureLineOverlay treasureLineOverlay;
     private HashSet<string> previousTreasureKeys = new(StringComparer.Ordinal);
     private HashSet<string> previousCarrotKeys = new(StringComparer.Ordinal);
     private DateTimeOffset nextPollUtc;
@@ -72,6 +75,7 @@ public sealed class Plugin : IDalamudPlugin
         encounterDetector = new CriticalEncounterDetector(encounterSource, observationStore.SessionId);
 
         atlasWindow = new AtlasWindow(atlasData, configuration);
+        treasureLineOverlay = new NearbyTreasureLineOverlay(GameGui, atlasData);
         windowSystem.AddWindow(atlasWindow);
 
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
@@ -79,6 +83,7 @@ public sealed class Plugin : IDalamudPlugin
             HelpMessage = "Crescent Atlas: map, collection and status controls.",
         });
         PluginInterface.UiBuilder.Draw += windowSystem.Draw;
+        PluginInterface.UiBuilder.Draw += treasureLineOverlay.Draw;
         PluginInterface.UiBuilder.OpenMainUi += ToggleMap;
         PluginInterface.UiBuilder.OpenConfigUi += ToggleMap;
         Framework.Update += OnFrameworkUpdate;
@@ -93,6 +98,7 @@ public sealed class Plugin : IDalamudPlugin
         Framework.Update -= OnFrameworkUpdate;
         PluginInterface.UiBuilder.OpenConfigUi -= ToggleMap;
         PluginInterface.UiBuilder.OpenMainUi -= ToggleMap;
+        PluginInterface.UiBuilder.Draw -= treasureLineOverlay.Draw;
         CommandManager.RemoveHandler(CommandName);
         windowSystem.RemoveAllWindows();
         atlasWindow.Dispose();

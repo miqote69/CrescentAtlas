@@ -12,7 +12,7 @@ movement, interaction, or combat and never uploads observations.
 - Enumerates regular treasure candidate positions from the active client layout.
 - Detects currently loaded treasure objects.
 - Draws a bright direct line and distance from the player to loaded treasures
-  within 120 yalms.
+  within 120 yalms, both on the dedicated atlas and over the game view.
 - Draws a nearest-neighbour exploration route through treasure candidates.
 - Reads active FATEs through Dalamud's public `IFateTable` API.
 - Reads active Critical Encounters through a read-only, fail-closed client view.
