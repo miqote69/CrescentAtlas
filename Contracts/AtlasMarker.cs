@@ -25,4 +25,6 @@ public sealed record AtlasMarker(
     uint EventId = 0,
     bool IsChecked = false,
     string TreasureType = "",
-    uint IconId = 0);
+    uint IconId = 0,
+    byte Progress = 0,
+    long TimeRemainingSeconds = 0);

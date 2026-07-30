@@ -508,6 +508,7 @@ public sealed class AtlasWindow : Window, IDisposable
             && marker.IconId != 0
             && TryDrawGameIcon(drawList, point, marker.IconId))
         {
+            DrawEventStatus(drawList, point, marker);
             return;
         }
 
@@ -536,6 +537,35 @@ public sealed class AtlasWindow : Window, IDisposable
             drawList.AddCircleFilled(point, radius, packedColor);
         }
 
+        DrawEventStatus(drawList, point, marker);
+    }
+
+    private static void DrawEventStatus(ImDrawListPtr drawList, Vector2 point, AtlasMarker marker)
+    {
+        if (marker.Kind is not (AtlasMarkerKind.Fate
+            or AtlasMarkerKind.CriticalEncounter
+            or AtlasMarkerKind.PotFate))
+        {
+            return;
+        }
+
+        var remainingSeconds = Math.Max(0, marker.TimeRemainingSeconds);
+        var minutes = remainingSeconds / 60;
+        var seconds = remainingSeconds % 60;
+        var text = $"{minutes:00}:{seconds:00}  {Math.Clamp(marker.Progress, (byte)0, (byte)100)}%";
+        var textSize = ImGui.CalcTextSize(text);
+        var textPosition = point + new Vector2(-(textSize.X * 0.5f), 15.0f);
+        var padding = new Vector2(3.0f, 2.0f);
+
+        drawList.AddRectFilled(
+            textPosition - padding,
+            textPosition + textSize + padding,
+            ImGui.GetColorU32(new Vector4(0.02f, 0.02f, 0.02f, 0.78f)),
+            3.0f);
+        drawList.AddText(
+            textPosition,
+            ImGui.GetColorU32(new Vector4(1.0f, 1.0f, 1.0f, 1.0f)),
+            text);
     }
 
     private bool TryDrawGameIcon(ImDrawListPtr drawList, Vector2 point, uint iconId)
