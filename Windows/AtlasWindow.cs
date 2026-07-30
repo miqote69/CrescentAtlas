@@ -680,6 +680,12 @@ public sealed class AtlasWindow : Window, IDisposable
         var packedColor = ImGui.GetColorU32(color);
         var radius = marker.Kind == AtlasMarkerKind.TreasureCandidate ? MarkerRadius + 1.5f : MarkerRadius;
 
+        if (marker.Kind == AtlasMarkerKind.Carrot)
+        {
+            DrawCarrotIcon(drawList, point);
+            return;
+        }
+
         if (marker.Kind is AtlasMarkerKind.Fate
                 or AtlasMarkerKind.CriticalEncounter
                 or AtlasMarkerKind.PotFate
@@ -731,6 +737,43 @@ public sealed class AtlasWindow : Window, IDisposable
 
         if (drawEventStatus)
             DrawEventStatus(drawList, point, marker, clipMinimum, clipMaximum);
+    }
+
+    private static void DrawCarrotIcon(ImDrawListPtr drawList, Vector2 point)
+    {
+        var shadow = ImGui.GetColorU32(new Vector4(0.02f, 0.03f, 0.02f, 0.95f));
+        var body = ImGui.GetColorU32(new Vector4(1.00f, 0.48f, 0.08f, 1.0f));
+        var highlight = ImGui.GetColorU32(new Vector4(1.00f, 0.77f, 0.25f, 1.0f));
+        var leaves = ImGui.GetColorU32(new Vector4(0.34f, 1.00f, 0.34f, 1.0f));
+
+        var shoulderLeft = point + new Vector2(-5.5f, -2.5f);
+        var shoulderRight = point + new Vector2(5.5f, -2.5f);
+        var tip = point + new Vector2(0.0f, 8.5f);
+        drawList.AddTriangleFilled(
+            shoulderLeft + new Vector2(-1.5f, -1.0f),
+            shoulderRight + new Vector2(1.5f, -1.0f),
+            tip + new Vector2(0.0f, 1.5f),
+            shadow);
+        drawList.AddCircleFilled(point + new Vector2(0.0f, -2.0f), 6.5f, shadow);
+        drawList.AddTriangleFilled(shoulderLeft, shoulderRight, tip, body);
+        drawList.AddCircleFilled(point + new Vector2(0.0f, -2.0f), 5.5f, body);
+        drawList.AddLine(
+            point + new Vector2(-2.5f, 0.0f),
+            point + new Vector2(2.0f, 1.0f),
+            highlight,
+            1.3f);
+
+        var leafBase = point + new Vector2(0.0f, -6.0f);
+        foreach (var leafTip in new[]
+                 {
+                     point + new Vector2(-5.5f, -11.0f),
+                     point + new Vector2(0.0f, -13.0f),
+                     point + new Vector2(5.5f, -11.0f),
+                 })
+        {
+            drawList.AddLine(leafBase, leafTip, shadow, 4.5f);
+            drawList.AddLine(leafBase, leafTip, leaves, 2.6f);
+        }
     }
 
     private static void DrawEventStatus(
