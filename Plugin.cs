@@ -69,74 +69,134 @@ public sealed class Plugin : IDalamudPlugin
     private DateTimeOffset nextLayoutScanUtc;
     private uint scannedTerritoryId;
     private bool wasActive;
+    private bool firstUpdateLogged;
+    private bool firstWindowDrawLogged;
+    private bool firstOverlayDrawLogged;
 
     public Plugin()
     {
-        configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
-        if (configuration.Version < 2)
+        BootstrapDiagnostics.Initialize(PluginInterface);
+        BootstrapDiagnostics.Write("constructor entered");
+        try
         {
-            // Existing builds defaulted to click-through, which also prevented
-            // ImGui's window border from receiving resize drags.
-            configuration.MapClickThrough = false;
-            configuration.Version = 2;
-            SaveConfiguration();
-        }
-
-        SeedLearnedPotObservations();
-        observationStore = new ObservationStore(PluginInterface);
-        crescentContext = new OccultCrescentContext(ClientState, DataManager, Log);
-        layoutScanner = new LayoutTreasureCandidateScanner(DataManager, Log);
-        objectCollector = new ObjectTableCollector(
-            ObjectTable,
-            new ConditionalObservationSink(
-                observationStore,
-                () => configuration.CollectionEnabled),
-            new ObjectTableCollectionOptions
+            configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+            BootstrapDiagnostics.Write($"configuration loaded; version={configuration.Version}");
+            if (configuration.Version < 2)
             {
-                CarrotDataIds = configuration.ConfirmedCarrotDataIds,
-                CarrotEventIds = configuration.ConfirmedCarrotEventIds,
-                SilverTreasureDataIds = silverTreasureDataIds,
-                IncludeUnclassifiedEventObjects = true,
+                // Existing builds defaulted to click-through, which also prevented
+                // ImGui's window border from receiving resize drags.
+                configuration.MapClickThrough = false;
+                configuration.Version = 2;
+                SaveConfiguration();
+            }
+
+            SeedLearnedPotObservations();
+            BootstrapDiagnostics.Write("Magic Pot seed initialized");
+            observationStore = new ObservationStore(PluginInterface);
+            BootstrapDiagnostics.Write($"observation store initialized; session={observationStore.SessionId}");
+            crescentContext = new OccultCrescentContext(ClientState, DataManager, Log);
+            layoutScanner = new LayoutTreasureCandidateScanner(DataManager, Log);
+            objectCollector = new ObjectTableCollector(
+                ObjectTable,
+                new ConditionalObservationSink(
+                    observationStore,
+                    () => configuration.CollectionEnabled),
+                new ObjectTableCollectionOptions
+                {
+                    CarrotDataIds = configuration.ConfirmedCarrotDataIds,
+                    CarrotEventIds = configuration.ConfirmedCarrotEventIds,
+                    SilverTreasureDataIds = silverTreasureDataIds,
+                    IncludeUnclassifiedEventObjects = true,
+                });
+            BootstrapDiagnostics.Write("collectors initialized");
+            fateSource = new DalamudFateSnapshotSource(FateTable);
+            fateDetector = new FateEventDetector(fateSource, observationStore.SessionId);
+            encounterDetector = new CriticalEncounterDetector(encounterSource, observationStore.SessionId);
+            BootstrapDiagnostics.Write("event detectors initialized");
+
+            atlasWindow = new AtlasWindow(
+                atlasData,
+                configuration,
+                DataManager,
+                ClientState,
+                TextureProvider,
+                SaveConfiguration);
+            treasureLineOverlay = new NearbyTreasureLineOverlay(GameGui, atlasData);
+            windowSystem.AddWindow(atlasWindow);
+            BootstrapDiagnostics.Write("atlas window and overlay initialized");
+
+            CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
+            {
+                HelpMessage = "Crescent Atlas: map, collection and status controls.",
             });
-        fateSource = new DalamudFateSnapshotSource(FateTable);
-        fateDetector = new FateEventDetector(fateSource, observationStore.SessionId);
-        encounterDetector = new CriticalEncounterDetector(encounterSource, observationStore.SessionId);
+            PluginInterface.UiBuilder.Draw += DrawWindowsWithDiagnostics;
+            PluginInterface.UiBuilder.Draw += DrawOverlayWithDiagnostics;
+            PluginInterface.UiBuilder.OpenMainUi += ToggleMap;
+            PluginInterface.UiBuilder.OpenConfigUi += ToggleMap;
+            Framework.Update += OnFrameworkUpdate;
+            BootstrapDiagnostics.Write("Dalamud callbacks registered");
 
-        atlasWindow = new AtlasWindow(
-            atlasData,
-            configuration,
-            DataManager,
-            ClientState,
-            TextureProvider,
-            SaveConfiguration);
-        treasureLineOverlay = new NearbyTreasureLineOverlay(GameGui, atlasData);
-        windowSystem.AddWindow(atlasWindow);
-
-        CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
+            nextPollUtc = DateTimeOffset.UtcNow;
+            nextFlushUtc = DateTimeOffset.UtcNow + FlushInterval;
+            ChatGui.Print("[Crescent Atlas] Loaded. /catlas toggles the display-only map.");
+            BootstrapDiagnostics.Write("constructor completed successfully");
+        }
+        catch (Exception ex)
         {
-            HelpMessage = "Crescent Atlas: map, collection and status controls.",
-        });
-        PluginInterface.UiBuilder.Draw += windowSystem.Draw;
-        PluginInterface.UiBuilder.Draw += treasureLineOverlay.Draw;
-        PluginInterface.UiBuilder.OpenMainUi += ToggleMap;
-        PluginInterface.UiBuilder.OpenConfigUi += ToggleMap;
-        Framework.Update += OnFrameworkUpdate;
-
-        nextPollUtc = DateTimeOffset.UtcNow;
-        nextFlushUtc = DateTimeOffset.UtcNow + FlushInterval;
-        ChatGui.Print("[Crescent Atlas] Loaded. /catlas toggles the display-only map.");
+            BootstrapDiagnostics.WriteException("constructor", ex);
+            throw;
+        }
     }
 
     public void Dispose()
     {
+        BootstrapDiagnostics.Write("dispose entered");
         Framework.Update -= OnFrameworkUpdate;
         PluginInterface.UiBuilder.OpenConfigUi -= ToggleMap;
         PluginInterface.UiBuilder.OpenMainUi -= ToggleMap;
-        PluginInterface.UiBuilder.Draw -= treasureLineOverlay.Draw;
+        PluginInterface.UiBuilder.Draw -= DrawOverlayWithDiagnostics;
+        PluginInterface.UiBuilder.Draw -= DrawWindowsWithDiagnostics;
         CommandManager.RemoveHandler(CommandName);
         windowSystem.RemoveAllWindows();
         atlasWindow.Dispose();
         observationStore.Dispose();
+        BootstrapDiagnostics.Write("dispose completed");
+    }
+
+    private void DrawWindowsWithDiagnostics()
+    {
+        try
+        {
+            if (!firstWindowDrawLogged)
+            {
+                firstWindowDrawLogged = true;
+                BootstrapDiagnostics.Write("first atlas window draw entered");
+            }
+            windowSystem.Draw();
+        }
+        catch (Exception ex)
+        {
+            BootstrapDiagnostics.WriteException("atlas window draw", ex);
+            throw;
+        }
+    }
+
+    private void DrawOverlayWithDiagnostics()
+    {
+        try
+        {
+            if (!firstOverlayDrawLogged)
+            {
+                firstOverlayDrawLogged = true;
+                BootstrapDiagnostics.Write("first treasure overlay draw entered");
+            }
+            treasureLineOverlay.Draw();
+        }
+        catch (Exception ex)
+        {
+            BootstrapDiagnostics.WriteException("treasure overlay draw", ex);
+            throw;
+        }
     }
 
     private void ToggleMap()
@@ -180,15 +240,24 @@ public sealed class Plugin : IDalamudPlugin
                     $"[Crescent Atlas] active={OccultCrescentContext.IsActive()}, territory={ClientState.TerritoryType}, " +
                     $"observations={observationStore.SessionObservationCount}, collection={configuration.CollectionEnabled}");
                 ChatGui.Print($"[Crescent Atlas] {atlasWindow.MapDiagnostic}");
+                ChatGui.Print($"[Crescent Atlas] Diagnostic log: {BootstrapDiagnostics.LogPath}");
+                break;
+            case "log":
+                ChatGui.Print($"[Crescent Atlas] Diagnostic log: {BootstrapDiagnostics.LogPath}");
                 break;
             default:
-                ChatGui.Print("[Crescent Atlas] /catlas [map|collect on|collect off|click|flush|folder|status]");
+                ChatGui.Print("[Crescent Atlas] /catlas [map|collect on|collect off|click|flush|folder|status|log]");
                 break;
         }
     }
 
     private void OnFrameworkUpdate(IFramework framework)
     {
+        if (!firstUpdateLogged)
+        {
+            firstUpdateLogged = true;
+            BootstrapDiagnostics.Write("first framework update entered");
+        }
         // Keep display-only guides tied to the live per-frame position. The
         // heavier scanners remain throttled by PollInterval below.
         var localPlayer = ObjectTable.LocalPlayer;
@@ -206,6 +275,7 @@ public sealed class Plugin : IDalamudPlugin
         catch (Exception ex)
         {
             Log.Error(ex, "Crescent Atlas update failed.");
+            BootstrapDiagnostics.WriteException("framework update", ex);
         }
     }
 

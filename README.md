@@ -73,6 +73,15 @@ intentionally contain character names, account IDs, world names, or chat.
 - `/catlas flush` flushes observations to disk.
 - `/catlas folder` prints the collection output directory.
 - `/catlas status` prints current collection status.
+- `/catlas log` prints the independent diagnostic log path.
+
+## Diagnostic log
+
+Startup, initialization stages, first draw/update callbacks, runtime exceptions,
+and unload stages are appended locally to
+`pluginConfigs/CrescentAtlas/diagnostics/bootstrap.log`. This log is independent
+of the main Dalamud log and remains available when the main log reaches its
+size limit. It is never uploaded automatically.
 
 ## Validation boundary
 
