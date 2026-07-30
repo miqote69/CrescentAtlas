@@ -28,6 +28,8 @@ movement, interaction, or combat and never uploads observations.
   alternating location.
 - Shows all confirmed markers in a dedicated click-through atlas without
   opening or controlling the standard game map.
+- Uses the current in-game map texture and Dalamud's standard map-coordinate
+  conversion so north, south, scale, and offsets match the game map.
 
 ## Collection data
 

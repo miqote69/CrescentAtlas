@@ -28,6 +28,7 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] private static IObjectTable ObjectTable { get; set; } = null!;
     [PluginService] private static IFateTable FateTable { get; set; } = null!;
     [PluginService] private static IGameGui GameGui { get; set; } = null!;
+    [PluginService] private static ITextureProvider TextureProvider { get; set; } = null!;
     [PluginService] private static IChatGui ChatGui { get; set; } = null!;
     [PluginService] private static IPluginLog Log { get; set; } = null!;
 
@@ -74,7 +75,12 @@ public sealed class Plugin : IDalamudPlugin
         fateDetector = new FateEventDetector(fateSource, observationStore.SessionId);
         encounterDetector = new CriticalEncounterDetector(encounterSource, observationStore.SessionId);
 
-        atlasWindow = new AtlasWindow(atlasData, configuration);
+        atlasWindow = new AtlasWindow(
+            atlasData,
+            configuration,
+            DataManager,
+            ClientState,
+            TextureProvider);
         treasureLineOverlay = new NearbyTreasureLineOverlay(GameGui, atlasData);
         windowSystem.AddWindow(atlasWindow);
 

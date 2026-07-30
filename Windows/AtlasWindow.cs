@@ -1,6 +1,10 @@
 using CrescentAtlas.Contracts;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Interface.Windowing;
+using Dalamud.Plugin.Services;
+using Dalamud.Utility;
+using Lumina.Excel.Sheets;
 
 namespace CrescentAtlas.Windows;
 
@@ -35,12 +39,23 @@ public sealed class AtlasWindow : Window, IDisposable
 
     private readonly IAtlasDataSource dataSource;
     private readonly Configuration configuration;
+    private readonly IDataManager dataManager;
+    private readonly IClientState clientState;
+    private readonly ITextureProvider textureProvider;
 
-    public AtlasWindow(IAtlasDataSource dataSource, Configuration configuration)
+    public AtlasWindow(
+        IAtlasDataSource dataSource,
+        Configuration configuration,
+        IDataManager dataManager,
+        IClientState clientState,
+        ITextureProvider textureProvider)
         : base("Crescent Atlas###CrescentAtlasMap")
     {
         this.dataSource = dataSource;
         this.configuration = configuration;
+        this.dataManager = dataManager;
+        this.clientState = clientState;
+        this.textureProvider = textureProvider;
         IsOpen = configuration.MapVisible;
 
         Flags |= ImGuiWindowFlags.NoFocusOnAppearing
@@ -138,7 +153,7 @@ public sealed class AtlasWindow : Window, IDisposable
         return ImGui.GetCursorPosY() - startY;
     }
 
-    private static void DrawField(
+    private void DrawField(
         Vector2 canvasMinimum,
         Vector2 canvasSize,
         IReadOnlyList<AtlasMarker> markers,
@@ -149,19 +164,44 @@ public sealed class AtlasWindow : Window, IDisposable
 
         drawList.PushClipRect(canvasMinimum, canvasMaximum, true);
         drawList.AddRectFilled(canvasMinimum, canvasMaximum, ImGui.GetColorU32(BackgroundColor), 5.0f);
-        DrawGrid(drawList, canvasMinimum, canvasMaximum);
 
-        var bounds = FieldBounds.Create(markers, playerPosition);
-        var projection = new FieldProjection(bounds, canvasMinimum, canvasSize, CanvasPadding);
+        Func<Vector3, Vector2> project;
+        if (TryGetGameMap(out var map, out var mapTexture))
+        {
+            var side = Math.Min(canvasSize.X, canvasSize.Y);
+            var mapSize = new Vector2(side, side);
+            var mapMinimum = canvasMinimum + ((canvasSize - mapSize) * 0.5f);
+            var mapMaximum = mapMinimum + mapSize;
+            drawList.AddImage(
+                mapTexture.Handle,
+                mapMinimum,
+                mapMaximum,
+                Vector2.Zero,
+                Vector2.One,
+                ImGui.GetColorU32(new Vector4(1.0f, 1.0f, 1.0f, 0.92f)));
+            drawList.AddRect(mapMinimum, mapMaximum, ImGui.GetColorU32(BorderColor), 4.0f);
+            drawList.AddText(
+                mapMinimum + new Vector2((side * 0.5f) - 5.0f, 6.0f),
+                ImGui.GetColorU32(new Vector4(1.0f, 0.94f, 0.72f, 1.0f)),
+                "N");
+            project = position => ProjectToGameMap(position, map, mapMinimum, mapSize);
+        }
+        else
+        {
+            DrawGrid(drawList, canvasMinimum, canvasMaximum);
+            var bounds = FieldBounds.Create(markers, playerPosition);
+            var fallback = new FieldProjection(bounds, canvasMinimum, canvasSize, CanvasPadding);
+            project = fallback.Project;
+        }
 
-        DrawTreasureCandidateRoute(drawList, projection, markers, playerPosition);
-        DrawNearbyTreasureLines(drawList, projection, markers, playerPosition);
+        DrawTreasureCandidateRoute(drawList, project, markers, playerPosition);
+        DrawNearbyTreasureLines(drawList, project, markers, playerPosition);
 
         foreach (var marker in markers.Where(marker => marker.Kind != AtlasMarkerKind.Player))
-            DrawMarker(drawList, projection.Project(marker.Position), marker);
+            DrawMarker(drawList, project(marker.Position), marker);
 
         if (playerPosition is { } position)
-            DrawPlayer(drawList, projection.Project(position));
+            DrawPlayer(drawList, project(position));
         else
             DrawMissingPlayerNotice(drawList, canvasMinimum);
 
@@ -169,9 +209,47 @@ public sealed class AtlasWindow : Window, IDisposable
         drawList.PopClipRect();
     }
 
+    private bool TryGetGameMap(out Map map, out IDalamudTextureWrap texture)
+    {
+        map = default;
+        texture = null!;
+
+        if (clientState.MapId == 0
+            || !dataManager.GetExcelSheet<Map>().TryGetRow(clientState.MapId, out map))
+        {
+            return false;
+        }
+
+        var mapId = map.Id.ToString().Trim();
+        if (string.IsNullOrWhiteSpace(mapId))
+            return false;
+
+        var textureName = mapId.Replace('/', '_');
+        var path = $"ui/map/{mapId}/{textureName}_m.tex";
+        var candidate = textureProvider.GetFromGame(path).GetWrapOrEmpty();
+        if (candidate.Width <= 1 || candidate.Height <= 1)
+            return false;
+
+        texture = candidate;
+        return true;
+    }
+
+    private static Vector2 ProjectToGameMap(
+        Vector3 world,
+        Map map,
+        Vector2 mapMinimum,
+        Vector2 mapSize)
+    {
+        var coordinate = MapUtil.WorldToMap(new Vector2(world.X, world.Z), map);
+        var normalized = new Vector2(
+            Math.Clamp((coordinate.X - 1.0f) / 41.0f, 0.0f, 1.0f),
+            Math.Clamp((coordinate.Y - 1.0f) / 41.0f, 0.0f, 1.0f));
+        return mapMinimum + (normalized * mapSize);
+    }
+
     private static void DrawTreasureCandidateRoute(
         ImDrawListPtr drawList,
-        FieldProjection projection,
+        Func<Vector3, Vector2> project,
         IReadOnlyList<AtlasMarker> markers,
         Vector3? playerPosition)
     {
@@ -186,7 +264,7 @@ public sealed class AtlasWindow : Window, IDisposable
             return;
 
         var current = player;
-        var currentScreen = projection.Project(current);
+        var currentScreen = project(current);
         var routeColor = ImGui.GetColorU32(new Vector4(0.36f, 0.80f, 0.92f, 0.45f));
 
         while (remaining.Count > 0)
@@ -204,7 +282,7 @@ public sealed class AtlasWindow : Window, IDisposable
             }
 
             var next = remaining[closestIndex];
-            var nextScreen = projection.Project(next);
+            var nextScreen = project(next);
             drawList.AddLine(currentScreen, nextScreen, routeColor, 1.5f);
             current = next;
             currentScreen = nextScreen;
@@ -214,14 +292,14 @@ public sealed class AtlasWindow : Window, IDisposable
 
     private static void DrawNearbyTreasureLines(
         ImDrawListPtr drawList,
-        FieldProjection projection,
+        Func<Vector3, Vector2> project,
         IReadOnlyList<AtlasMarker> markers,
         Vector3? playerPosition)
     {
         if (playerPosition is not { } player)
             return;
 
-        var playerScreen = projection.Project(player);
+        var playerScreen = project(player);
         var maximumDistanceSquared = NearbyTreasureDistance * NearbyTreasureDistance;
         var lineColor = ImGui.GetColorU32(new Vector4(0.18f, 0.95f, 1.00f, 0.92f));
 
@@ -229,7 +307,7 @@ public sealed class AtlasWindow : Window, IDisposable
                      marker.Kind == AtlasMarkerKind.ActiveTreasure
                      && Vector3.DistanceSquared(player, marker.Position) <= maximumDistanceSquared))
         {
-            var treasureScreen = projection.Project(marker.Position);
+            var treasureScreen = project(marker.Position);
             drawList.AddLine(playerScreen, treasureScreen, lineColor, 3.0f);
             drawList.AddCircle(treasureScreen, MarkerRadius + 5.0f, lineColor, 0, 2.0f);
 
