@@ -94,32 +94,42 @@ Assert(
     DynamicEventTimeResolver.Resolve(
         "Warmup",
         1_000,
-        900,
+        1_092,
         0,
         180,
         120,
-        92) == 92,
-    "CE standard UI countdown takes precedence");
-Assert(
-    DynamicEventTimeResolver.Resolve(
-        "Warmup",
-        1_000,
-        900,
-        51,
-        180,
-        120,
-        null) == 51,
-    "CE native seconds-left is used when UI data is unavailable");
+        999) == 92,
+    "CE start timestamp is the common source of truth for every waiting CE");
 Assert(
     DynamicEventTimeResolver.Resolve(
         "Register",
         1_000,
-        900,
+        1_104,
+        294,
+        180,
+        120,
+        null) == 104,
+    "CE start countdown does not reuse the event-dependent seconds-left field");
+Assert(
+    DynamicEventTimeResolver.Resolve(
+        "Register",
+        1_000,
+        1_080,
         0,
         180,
         120,
         null) == 80,
-    "CE registration countdown does not add the later warmup phase");
+    "CE start timestamp does not add registration or warmup durations");
+Assert(
+    DynamicEventTimeResolver.Resolve(
+        "Warmup",
+        1_001,
+        1_000,
+        0,
+        180,
+        120,
+        null) == 0,
+    "CE warmup is shown as zero after its scheduled start");
 Assert(
     DynamicEventNameMatcher.IsMatch(
         "エルムギガース",
