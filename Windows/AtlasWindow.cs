@@ -26,6 +26,7 @@ public sealed class AtlasWindow : Window, IDisposable
     private const float MinimumMapZoom = 1.0f;
     private const float MaximumMapZoom = 4.0f;
     private const float MapZoomStep = 0.25f;
+    private const uint PlayerMapIconId = 60443;
     private static readonly Vector4 BackgroundColor = new(0.035f, 0.045f, 0.055f, 0.96f);
     private static readonly Vector4 GridColor = new(0.28f, 0.34f, 0.39f, 0.23f);
     private static readonly Vector4 BorderColor = new(0.55f, 0.64f, 0.69f, 0.62f);
@@ -1175,11 +1176,15 @@ public sealed class AtlasWindow : Window, IDisposable
         drawList.AddCircle(point, 15.0f, packedColor, 0, 2.5f);
     }
 
-    private static void DrawPlayer(ImDrawListPtr drawList, Vector2 point, float? rotation)
+    private void DrawPlayer(ImDrawListPtr drawList, Vector2 point, float? rotation)
     {
         var angle = rotation ?? 0.0f;
         var forward = new Vector2(MathF.Sin(angle), MathF.Cos(angle));
         var right = new Vector2(forward.Y, -forward.X);
+
+        if (TryDrawRotatedPlayerIcon(drawList, point, forward, right))
+            return;
+
         var shadow = ImGui.GetColorU32(new Vector4(0.01f, 0.02f, 0.03f, 0.92f));
         var border = ImGui.GetColorU32(new Vector4(0.98f, 0.98f, 1.00f, 1.0f));
         var fill = ImGui.GetColorU32(new Vector4(1.00f, 0.76f, 0.18f, 1.0f));
@@ -1204,6 +1209,39 @@ public sealed class AtlasWindow : Window, IDisposable
         var fillRight = fillBack + (right * 4.8f);
         drawList.AddCircleFilled(point - forward, 5.2f, fill);
         drawList.AddTriangleFilled(fillTip, fillRight, fillLeft, fill);
+    }
+
+    private bool TryDrawRotatedPlayerIcon(
+        ImDrawListPtr drawList,
+        Vector2 point,
+        Vector2 forward,
+        Vector2 right)
+    {
+        try
+        {
+            var texture = textureProvider
+                .GetFromGameIcon(new GameIconLookup(PlayerMapIconId))
+                .GetWrapOrEmpty();
+            if (texture.Width <= 1 || texture.Height <= 1)
+                return false;
+
+            const float halfSize = 13.0f;
+            var topLeft = point + (forward * halfSize) - (right * halfSize);
+            var topRight = point + (forward * halfSize) + (right * halfSize);
+            var bottomRight = point - (forward * halfSize) + (right * halfSize);
+            var bottomLeft = point - (forward * halfSize) - (right * halfSize);
+            drawList.AddImageQuad(
+                texture.Handle,
+                topLeft,
+                topRight,
+                bottomRight,
+                bottomLeft);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private static void DrawDiamond(ImDrawListPtr drawList, Vector2 point, float radius, uint color)
