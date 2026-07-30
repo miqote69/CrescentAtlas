@@ -20,6 +20,7 @@ public sealed class Plugin : IDalamudPlugin
     private const string NorthHornInstanceKey = "territory-1346";
     private const float TreasureCandidateCheckRadius = 70.0f;
     private const float TreasureCandidateObjectMatchRadius = 12.0f;
+    private static readonly HashSet<uint> MagicPotEventIds = [2072, 2073];
     private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(500);
     private static readonly TimeSpan FlushInterval = TimeSpan.FromSeconds(30);
     private static readonly PotObservation[] LearnedNorthHornPotObservations =
@@ -104,6 +105,7 @@ public sealed class Plugin : IDalamudPlugin
                 $"potChest={potChestDataIds.Count}");
             observationStore = new ObservationStore(PluginInterface);
             BootstrapDiagnostics.Write($"observation store initialized; session={observationStore.SessionId}");
+            RestorePotObservations();
             crescentContext = new OccultCrescentContext(ClientState, DataManager, Log);
             layoutScanner = new LayoutTreasureCandidateScanner(DataManager, Log);
             objectCollector = new ObjectTableCollector(
@@ -411,6 +413,8 @@ public sealed class Plugin : IDalamudPlugin
                 observation.ObservedAtUtc,
                 observation.EventId,
                 new Vector3(observation.X, observation.Y, observation.Z)));
+            if (configuration.CollectionEnabled)
+                observationStore.Flush();
             PrintPotPrediction(prediction);
         }
     }
@@ -515,6 +519,20 @@ public sealed class Plugin : IDalamudPlugin
             potPredictionTracker.Observe(observation);
     }
 
+    private void RestorePotObservations()
+    {
+        var restored = PotObservationHistoryReader.Load(
+            observationStore.OutputDirectory,
+            MagicPotEventIds,
+            NorthHornInstanceKey);
+        foreach (var observation in restored)
+            potPredictionTracker.Observe(observation);
+
+        BootstrapDiagnostics.Write(
+            $"Magic Pot history restored; source={restored.Count}; " +
+            $"accepted={potPredictionTracker.GetObservations(NorthHornInstanceKey).Count}");
+    }
+
     private void UpdatePotPrediction(string instanceKey, DateTimeOffset now)
     {
         if (!StringComparer.Ordinal.Equals(instanceKey, NorthHornInstanceKey))
@@ -569,8 +587,6 @@ public sealed class Plugin : IDalamudPlugin
         previousCarrotKeys.Clear();
         previousPotChestKeys.Clear();
         fateDetector.Reset();
-        potPredictionTracker.ResetAll();
-        SeedLearnedPotObservations();
         atlasData.SetPotPrediction(null);
         atlasData.SetContext(0, string.Empty, null, null);
     }

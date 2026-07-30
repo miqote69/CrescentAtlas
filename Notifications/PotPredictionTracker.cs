@@ -17,7 +17,7 @@ public sealed class PotPredictionTracker
     {
         this.provisionalInterval =
             provisionalInterval ?? PotPredictionCalculator.DefaultInterval;
-        this.duplicateWindow = duplicateWindow ?? TimeSpan.FromSeconds(30);
+        this.duplicateWindow = duplicateWindow ?? TimeSpan.FromMinutes(25);
     }
 
     public PotPrediction Observe(PotObservation observation)
@@ -79,7 +79,13 @@ public sealed class PotPredictionTracker
         if (ordered.Length < 2)
             return prediction with { NextOccurrenceUtc = next };
 
-        var predicted = advances % 2 == 0 ? ordered[^2] : ordered[^1];
+        var latest = ordered[^1];
+        var alternate = ordered
+            .Take(ordered.Length - 1)
+            .LastOrDefault(item => item.EventId != latest.EventId);
+        var predicted = advances % 2 == 0
+            ? alternate ?? latest
+            : latest;
         return prediction with
         {
             NextOccurrenceUtc = next,

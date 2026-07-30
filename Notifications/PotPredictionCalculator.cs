@@ -40,9 +40,13 @@ public static class PotPredictionCalculator
                 1);
         }
 
-        var previous = ordered[^2];
-        var measured = latest.ObservedAtUtc - previous.ObservedAtUtc;
-        if (!IsPlausible(measured))
+        var intervals = ordered
+            .Zip(
+                ordered.Skip(1),
+                (previous, current) => current.ObservedAtUtc - previous.ObservedAtUtc)
+            .Where(IsPlausible)
+            .ToArray();
+        if (intervals.Length == 0)
         {
             return new PotPrediction(
                 instanceKey,
@@ -54,16 +58,22 @@ public static class PotPredictionCalculator
                 ordered.Length);
         }
 
+        // Missed spawns produce 60/90-minute gaps. The smallest plausible
+        // observed gap is the best evidence for the underlying cadence.
+        var measured = intervals.Min();
+        var previousAlternate = ordered
+            .Take(ordered.Length - 1)
+            .LastOrDefault(item => item.EventId != latest.EventId);
+
         // With two alternating observations, the best evidence for the next
-        // location/event is the preceding one. More observations keep applying
-        // the same two-step cycle without any hard-coded North Horn data.
+        // location/event is the latest observation of the other event.
         return new PotPrediction(
             instanceKey,
             PotPredictionConfidence.Confirmed,
             latest.ObservedAtUtc + measured,
             measured,
-            previous.EventId,
-            previous.Position,
+            (previousAlternate ?? latest).EventId,
+            (previousAlternate ?? latest).Position,
             ordered.Length);
     }
 

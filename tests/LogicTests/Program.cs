@@ -31,6 +31,38 @@ Assert(advanced.PredictedPosition == secondPosition, "advanced prediction altern
 var isolated = tracker.GetPrediction("instance-b");
 Assert(isolated.Confidence == PotPredictionConfidence.Unknown, "instances remain isolated");
 
+var missedTracker = new PotPredictionTracker();
+missedTracker.Observe(new PotObservation("missed", origin, 100, firstPosition));
+missedTracker.Observe(new PotObservation("missed", origin.AddMinutes(30), 200, secondPosition));
+var afterMissedSpawns = missedTracker.Observe(
+    new PotObservation("missed", origin.AddMinutes(120), 100, firstPosition));
+Assert(afterMissedSpawns.EstimatedInterval == TimeSpan.FromMinutes(30), "missed spawns retain base interval");
+Assert(afterMissedSpawns.NextOccurrenceUtc == origin.AddMinutes(150), "prediction continues from latest observation");
+Assert(afterMissedSpawns.PredictedEventId == 200, "prediction selects the other alternating event");
+
+var beforeReloadDuplicate = missedTracker.GetObservations("missed").Count;
+missedTracker.Observe(new PotObservation(
+    "missed",
+    origin.AddMinutes(140),
+    100,
+    firstPosition));
+Assert(
+    missedTracker.GetObservations("missed").Count == beforeReloadDuplicate,
+    "same active pot after reload is ignored");
+
+var historyLine =
+    """{"observedAtUtc":"2026-07-30T08:01:15.9085312+00:00","kind":"FateStarted","eventId":2072,"x":233,"y":7.729229,"z":-470,"properties":{"instanceKey":"territory-1346"}}""";
+Assert(
+    PotObservationHistoryReader.TryParseLine(
+        historyLine,
+        new HashSet<uint> { 2072, 2073 },
+        "fallback",
+        out var restoredPot),
+    "pot history line parses");
+Assert(restoredPot.InstanceKey == "territory-1346", "history restores instance key");
+Assert(restoredPot.EventId == 2072, "history restores event id");
+Assert(restoredPot.Position == new Vector3(233, 7.729229f, -470), "history restores position");
+
 var atlas = new MutableAtlasDataSource();
 atlas.SetContext(1346, "North Horn", Vector3.Zero, 0.0f);
 atlas.ReplaceSource(

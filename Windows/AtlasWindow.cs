@@ -30,6 +30,9 @@ public sealed class AtlasWindow : Window, IDisposable
     private static readonly Vector4 GridColor = new(0.28f, 0.34f, 0.39f, 0.23f);
     private static readonly Vector4 BorderColor = new(0.55f, 0.64f, 0.69f, 0.62f);
     private static readonly Vector4 CheckedTreasureColor = new(0.30f, 1.00f, 0.42f, 1.0f);
+    private static readonly Vector4 BronzeTreasureColor = new(0.66f, 0.34f, 0.12f, 1.0f);
+    private static readonly Vector4 CheckedBronzeTreasureColor = new(0.38f, 0.20f, 0.08f, 1.0f);
+    private static readonly Vector4 BronzeTreasureRingColor = new(1.00f, 0.70f, 0.30f, 1.0f);
     private static readonly Vector4 SilverTreasureColor = new(0.88f, 0.94f, 1.00f, 1.0f);
 
     private static readonly LegendEntry[] Legend =
@@ -37,6 +40,7 @@ public sealed class AtlasWindow : Window, IDisposable
         new(AtlasMarkerKind.Player, "Player", new Vector4(0.96f, 0.96f, 1.00f, 1.0f), LegendStyle.Player),
         new(AtlasMarkerKind.TreasureCandidate, "Unchecked treasure", new Vector4(0.20f, 0.92f, 1.00f, 1.0f)),
         new(AtlasMarkerKind.TreasureCandidate, "Checked treasure", CheckedTreasureColor, LegendStyle.CheckedTreasure),
+        new(AtlasMarkerKind.TreasureCandidate, "Bronze treasure", BronzeTreasureColor, LegendStyle.BronzeTreasure),
         new(AtlasMarkerKind.TreasureCandidate, "Silver treasure", SilverTreasureColor, LegendStyle.SilverTreasure),
         new(AtlasMarkerKind.ActiveTreasure, "Active treasure", new Vector4(0.26f, 0.92f, 1.00f, 1.0f)),
         new(AtlasMarkerKind.Carrot, "Carrot", new Vector4(1.00f, 0.55f, 0.18f, 1.0f)),
@@ -299,7 +303,12 @@ public sealed class AtlasWindow : Window, IDisposable
             true,
             0,
             IsChecked: entry.Style == LegendStyle.CheckedTreasure,
-            TreasureType: entry.Style == LegendStyle.SilverTreasure ? "silver" : string.Empty);
+            TreasureType: entry.Style switch
+            {
+                LegendStyle.BronzeTreasure => "bronze",
+                LegendStyle.SilverTreasure => "silver",
+                _ => string.Empty,
+            });
         DrawMarker(drawList, point, marker, false);
     }
 
@@ -501,9 +510,15 @@ public sealed class AtlasWindow : Window, IDisposable
     {
         var isSilverTreasure = marker.Kind == AtlasMarkerKind.TreasureCandidate
                                && marker.TreasureType.Equals("silver", StringComparison.OrdinalIgnoreCase);
-        var color = marker.Kind == AtlasMarkerKind.TreasureCandidate && marker.IsChecked
-            ? CheckedTreasureColor
-            : MarkerColor(marker.Kind);
+        var isBronzeTreasure = marker.Kind == AtlasMarkerKind.TreasureCandidate
+                               && marker.TreasureType.Equals("bronze", StringComparison.OrdinalIgnoreCase);
+        var color = isBronzeTreasure
+            ? marker.IsChecked
+                ? CheckedBronzeTreasureColor
+                : BronzeTreasureColor
+            : marker.Kind == AtlasMarkerKind.TreasureCandidate && marker.IsChecked
+                ? CheckedTreasureColor
+                : MarkerColor(marker.Kind);
         if (!marker.IsActive && marker.Kind != AtlasMarkerKind.TreasureCandidate)
             color.W *= 0.45f;
 
@@ -524,15 +539,28 @@ public sealed class AtlasWindow : Window, IDisposable
         if (marker.Kind == AtlasMarkerKind.TreasureCandidate)
         {
             var shadowColor = ImGui.GetColorU32(new Vector4(0.01f, 0.04f, 0.06f, 0.92f));
-            var ringColor = ImGui.GetColorU32(new Vector4(color.X, color.Y, color.Z, color.W * 0.72f));
+            var ring = isBronzeTreasure
+                ? marker.IsChecked
+                    ? CheckedTreasureColor
+                    : BronzeTreasureRingColor
+                : new Vector4(color.X, color.Y, color.Z, color.W * 0.72f);
+            var ringColor = ImGui.GetColorU32(ring);
             drawList.AddCircleFilled(point, radius + 2.5f, shadowColor);
             drawList.AddCircleFilled(point, radius, packedColor);
-            drawList.AddCircle(point, radius + 3.5f, ringColor, 0, 2.0f);
+            drawList.AddCircle(point, radius + 3.5f, ringColor, 0, isBronzeTreasure ? 2.5f : 2.0f);
+            if (isBronzeTreasure)
+                DrawDiamond(
+                    drawList,
+                    point,
+                    radius - 2.0f,
+                    ImGui.GetColorU32(new Vector4(0.96f, 0.62f, 0.24f, 1.0f)));
             if (isSilverTreasure)
                 DrawDiamond(drawList, point, radius - 1.0f, ImGui.GetColorU32(SilverTreasureColor));
             if (marker.IsChecked)
             {
-                var checkColor = ImGui.GetColorU32(new Vector4(0.03f, 0.12f, 0.05f, 1.0f));
+                var checkColor = ImGui.GetColorU32(isBronzeTreasure
+                    ? new Vector4(0.50f, 1.00f, 0.55f, 1.0f)
+                    : new Vector4(0.03f, 0.12f, 0.05f, 1.0f));
                 drawList.AddLine(point + new Vector2(-3.0f, 0.0f), point + new Vector2(-0.5f, 3.0f), checkColor, 2.0f);
                 drawList.AddLine(point + new Vector2(-0.5f, 3.0f), point + new Vector2(4.0f, -3.0f), checkColor, 2.0f);
             }
@@ -565,19 +593,20 @@ public sealed class AtlasWindow : Window, IDisposable
         var timeLabel = marker.Kind == AtlasMarkerKind.CriticalEncounter
             ? marker.EventState switch
             {
-                "Register" => "待機",
-                "Warmup" => "開始まで",
+                "Register" or "Warmup" => "開始まで",
                 _ => "残り",
             }
             : "残り";
-        var firstLine = $"{timeLabel} {minutes:00}:{seconds:00}";
-        var secondLine = $"進捗 {Math.Clamp(marker.Progress, (byte)0, (byte)100)}%";
-        var firstLineSize = ImGui.CalcTextSize(firstLine);
-        var secondLineSize = ImGui.CalcTextSize(secondLine);
-        var lineHeight = Math.Max(firstLineSize.Y, secondLineSize.Y);
+        var nameLine = CompactMarkerLabel(marker.Label, 18);
+        var timeLine = $"{timeLabel} {minutes:00}:{seconds:00}";
+        var progressLine = $"進捗 {Math.Clamp(marker.Progress, (byte)0, (byte)100)}%";
+        var nameLineSize = ImGui.CalcTextSize(nameLine);
+        var timeLineSize = ImGui.CalcTextSize(timeLine);
+        var progressLineSize = ImGui.CalcTextSize(progressLine);
+        var lineHeight = Math.Max(nameLineSize.Y, Math.Max(timeLineSize.Y, progressLineSize.Y));
         var textSize = new Vector2(
-            Math.Max(firstLineSize.X, secondLineSize.X),
-            lineHeight * 2.0f);
+            Math.Max(nameLineSize.X, Math.Max(timeLineSize.X, progressLineSize.X)),
+            lineHeight * 3.0f);
         var textPosition = point + new Vector2(-(textSize.X * 0.5f), 15.0f);
         var padding = new Vector2(4.0f, 3.0f);
         var background = marker.Kind == AtlasMarkerKind.CriticalEncounter
@@ -591,13 +620,28 @@ public sealed class AtlasWindow : Window, IDisposable
             ImGui.GetColorU32(background),
             3.0f);
         drawList.AddText(
-            textPosition + new Vector2((textSize.X - firstLineSize.X) * 0.5f, 0.0f),
-            ImGui.GetColorU32(new Vector4(1.0f, 0.88f, 0.46f, 1.0f)),
-            firstLine);
-        drawList.AddText(
-            textPosition + new Vector2((textSize.X - secondLineSize.X) * 0.5f, lineHeight),
+            textPosition + new Vector2((textSize.X - nameLineSize.X) * 0.5f, 0.0f),
             ImGui.GetColorU32(new Vector4(1.0f, 1.0f, 1.0f, 1.0f)),
-            secondLine);
+            nameLine);
+        drawList.AddText(
+            textPosition + new Vector2((textSize.X - timeLineSize.X) * 0.5f, lineHeight),
+            ImGui.GetColorU32(new Vector4(1.0f, 0.88f, 0.46f, 1.0f)),
+            timeLine);
+        drawList.AddText(
+            textPosition + new Vector2((textSize.X - progressLineSize.X) * 0.5f, lineHeight * 2.0f),
+            ImGui.GetColorU32(new Vector4(1.0f, 1.0f, 1.0f, 1.0f)),
+            progressLine);
+    }
+
+    private static string CompactMarkerLabel(string label, int maximumCharacters)
+    {
+        if (string.IsNullOrWhiteSpace(label))
+            return "Unknown event";
+
+        var trimmed = label.Trim();
+        return trimmed.Length <= maximumCharacters
+            ? trimmed
+            : $"{trimmed[..Math.Max(1, maximumCharacters - 1)]}…";
     }
 
     private bool TryDrawGameIcon(ImDrawListPtr drawList, Vector2 point, uint iconId)
@@ -635,15 +679,26 @@ public sealed class AtlasWindow : Window, IDisposable
         var countdown = totalSeconds >= 3600
             ? $"{totalSeconds / 3600:00}:{(totalSeconds / 60) % 60:00}:{totalSeconds % 60:00}"
             : $"{totalSeconds / 60:00}:{totalSeconds % 60:00}";
-        var label = $"POT {countdown}";
-        var textSize = ImGui.CalcTextSize(label);
+        var predictedLocal = prediction.NextOccurrenceUtc.ToLocalTime();
+        var firstLine = $"予想時間 {predictedLocal:HH:mm:ss}";
+        var secondLine = $"あと {countdown}";
+        var firstLineSize = ImGui.CalcTextSize(firstLine);
+        var secondLineSize = ImGui.CalcTextSize(secondLine);
+        var lineHeight = Math.Max(firstLineSize.Y, secondLineSize.Y);
+        var textSize = new Vector2(
+            Math.Max(firstLineSize.X, secondLineSize.X),
+            lineHeight * 2.0f);
         var textMinimum = point + new Vector2(18.0f, -textSize.Y * 0.5f);
         drawList.AddRectFilled(
             textMinimum - new Vector2(4.0f, 2.0f),
             textMinimum + textSize + new Vector2(4.0f, 2.0f),
             shadow,
             3.0f);
-        drawList.AddText(textMinimum, packedColor, label);
+        drawList.AddText(textMinimum, packedColor, firstLine);
+        drawList.AddText(
+            textMinimum + new Vector2(0.0f, lineHeight),
+            ImGui.GetColorU32(new Vector4(1.0f, 0.94f, 0.72f, 1.0f)),
+            secondLine);
     }
 
     private static void DrawPotPredictionCore(ImDrawListPtr drawList, Vector2 point)
@@ -727,6 +782,7 @@ public sealed class AtlasWindow : Window, IDisposable
         Marker,
         Player,
         CheckedTreasure,
+        BronzeTreasure,
         SilverTreasure,
         LiveGameIcon,
         PotPrediction,
