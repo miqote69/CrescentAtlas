@@ -43,6 +43,8 @@ public sealed class AtlasWindow : Window, IDisposable
     private readonly IClientState clientState;
     private readonly ITextureProvider textureProvider;
 
+    public string MapDiagnostic { get; private set; } = "Map not checked.";
+
     public AtlasWindow(
         IAtlasDataSource dataSource,
         Configuration configuration,
@@ -189,6 +191,10 @@ public sealed class AtlasWindow : Window, IDisposable
         else
         {
             DrawGrid(drawList, canvasMinimum, canvasMaximum);
+            drawList.AddText(
+                canvasMinimum + new Vector2(12.0f, canvasSize.Y - ImGui.GetTextLineHeight() - 8.0f),
+                ImGui.GetColorU32(new Vector4(1.0f, 0.52f, 0.28f, 0.92f)),
+                $"Game map unavailable: {MapDiagnostic}");
             var bounds = FieldBounds.Create(markers, playerPosition);
             var fallback = new FieldProjection(bounds, canvasMinimum, canvasSize, CanvasPadding);
             project = fallback.Project;
@@ -217,21 +223,43 @@ public sealed class AtlasWindow : Window, IDisposable
         if (clientState.MapId == 0
             || !dataManager.GetExcelSheet<Map>().TryGetRow(clientState.MapId, out map))
         {
+            MapDiagnostic = $"Map row {clientState.MapId} is unavailable.";
             return false;
         }
 
-        var mapId = map.Id.ToString().Trim();
+        var mapId = map.Id.ToString().Trim().TrimEnd('\0');
         if (string.IsNullOrWhiteSpace(mapId))
+        {
+            MapDiagnostic = $"Map row {clientState.MapId} has an empty Id.";
             return false;
+        }
 
         var textureName = mapId.Replace('/', '_');
-        var path = $"ui/map/{mapId}/{textureName}_m.tex";
-        var candidate = textureProvider.GetFromGame(path).GetWrapOrEmpty();
-        if (candidate.Width <= 1 || candidate.Height <= 1)
-            return false;
+        var paths = new[]
+        {
+            $"ui/map/{mapId}/{textureName}_m.tex",
+            $"ui/map/{mapId}/{textureName}_s.tex",
+        };
 
-        texture = candidate;
-        return true;
+        foreach (var path in paths)
+        {
+            if (!dataManager.FileExists(path))
+                continue;
+
+            var candidate = textureProvider.GetFromGame(path).GetWrapOrEmpty();
+            if (candidate.Width <= 1 || candidate.Height <= 1)
+            {
+                MapDiagnostic = $"Map {clientState.MapId} '{mapId}': loading {path}";
+                continue;
+            }
+
+            MapDiagnostic = $"Map {clientState.MapId} '{mapId}': {path}";
+            texture = candidate;
+            return true;
+        }
+
+        MapDiagnostic = $"Map {clientState.MapId} '{mapId}': no _m/_s texture found.";
+        return false;
     }
 
     private static Vector2 ProjectToGameMap(

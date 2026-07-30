@@ -151,6 +151,7 @@ public sealed class Plugin : IDalamudPlugin
                 ChatGui.Print(
                     $"[Crescent Atlas] active={OccultCrescentContext.IsActive()}, territory={ClientState.TerritoryType}, " +
                     $"observations={observationStore.SessionObservationCount}, collection={configuration.CollectionEnabled}");
+                ChatGui.Print($"[Crescent Atlas] {atlasWindow.MapDiagnostic}");
                 break;
             default:
                 ChatGui.Print("[Crescent Atlas] /catlas [map|collect on|collect off|click|flush|folder|status]");
