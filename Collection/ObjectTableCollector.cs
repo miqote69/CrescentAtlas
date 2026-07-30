@@ -82,11 +82,16 @@ public sealed class ObjectTableCollector(
             .ToArray();
     }
 
-    private AtlasMarker CreateTreasureMarker(
+    private AtlasMarker? CreateTreasureMarker(
         IGameObject gameObject,
         uint territoryId,
         DateTimeOffset observedAt)
     {
+        // Opened coffers can remain in the object table briefly, but they are
+        // no longer interactable. Treat only targetable coffers as present.
+        if (!gameObject.IsTargetable)
+            return null;
+
         var dataId = gameObject.BaseId;
         var treasureType = options.SilverTreasureDataIds.Contains(dataId) ? "silver" : string.Empty;
         var key = ObservationIdentity.PositionKey(
