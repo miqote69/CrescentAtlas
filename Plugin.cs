@@ -52,7 +52,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly Configuration configuration;
     private readonly ObservationStore observationStore;
     private readonly HashSet<uint> silverTreasureDataIds = [];
-    private readonly HashSet<uint> potChestDataIds = [];
+    private readonly HashSet<uint> potTargetDataIds = [];
     private readonly MutableAtlasDataSource atlasData = new();
     private readonly OccultCrescentContext crescentContext;
     private readonly LayoutTreasureCandidateScanner layoutScanner;
@@ -67,7 +67,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly NearbyTreasureLineOverlay treasureLineOverlay;
     private HashSet<string> previousTreasureKeys = new(StringComparer.Ordinal);
     private HashSet<string> previousCarrotKeys = new(StringComparer.Ordinal);
-    private HashSet<string> previousPotChestKeys = new(StringComparer.Ordinal);
+    private HashSet<string> previousPotTargetKeys = new(StringComparer.Ordinal);
     private DateTimeOffset nextPollUtc;
     private DateTimeOffset nextFlushUtc;
     private DateTimeOffset nextLayoutScanUtc;
@@ -98,11 +98,11 @@ public sealed class Plugin : IDalamudPlugin
             BootstrapDiagnostics.Write("Magic Pot seed initialized");
             silverTreasureDataIds.UnionWith(
                 ConfirmedSilverTreasureSpots.NorthHorn.Select(spot => spot.DataId));
-            potChestDataIds.UnionWith(
-                ConfirmedPotChestObservations.NorthHorn.Select(observation => observation.DataId));
+            potTargetDataIds.UnionWith(
+                ConfirmedPotTargetObservations.NorthHorn.Select(observation => observation.DataId));
             BootstrapDiagnostics.Write(
                 $"confirmed treasure data initialized; silver={silverTreasureDataIds.Count}; " +
-                $"potChest={potChestDataIds.Count}");
+                $"potTarget={potTargetDataIds.Count}");
             observationStore = new ObservationStore(PluginInterface);
             BootstrapDiagnostics.Write($"observation store initialized; session={observationStore.SessionId}");
             RestorePotObservations();
@@ -118,7 +118,7 @@ public sealed class Plugin : IDalamudPlugin
                     CarrotDataIds = configuration.ConfirmedCarrotDataIds,
                     CarrotEventIds = configuration.ConfirmedCarrotEventIds,
                     SilverTreasureDataIds = silverTreasureDataIds,
-                    PotChestDataIds = potChestDataIds,
+                    PotTargetDataIds = potTargetDataIds,
                     IncludeUnclassifiedEventObjects = true,
                 });
             BootstrapDiagnostics.Write("collectors initialized");
@@ -339,20 +339,20 @@ public sealed class Plugin : IDalamudPlugin
         var objectMarkers = objectCollector.Collect(territoryId, territoryName, now);
         var treasures = objectMarkers.Where(marker => marker.Kind == AtlasMarkerKind.ActiveTreasure).ToArray();
         var carrotCandidates = objectMarkers.Where(marker => marker.Kind == AtlasMarkerKind.Carrot).ToArray();
-        var potChests = objectMarkers.Where(marker => marker.Kind == AtlasMarkerKind.PotChest).ToArray();
+        var potTargets = objectMarkers.Where(marker => marker.Kind == AtlasMarkerKind.PotTarget).ToArray();
         var carrots = carrotCandidates
             .Where(marker => !marker.Key.Contains("carrot-candidate", StringComparison.Ordinal))
             .ToArray();
         atlasData.ReplaceSource(AtlasMarkerKind.ActiveTreasure, treasures);
         atlasData.ReplaceSource(AtlasMarkerKind.Carrot, carrots);
-        atlasData.ReplaceSource(AtlasMarkerKind.PotChest, potChests);
+        atlasData.ReplaceSource(AtlasMarkerKind.PotTarget, potTargets);
         if (localPlayer is not null)
             atlasData.MarkAbsentNearbyTreasureCandidatesChecked(
                 localPlayer.Position,
                 TreasureCandidateCheckRadius,
                 treasures,
                 TreasureCandidateObjectMatchRadius);
-        NotifyNewObjects(treasures, carrots, potChests);
+        NotifyNewObjects(treasures, carrots, potTargets);
 
         PollFates(territoryId, territoryName, instanceKey, now, entering);
         UpdatePotPrediction(instanceKey, now);
@@ -476,11 +476,11 @@ public sealed class Plugin : IDalamudPlugin
     private void NotifyNewObjects(
         IReadOnlyList<AtlasMarker> treasures,
         IReadOnlyList<AtlasMarker> carrots,
-        IReadOnlyList<AtlasMarker> potChests)
+        IReadOnlyList<AtlasMarker> potTargets)
     {
         var treasureKeys = treasures.Select(marker => marker.Key).ToHashSet(StringComparer.Ordinal);
         var carrotKeys = carrots.Select(marker => marker.Key).ToHashSet(StringComparer.Ordinal);
-        var potChestKeys = potChests.Select(marker => marker.Key).ToHashSet(StringComparer.Ordinal);
+        var potTargetKeys = potTargets.Select(marker => marker.Key).ToHashSet(StringComparer.Ordinal);
 
         if (configuration.TreasureNotificationsEnabled)
         {
@@ -496,13 +496,13 @@ public sealed class Plugin : IDalamudPlugin
 
         if (configuration.PotNotificationsEnabled)
         {
-            foreach (var marker in potChests.Where(marker => !previousPotChestKeys.Contains(marker.Key)))
-                ChatGui.Print($"[Crescent Atlas] Magic Pot gold chest: {marker.Label}");
+            foreach (var marker in potTargets.Where(marker => !previousPotTargetKeys.Contains(marker.Key)))
+                ChatGui.Print($"[Crescent Atlas] Magic Pot target: {marker.Label}");
         }
 
         previousTreasureKeys = treasureKeys;
         previousCarrotKeys = carrotKeys;
-        previousPotChestKeys = potChestKeys;
+        previousPotTargetKeys = potTargetKeys;
     }
 
     private bool IsPotFate(FateSnapshot fate) => IsPotFate(fate.FateId, fate.Name);
@@ -585,7 +585,7 @@ public sealed class Plugin : IDalamudPlugin
         nextLayoutScanUtc = DateTimeOffset.MinValue;
         previousTreasureKeys.Clear();
         previousCarrotKeys.Clear();
-        previousPotChestKeys.Clear();
+        previousPotTargetKeys.Clear();
         fateDetector.Reset();
         atlasData.SetPotPrediction(null);
         atlasData.SetContext(0, string.Empty, null, null);

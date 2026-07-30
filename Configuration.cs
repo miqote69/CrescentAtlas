@@ -17,7 +17,7 @@ public sealed class Configuration : IPluginConfiguration
 
     public bool ShowSilverTreasure { get; set; } = true;
 
-    public bool ShowGoldTreasure { get; set; } = true;
+    public bool ShowPotTarget { get; set; } = true;
 
     public bool ShowFates { get; set; } = true;
 

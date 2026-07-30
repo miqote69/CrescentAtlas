@@ -27,7 +27,7 @@ public sealed record ObjectTableCollectionOptions
     /// <summary>
     /// Event-object Data IDs confirmed to represent Magic Pot reward coffers.
     /// </summary>
-    public IReadOnlySet<uint> PotChestDataIds { get; init; } = new HashSet<uint>();
+    public IReadOnlySet<uint> PotTargetDataIds { get; init; } = new HashSet<uint>();
 
     /// <summary>
     /// Optional game-version-specific classifier. It runs only for EventObj objects.
@@ -125,25 +125,24 @@ public sealed class ObjectTableCollector(
     {
         var dataId = gameObject.BaseId;
         var eventId = TryReadEventId(gameObject);
-        if (options.PotChestDataIds.Contains(dataId))
+        if (options.PotTargetDataIds.Contains(dataId))
         {
-            var potChestKey = ObservationIdentity.PositionKey(
+            var potTargetKey = ObservationIdentity.PositionKey(
                 territoryId,
-                "pot-chest",
+                "pot-target",
                 dataId,
                 eventId,
                 gameObject.Position);
             return new AtlasMarker(
-                potChestKey,
-                AtlasMarkerKind.PotChest,
-                DisplayName(gameObject, "Magic Pot gold chest"),
+                potTargetKey,
+                AtlasMarkerKind.PotTarget,
+                DisplayName(gameObject, "Magic Pot target"),
                 gameObject.Position,
                 observedAt,
                 IsActive: true,
                 territoryId,
                 dataId,
-                eventId,
-                TreasureType: "gold");
+                eventId);
         }
 
         var confirmed = options.CarrotDataIds.Contains(dataId)
@@ -181,7 +180,7 @@ public sealed class ObjectTableCollector(
             Kind = marker.Kind switch
             {
                 AtlasMarkerKind.ActiveTreasure => "active-treasure",
-                AtlasMarkerKind.PotChest => "pot-chest",
+                AtlasMarkerKind.PotTarget => "pot-target",
                 _ when marker.Label.Contains("candidate", StringComparison.OrdinalIgnoreCase) => "carrot-candidate",
                 _ => "carrot",
             },
@@ -208,8 +207,8 @@ public sealed class ObjectTableCollector(
         };
         if (!string.IsNullOrWhiteSpace(marker.TreasureType))
             properties["cofferType"] = marker.TreasureType;
-        if (marker.Kind == AtlasMarkerKind.PotChest)
-            properties["rewardSource"] = "magic-pot";
+        if (marker.Kind == AtlasMarkerKind.PotTarget)
+            properties["targetType"] = "magic-pot-destination";
         return properties;
     }
 

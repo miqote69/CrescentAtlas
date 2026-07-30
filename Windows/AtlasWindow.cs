@@ -47,7 +47,7 @@ public sealed class AtlasWindow : Window, IDisposable
         new(AtlasMarkerKind.CriticalEncounter, "Forked Tower", new Vector4(0.38f, 0.88f, 1.00f, 1.0f), LegendStyle.ForkedTower),
         new(AtlasMarkerKind.PotFate, "Magic pot", new Vector4(1.00f, 0.83f, 0.25f, 1.0f), LegendStyle.LiveGameIcon),
         new(AtlasMarkerKind.PotPrediction, "Magic pot prediction", new Vector4(1.00f, 0.72f, 0.08f, 1.0f), LegendStyle.PotPrediction),
-        new(AtlasMarkerKind.PotChest, "Pot chest", new Vector4(0.45f, 1.00f, 0.48f, 1.0f)),
+        new(AtlasMarkerKind.PotTarget, "Magic Pot target", new Vector4(0.45f, 1.00f, 0.48f, 1.0f)),
     ];
 
     private readonly IAtlasDataSource dataSource;
@@ -193,7 +193,7 @@ public sealed class AtlasWindow : Window, IDisposable
 
         var showBronzeTreasure = configuration.ShowBronzeTreasure;
         var showSilverTreasure = configuration.ShowSilverTreasure;
-        var showGoldTreasure = configuration.ShowGoldTreasure;
+        var showPotTarget = configuration.ShowPotTarget;
         var showFates = configuration.ShowFates;
         var showCriticalEncounters = configuration.ShowCriticalEncounters;
         var detailedEventDisplay = configuration.DetailedEventDisplay;
@@ -213,8 +213,8 @@ public sealed class AtlasWindow : Window, IDisposable
             ref usedWidth,
             availableWidth);
         changed |= DrawFilterCheckbox(
-            "Gold chest",
-            ref showGoldTreasure,
+            "Magic Pot target",
+            ref showPotTarget,
             ref usedWidth,
             availableWidth);
         changed |= DrawFilterCheckbox(
@@ -247,7 +247,7 @@ public sealed class AtlasWindow : Window, IDisposable
         {
             configuration.ShowBronzeTreasure = showBronzeTreasure;
             configuration.ShowSilverTreasure = showSilverTreasure;
-            configuration.ShowGoldTreasure = showGoldTreasure;
+            configuration.ShowPotTarget = showPotTarget;
             configuration.ShowFates = showFates;
             configuration.ShowCriticalEncounters = showCriticalEncounters;
             configuration.DetailedEventDisplay = detailedEventDisplay;
@@ -286,8 +286,8 @@ public sealed class AtlasWindow : Window, IDisposable
             return configuration.ShowForkedTower;
         if (marker.Kind == AtlasMarkerKind.CriticalEncounter)
             return configuration.ShowCriticalEncounters;
-        if (IsGoldTreasure(marker))
-            return configuration.ShowGoldTreasure;
+        if (marker.Kind == AtlasMarkerKind.PotTarget)
+            return configuration.ShowPotTarget;
         if (IsSilverTreasure(marker))
             return configuration.ShowSilverTreasure;
         if (IsBronzeTreasure(marker))
@@ -310,10 +310,6 @@ public sealed class AtlasWindow : Window, IDisposable
     private static bool IsSilverTreasure(AtlasMarker marker)
         => marker.Kind is AtlasMarkerKind.TreasureCandidate or AtlasMarkerKind.ActiveTreasure
            && marker.TreasureType.Equals("silver", StringComparison.OrdinalIgnoreCase);
-
-    private static bool IsGoldTreasure(AtlasMarker marker)
-        => marker.Kind == AtlasMarkerKind.PotChest
-           || marker.TreasureType.Equals("gold", StringComparison.OrdinalIgnoreCase);
 
     private void UpdateMapInteraction(Vector2 canvasMinimum, Vector2 canvasSize)
     {
@@ -735,7 +731,7 @@ public sealed class AtlasWindow : Window, IDisposable
                 drawList.AddLine(point + new Vector2(-0.5f, 3.0f), point + new Vector2(4.0f, -3.0f), checkColor, 2.0f);
             }
         }
-        else if (marker.Kind is AtlasMarkerKind.ActiveTreasure or AtlasMarkerKind.PotChest)
+        else if (marker.Kind is AtlasMarkerKind.ActiveTreasure or AtlasMarkerKind.PotTarget)
         {
             DrawDiamond(drawList, point, radius + 1.0f, packedColor);
         }
@@ -1057,7 +1053,7 @@ public sealed class AtlasWindow : Window, IDisposable
             AtlasMarkerKind.CriticalEncounter => "\u25cf",
             AtlasMarkerKind.PotFate => "\u2605",
             AtlasMarkerKind.PotPrediction => "\u25c8",
-            AtlasMarkerKind.PotChest => "\u25c6",
+            AtlasMarkerKind.PotTarget => "\u25c6",
             _ => "\u2022",
         };
 
