@@ -1,5 +1,6 @@
 using System.Numerics;
 using CrescentAtlas.Contracts;
+using CrescentAtlas.Events;
 using CrescentAtlas.Notifications;
 using CrescentAtlas.Runtime;
 
@@ -87,6 +88,47 @@ Assert(!atlas.GetMarkers().Single().IsChecked, "reset spot stays unchecked until
 atlas.MarkAbsentNearbyTreasureCandidatesChecked(new Vector3(20, 0, 0), 10.0f, [], 2.0f);
 atlas.MarkAbsentNearbyTreasureCandidatesChecked(Vector3.Zero, 10.0f, [], 2.0f);
 Assert(atlas.GetMarkers().Single().IsChecked, "spot can be checked again after revisiting");
+
+Assert(
+    DynamicEventTimeResolver.Resolve(
+        "Warmup",
+        1_000,
+        900,
+        0,
+        180,
+        120,
+        92) == 92,
+    "CE standard UI countdown takes precedence");
+Assert(
+    DynamicEventTimeResolver.Resolve(
+        "Warmup",
+        1_000,
+        900,
+        51,
+        180,
+        120,
+        null) == 51,
+    "CE native seconds-left is used when UI data is unavailable");
+Assert(
+    DynamicEventTimeResolver.Resolve(
+        "Register",
+        1_000,
+        900,
+        0,
+        180,
+        120,
+        null) == 200,
+    "CE battle start countdown is derived from registration and warmup timing");
+Assert(
+    DynamicEventTimeResolver.Resolve(
+        "Battle",
+        1_000,
+        900,
+        0,
+        180,
+        120,
+        null) == -1,
+    "CE active battle does not reuse the start countdown formula");
 
 Console.WriteLine("CrescentAtlas logic smoke tests: PASS");
 return;

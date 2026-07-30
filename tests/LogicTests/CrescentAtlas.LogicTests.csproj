@@ -14,5 +14,6 @@
     <Compile Include="..\..\Contracts\AtlasPotPrediction.cs" Link="AtlasPotPrediction.cs" />
     <Compile Include="..\..\Contracts\IAtlasDataSource.cs" Link="IAtlasDataSource.cs" />
     <Compile Include="..\..\Runtime\MutableAtlasDataSource.cs" Link="MutableAtlasDataSource.cs" />
+    <Compile Include="..\..\Events\DynamicEventTimeResolver.cs" Link="DynamicEventTimeResolver.cs" />
   </ItemGroup>
 </Project>

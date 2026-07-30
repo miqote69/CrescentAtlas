@@ -1,5 +1,7 @@
 using FFXIVClientStructs.FFXIV.Client.Game.InstanceContent;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace CrescentAtlas.Events;
 
@@ -19,7 +21,7 @@ public sealed unsafe class DynamicEventSnapshotSource : ICriticalEncounterSnapsh
             if (container is null)
                 return false;
 
-            var displayTimes = ReadDisplayedEventTimes();
+            var displayedEvents = ReadDisplayedEvents();
             var result = new List<CriticalEncounterSnapshot>();
             foreach (ref readonly var dynamicEvent in container->Events)
             {
@@ -29,16 +31,25 @@ public sealed unsafe class DynamicEventSnapshotSource : ICriticalEncounterSnapsh
                     continue;
                 }
 
+                var name = dynamicEvent.Name.ToString();
+                var displayedTime = FindDisplayedTime(
+                    displayedEvents,
+                    dynamicEvent.DynamicEventId,
+                    name);
+                var timing = ReadTiming(in dynamicEvent);
                 result.Add(new CriticalEncounterSnapshot(
                     dynamicEvent.DynamicEventId,
-                    dynamicEvent.Name.ToString(),
+                    name,
                     dynamicEvent.MapMarker.Position,
                     dynamicEvent.State.ToString(),
-                    displayTimes.TryGetValue(dynamicEvent.DynamicEventId, out var displayedTime)
-                        ? displayedTime
-                        : dynamicEvent.SecondsLeft > 0
-                            ? dynamicEvent.SecondsLeft
-                            : -1,
+                    DynamicEventTimeResolver.Resolve(
+                        dynamicEvent.State.ToString(),
+                        DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                        timing.StartTimestamp,
+                        timing.SecondsLeft,
+                        timing.SecondsRegistrationTime,
+                        timing.SecondsWarmupTime,
+                        displayedTime),
                     dynamicEvent.Progress,
                     dynamicEvent.Participants,
                     dynamicEvent.MapMarker.IconId));
@@ -54,9 +65,9 @@ public sealed unsafe class DynamicEventSnapshotSource : ICriticalEncounterSnapsh
         }
     }
 
-    private static Dictionary<ushort, long> ReadDisplayedEventTimes()
+    private static List<DisplayedDynamicEvent> ReadDisplayedEvents()
     {
-        var result = new Dictionary<ushort, long>();
+        var result = new List<DisplayedDynamicEvent>();
         var agent = AgentMycBattleAreaInfo.Instance();
         if (agent is null || agent->MycDynamicEventData is null)
             return result;
@@ -66,10 +77,66 @@ public sealed unsafe class DynamicEventSnapshotSource : ICriticalEncounterSnapsh
         for (var index = 0; index < count; index++)
         {
             ref readonly var displayedEvent = ref data->Array[index];
-            if (displayedEvent.Id != 0)
-                result[displayedEvent.Id] = displayedEvent.TimeLeft;
+            var name = displayedEvent.Name.ToString();
+            if (displayedEvent.Id != 0 || !string.IsNullOrWhiteSpace(name))
+            {
+                result.Add(new DisplayedDynamicEvent(
+                    displayedEvent.Id,
+                    name,
+                    displayedEvent.TimeLeft));
+            }
         }
 
         return result;
+    }
+
+    private static long? FindDisplayedTime(
+        IReadOnlyList<DisplayedDynamicEvent> displayedEvents,
+        ushort dynamicEventId,
+        string name)
+    {
+        var byId = displayedEvents.FirstOrDefault(displayedEvent =>
+            displayedEvent.Id == dynamicEventId);
+        if (byId is not null)
+            return byId.TimeLeft;
+
+        var byName = displayedEvents.FirstOrDefault(displayedEvent =>
+            !string.IsNullOrWhiteSpace(name)
+            && string.Equals(
+                displayedEvent.Name.Trim(),
+                name.Trim(),
+                StringComparison.Ordinal));
+        return byName?.TimeLeft;
+    }
+
+    private static DynamicEventTiming ReadTiming(in DynamicEvent dynamicEvent)
+    {
+        ref var mutableEvent = ref Unsafe.AsRef(in dynamicEvent);
+        ref var timing = ref Unsafe.As<DynamicEvent, DynamicEventTimingOverlay>(ref mutableEvent);
+        return new DynamicEventTiming(
+            timing.StartTimestamp,
+            timing.SecondsLeft,
+            timing.SecondsRegistrationTime,
+            timing.SecondsWarmupTime);
+    }
+
+    private sealed record DisplayedDynamicEvent(
+        ushort Id,
+        string Name,
+        long TimeLeft);
+
+    private readonly record struct DynamicEventTiming(
+        int StartTimestamp,
+        uint SecondsLeft,
+        uint SecondsRegistrationTime,
+        uint SecondsWarmupTime);
+
+    [StructLayout(LayoutKind.Explicit, Size = 0x74)]
+    private struct DynamicEventTimingOverlay
+    {
+        [FieldOffset(0x60)] public int StartTimestamp;
+        [FieldOffset(0x64)] public uint SecondsLeft;
+        [FieldOffset(0x6C)] public uint SecondsRegistrationTime;
+        [FieldOffset(0x70)] public uint SecondsWarmupTime;
     }
 }
