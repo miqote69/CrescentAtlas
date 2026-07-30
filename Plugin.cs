@@ -18,7 +18,7 @@ public sealed class Plugin : IDalamudPlugin
 {
     private const string CommandName = "/catlas";
     private const string NorthHornInstanceKey = "territory-1346";
-    private const float TreasureCandidateCheckRadius = 35.0f;
+    private const float TreasureCandidateCheckRadius = 70.0f;
     private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(500);
     private static readonly TimeSpan FlushInterval = TimeSpan.FromSeconds(30);
     private static readonly PotObservation[] LearnedNorthHornPotObservations =
