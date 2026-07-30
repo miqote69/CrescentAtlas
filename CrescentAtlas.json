@@ -5,7 +5,7 @@
   "Description": "DEVELOPMENT PROTOTYPE. May crash FFXIV or Dalamud. Collects local field observations and displays map markers and event notifications without automating movement or interaction.",
   "ApplicableVersion": "any",
   "RepoUrl": "https://github.com/miqote69/CrescentAtlas",
-  "IconUrl": "https://raw.githubusercontent.com/miqote69/CrescentAtlas/main/images/icon-v1.png",
+  "IconUrl": "https://raw.githubusercontent.com/miqote69/CrescentAtlas/main/images/icon-v44.png",
   "Tags": [
     "occult crescent",
     "map",

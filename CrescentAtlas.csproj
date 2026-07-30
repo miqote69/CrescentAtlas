@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
-    <Version>0.1.43</Version>
+    <Version>0.1.44</Version>
     <PackageProjectUrl>https://github.com/miqote69/CrescentAtlas</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <IsPackable>false</IsPackable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <IconUrl>https://raw.githubusercontent.com/miqote69/CrescentAtlas/main/images/icon-v1.png</IconUrl>
+    <IconUrl>https://raw.githubusercontent.com/miqote69/CrescentAtlas/main/images/icon-v44.png</IconUrl>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="tests\**\*.cs" />
