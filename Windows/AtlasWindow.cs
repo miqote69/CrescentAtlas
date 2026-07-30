@@ -476,7 +476,6 @@ public sealed class AtlasWindow : Window, IDisposable
             const float halfSize = 13.0f;
             var minimum = point - new Vector2(halfSize);
             var maximum = point + new Vector2(halfSize);
-            drawList.AddCircleFilled(point, halfSize + 2.0f, ImGui.GetColorU32(new Vector4(0.02f, 0.02f, 0.03f, 0.92f)));
             drawList.AddImage(texture.Handle, minimum, maximum);
             return true;
         }
