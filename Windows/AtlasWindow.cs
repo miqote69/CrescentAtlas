@@ -129,7 +129,7 @@ public sealed class AtlasWindow : Window, IDisposable
         ImGui.SameLine();
         ImGui.TextDisabled(configuration.MapClickThrough
             ? "Click-through mode"
-            : "Drag edge to resize / wheel to zoom");
+            : "Drag map to pan / wheel to zoom / drag edge to resize");
 
         if (!configuration.MapClickThrough)
         {
@@ -149,8 +149,8 @@ public sealed class AtlasWindow : Window, IDisposable
             Math.Max(CanvasMinimumHeight, available.Y - legendHeight));
 
         var canvasMinimum = ImGui.GetCursorScreenPos();
-        ImGui.Dummy(canvasSize);
-        UpdateMapZoom(canvasMinimum, canvasSize);
+        ImGui.InvisibleButton("##CrescentAtlasMapCanvas", canvasSize, ImGuiButtonFlags.MouseButtonLeft);
+        UpdateMapInteraction(canvasMinimum, canvasSize);
         DrawField(
             canvasMinimum,
             canvasSize,
@@ -159,12 +159,26 @@ public sealed class AtlasWindow : Window, IDisposable
             dataSource.PlayerRotation);
     }
 
-    private void UpdateMapZoom(Vector2 canvasMinimum, Vector2 canvasSize)
+    private void UpdateMapInteraction(Vector2 canvasMinimum, Vector2 canvasSize)
     {
-        if (configuration.MapClickThrough || !ImGui.IsItemHovered())
+        if (configuration.MapClickThrough)
             return;
 
-        var wheel = ImGui.GetIO().MouseWheel;
+        var side = Math.Min(canvasSize.X, canvasSize.Y);
+        var io = ImGui.GetIO();
+        if (ImGui.IsItemActive() && ImGui.IsMouseDragging(ImGuiMouseButton.Left))
+        {
+            var mapSize = new Vector2(side * mapZoom);
+            mapCenter = ClampMapCenter(
+                mapCenter - (io.MouseDelta / mapSize),
+                mapSize,
+                canvasSize);
+        }
+
+        if (!ImGui.IsItemHovered())
+            return;
+
+        var wheel = io.MouseWheel;
         if (Math.Abs(wheel) < float.Epsilon)
             return;
 
@@ -176,7 +190,6 @@ public sealed class AtlasWindow : Window, IDisposable
         if (Math.Abs(newZoom - oldZoom) < float.Epsilon)
             return;
 
-        var side = Math.Min(canvasSize.X, canvasSize.Y);
         var canvasCenter = canvasMinimum + (canvasSize * 0.5f);
         var oldMapSize = new Vector2(side * oldZoom);
         var oldMapMinimum = canvasCenter - (mapCenter * oldMapSize);
@@ -187,16 +200,24 @@ public sealed class AtlasWindow : Window, IDisposable
 
         var newMapSize = new Vector2(side * newZoom);
         var newMapMinimum = mousePosition - (mouseOnMap * newMapSize);
-        mapCenter = ClampMapCenter((canvasCenter - newMapMinimum) / newMapSize, newZoom);
+        mapCenter = ClampMapCenter(
+            (canvasCenter - newMapMinimum) / newMapSize,
+            newMapSize,
+            canvasSize);
         mapZoom = newZoom;
     }
 
-    private static Vector2 ClampMapCenter(Vector2 center, float zoom)
+    private static Vector2 ClampMapCenter(
+        Vector2 center,
+        Vector2 mapSize,
+        Vector2 canvasSize)
     {
-        var halfVisible = 0.5f / zoom;
+        var halfVisible = new Vector2(
+            Math.Min(0.5f, canvasSize.X / (2.0f * mapSize.X)),
+            Math.Min(0.5f, canvasSize.Y / (2.0f * mapSize.Y)));
         return new Vector2(
-            Math.Clamp(center.X, halfVisible, 1.0f - halfVisible),
-            Math.Clamp(center.Y, halfVisible, 1.0f - halfVisible));
+            Math.Clamp(center.X, halfVisible.X, 1.0f - halfVisible.X),
+            Math.Clamp(center.Y, halfVisible.Y, 1.0f - halfVisible.Y));
     }
 
     private static float DrawLegend()
