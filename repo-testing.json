@@ -5,10 +5,11 @@
     "Description": "DEVELOPMENT PROTOTYPE. DO NOT USE outside active testing. May crash FFXIV or Dalamud. Display-only Occult Crescent atlas and local collector.",
     "InternalName": "CrescentAtlas",
     "AssemblyVersion": "0.1.30.0",
-    "TestingAssemblyVersion": null,
+    "TestingAssemblyVersion": "0.1.30.0",
     "RepoUrl": "https://github.com/miqote69/CrescentAtlas",
     "ApplicableVersion": "any",
     "DalamudApiLevel": 15,
+    "TestingDalamudApiLevel": 15,
     "Punchline": "UNSTABLE TEST BUILD - may crash; do not use outside development testing.",
     "Tags": [
       "occult crescent",
@@ -21,6 +22,6 @@
     "DownloadLinkInstall": "https://github.com/miqote69/CrescentAtlas/releases/download/v0.1.30/CrescentAtlas.zip",
     "DownloadLinkTesting": "https://github.com/miqote69/CrescentAtlas/releases/download/v0.1.30/CrescentAtlas.zip",
     "DownloadLinkUpdate": "https://github.com/miqote69/CrescentAtlas/releases/download/v0.1.30/CrescentAtlas.zip",
-    "LastUpdate": 1785401576
+    "LastUpdate": 1785401994
   }
 ]
