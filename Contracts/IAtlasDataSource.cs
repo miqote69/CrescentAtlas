@@ -13,4 +13,6 @@ public interface IAtlasDataSource
     AtlasPotPrediction? PotPrediction { get; }
 
     IReadOnlyList<AtlasMarker> GetMarkers();
+
+    void ResetTreasureChecks();
 }

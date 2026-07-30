@@ -141,6 +141,10 @@ public sealed class AtlasWindow : Window, IDisposable
                 configuration.MapOpacity = opacity;
                 saveConfiguration();
             }
+
+            ImGui.SameLine();
+            if (ImGui.Button("Reset treasure checks"))
+                dataSource.ResetTreasureChecks();
         }
 
         var legendHeight = DrawLegend(visibleMarkers);
@@ -282,7 +286,7 @@ public sealed class AtlasWindow : Window, IDisposable
             : null;
         if (representative is not null)
         {
-            DrawMarker(drawList, point, representative);
+            DrawMarker(drawList, point, representative, false);
             return;
         }
 
@@ -296,7 +300,7 @@ public sealed class AtlasWindow : Window, IDisposable
             0,
             IsChecked: entry.Style == LegendStyle.CheckedTreasure,
             TreasureType: entry.Style == LegendStyle.SilverTreasure ? "silver" : string.Empty);
-        DrawMarker(drawList, point, marker);
+        DrawMarker(drawList, point, marker, false);
     }
 
     private void DrawField(
@@ -489,7 +493,11 @@ public sealed class AtlasWindow : Window, IDisposable
         }
     }
 
-    private void DrawMarker(ImDrawListPtr drawList, Vector2 point, AtlasMarker marker)
+    private void DrawMarker(
+        ImDrawListPtr drawList,
+        Vector2 point,
+        AtlasMarker marker,
+        bool drawEventStatus = true)
     {
         var isSilverTreasure = marker.Kind == AtlasMarkerKind.TreasureCandidate
                                && marker.TreasureType.Equals("silver", StringComparison.OrdinalIgnoreCase);
@@ -508,7 +516,8 @@ public sealed class AtlasWindow : Window, IDisposable
             && marker.IconId != 0
             && TryDrawGameIcon(drawList, point, marker.IconId))
         {
-            DrawEventStatus(drawList, point, marker);
+            if (drawEventStatus)
+                DrawEventStatus(drawList, point, marker);
             return;
         }
 
@@ -537,7 +546,8 @@ public sealed class AtlasWindow : Window, IDisposable
             drawList.AddCircleFilled(point, radius, packedColor);
         }
 
-        DrawEventStatus(drawList, point, marker);
+        if (drawEventStatus)
+            DrawEventStatus(drawList, point, marker);
     }
 
     private static void DrawEventStatus(ImDrawListPtr drawList, Vector2 point, AtlasMarker marker)

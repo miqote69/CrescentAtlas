@@ -6,6 +6,7 @@ public sealed class MutableAtlasDataSource : IAtlasDataSource
 {
     private readonly object sync = new();
     private readonly Dictionary<string, AtlasMarker> markers = new(StringComparer.Ordinal);
+    private readonly HashSet<string> resetBlockedTreasureKeys = new(StringComparer.Ordinal);
 
     public uint TerritoryId { get; private set; }
 
@@ -32,7 +33,10 @@ public sealed class MutableAtlasDataSource : IAtlasDataSource
         lock (sync)
         {
             if (TerritoryId != territoryId)
+            {
                 markers.Clear();
+                resetBlockedTreasureKeys.Clear();
+            }
 
             TerritoryId = territoryId;
             TerritoryName = territoryName;
@@ -66,10 +70,15 @@ public sealed class MutableAtlasDataSource : IAtlasDataSource
         var objectMatchRadiusSquared = objectMatchRadius * objectMatchRadius;
         lock (sync)
         {
+            resetBlockedTreasureKeys.RemoveWhere(key =>
+                !markers.TryGetValue(key, out var marker)
+                || HorizontalDistanceSquared(playerPosition, marker.Position) > visibilityRadiusSquared);
+
             foreach (var key in markers
                          .Where(pair =>
                              pair.Value.Kind == AtlasMarkerKind.TreasureCandidate
                              && !pair.Value.IsChecked
+                             && !resetBlockedTreasureKeys.Contains(pair.Key)
                              && HorizontalDistanceSquared(playerPosition, pair.Value.Position) <= visibilityRadiusSquared
                              && !visibleTreasures.Any(treasure =>
                                  HorizontalDistanceSquared(treasure.Position, pair.Value.Position)
@@ -78,6 +87,21 @@ public sealed class MutableAtlasDataSource : IAtlasDataSource
                          .ToArray())
             {
                 markers[key] = markers[key] with { IsChecked = true };
+            }
+        }
+    }
+
+    public void ResetTreasureChecks()
+    {
+        lock (sync)
+        {
+            foreach (var key in markers
+                         .Where(pair => pair.Value.Kind == AtlasMarkerKind.TreasureCandidate)
+                         .Select(pair => pair.Key)
+                         .ToArray())
+            {
+                markers[key] = markers[key] with { IsChecked = false };
+                resetBlockedTreasureKeys.Add(key);
             }
         }
     }
@@ -98,6 +122,8 @@ public sealed class MutableAtlasDataSource : IAtlasDataSource
 
             foreach (var marker in replacement)
                 markers[marker.Key] = marker;
+
+            resetBlockedTreasureKeys.RemoveWhere(key => !markers.ContainsKey(key));
         }
     }
 

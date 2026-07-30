@@ -1,5 +1,7 @@
 using System.Numerics;
+using CrescentAtlas.Contracts;
 using CrescentAtlas.Notifications;
+using CrescentAtlas.Runtime;
 
 var origin = new DateTimeOffset(2026, 7, 30, 0, 0, 0, TimeSpan.Zero);
 var firstPosition = new Vector3(10, 0, 20);
@@ -28,6 +30,31 @@ Assert(advanced.PredictedPosition == secondPosition, "advanced prediction altern
 
 var isolated = tracker.GetPrediction("instance-b");
 Assert(isolated.Confidence == PotPredictionConfidence.Unknown, "instances remain isolated");
+
+var atlas = new MutableAtlasDataSource();
+atlas.SetContext(1346, "North Horn", Vector3.Zero, 0.0f);
+atlas.ReplaceSource(
+    AtlasMarkerKind.TreasureCandidate,
+    [
+        new AtlasMarker(
+            "treasure:a",
+            AtlasMarkerKind.TreasureCandidate,
+            "Treasure",
+            Vector3.Zero,
+            origin,
+            true,
+            1346),
+    ]);
+atlas.MarkAbsentNearbyTreasureCandidatesChecked(Vector3.Zero, 10.0f, [], 2.0f);
+Assert(atlas.GetMarkers().Single().IsChecked, "nearby absent treasure is checked");
+
+atlas.ResetTreasureChecks();
+Assert(!atlas.GetMarkers().Single().IsChecked, "reset clears treasure checks");
+atlas.MarkAbsentNearbyTreasureCandidatesChecked(Vector3.Zero, 10.0f, [], 2.0f);
+Assert(!atlas.GetMarkers().Single().IsChecked, "reset spot stays unchecked until player leaves");
+atlas.MarkAbsentNearbyTreasureCandidatesChecked(new Vector3(20, 0, 0), 10.0f, [], 2.0f);
+atlas.MarkAbsentNearbyTreasureCandidatesChecked(Vector3.Zero, 10.0f, [], 2.0f);
+Assert(atlas.GetMarkers().Single().IsChecked, "spot can be checked again after revisiting");
 
 Console.WriteLine("CrescentAtlas logic smoke tests: PASS");
 return;
