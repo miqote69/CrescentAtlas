@@ -604,6 +604,7 @@ public sealed class Plugin : IDalamudPlugin
             interval,
             eventId,
             position,
+            ResolveFateMapIcon((ushort)eventId),
             prediction.ObservationCount,
             prediction.Confidence == PotPredictionConfidence.Confirmed));
     }

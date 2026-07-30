@@ -561,7 +561,15 @@ public sealed class AtlasWindow : Window, IDisposable
 
         if (entry.Style == LegendStyle.PotPrediction)
         {
-            DrawPotPredictionCore(drawList, point);
+            var iconId = dataSource.PotPrediction?.IconId
+                         ?? markers.LastOrDefault(marker =>
+                             marker.Kind == AtlasMarkerKind.PotFate
+                             && marker.IconId != 0)?.IconId
+                         ?? 0;
+            if (iconId == 0 || !TryDrawGameIcon(drawList, point, iconId))
+                DrawPotPredictionCore(drawList, point);
+            else
+                DrawPotPredictionRing(drawList, point);
             return;
         }
 
@@ -1082,7 +1090,7 @@ public sealed class AtlasWindow : Window, IDisposable
         }
     }
 
-    private static void DrawPotPrediction(
+    private void DrawPotPrediction(
         ImDrawListPtr drawList,
         Vector2 point,
         AtlasPotPrediction prediction)
@@ -1090,7 +1098,15 @@ public sealed class AtlasWindow : Window, IDisposable
         var color = MarkerColor(AtlasMarkerKind.PotPrediction);
         var packedColor = ImGui.GetColorU32(color);
         var shadow = ImGui.GetColorU32(new Vector4(0.02f, 0.02f, 0.01f, 0.94f));
-        DrawPotPredictionCore(drawList, point);
+        if (prediction.IconId == 0
+            || !TryDrawGameIcon(drawList, point, prediction.IconId))
+        {
+            DrawPotPredictionCore(drawList, point);
+        }
+        else
+        {
+            DrawPotPredictionRing(drawList, point);
+        }
 
         var remaining = prediction.NextOccurrenceUtc - DateTimeOffset.UtcNow;
         var totalSeconds = Math.Max(0, (int)Math.Ceiling(remaining.TotalSeconds));
@@ -1125,6 +1141,12 @@ public sealed class AtlasWindow : Window, IDisposable
         var shadow = ImGui.GetColorU32(new Vector4(0.02f, 0.02f, 0.01f, 0.94f));
         drawList.AddCircleFilled(point, 12.0f, shadow);
         DrawDiamond(drawList, point, 8.0f, packedColor);
+        drawList.AddCircle(point, 15.0f, packedColor, 0, 2.5f);
+    }
+
+    private static void DrawPotPredictionRing(ImDrawListPtr drawList, Vector2 point)
+    {
+        var packedColor = ImGui.GetColorU32(MarkerColor(AtlasMarkerKind.PotPrediction));
         drawList.AddCircle(point, 15.0f, packedColor, 0, 2.5f);
     }
 
