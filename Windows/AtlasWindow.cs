@@ -33,16 +33,16 @@ public sealed class AtlasWindow : Window, IDisposable
 
     private static readonly LegendEntry[] Legend =
     [
-        new(AtlasMarkerKind.Player, "Player", new Vector4(0.96f, 0.96f, 1.00f, 1.0f)),
+        new(AtlasMarkerKind.Player, "Player", new Vector4(0.96f, 0.96f, 1.00f, 1.0f), LegendStyle.Player),
         new(AtlasMarkerKind.TreasureCandidate, "Unchecked treasure", new Vector4(0.20f, 0.92f, 1.00f, 1.0f)),
-        new(AtlasMarkerKind.TreasureCandidate, "Checked treasure", CheckedTreasureColor),
-        new(AtlasMarkerKind.TreasureCandidate, "Silver treasure", SilverTreasureColor),
+        new(AtlasMarkerKind.TreasureCandidate, "Checked treasure", CheckedTreasureColor, LegendStyle.CheckedTreasure),
+        new(AtlasMarkerKind.TreasureCandidate, "Silver treasure", SilverTreasureColor, LegendStyle.SilverTreasure),
         new(AtlasMarkerKind.ActiveTreasure, "Active treasure", new Vector4(0.26f, 0.92f, 1.00f, 1.0f)),
         new(AtlasMarkerKind.Carrot, "Carrot", new Vector4(1.00f, 0.55f, 0.18f, 1.0f)),
-        new(AtlasMarkerKind.Fate, "FATE", new Vector4(0.78f, 0.42f, 1.00f, 1.0f)),
-        new(AtlasMarkerKind.CriticalEncounter, "Critical encounter", new Vector4(1.00f, 0.24f, 0.31f, 1.0f)),
+        new(AtlasMarkerKind.Fate, "FATE", new Vector4(0.78f, 0.42f, 1.00f, 1.0f), LegendStyle.LiveGameIcon),
+        new(AtlasMarkerKind.CriticalEncounter, "Critical encounter", new Vector4(1.00f, 0.24f, 0.31f, 1.0f), LegendStyle.LiveGameIcon),
         new(AtlasMarkerKind.PotFate, "Magic pot", new Vector4(1.00f, 0.83f, 0.25f, 1.0f)),
-        new(AtlasMarkerKind.PotPrediction, "Magic pot prediction", new Vector4(1.00f, 0.72f, 0.08f, 1.0f)),
+        new(AtlasMarkerKind.PotPrediction, "Magic pot prediction", new Vector4(1.00f, 0.72f, 0.08f, 1.0f), LegendStyle.PotPrediction),
         new(AtlasMarkerKind.PotChest, "Pot chest", new Vector4(0.45f, 1.00f, 0.48f, 1.0f)),
     ];
 
@@ -142,7 +142,7 @@ public sealed class AtlasWindow : Window, IDisposable
             }
         }
 
-        var legendHeight = DrawLegend();
+        var legendHeight = DrawLegend(visibleMarkers);
         var available = ImGui.GetContentRegionAvail();
         var canvasSize = new Vector2(
             Math.Max(1.0f, available.X),
@@ -220,16 +220,19 @@ public sealed class AtlasWindow : Window, IDisposable
             Math.Clamp(center.Y, halfVisible.Y, 1.0f - halfVisible.Y));
     }
 
-    private static float DrawLegend()
+    private float DrawLegend(IReadOnlyList<AtlasMarker> markers)
     {
+        const float iconSize = 30.0f;
         ImGui.Spacing();
         var startY = ImGui.GetCursorPosY();
         var availableWidth = Math.Max(100.0f, ImGui.GetContentRegionAvail().X);
         var usedWidth = 0.0f;
+        var drawList = ImGui.GetWindowDrawList();
 
         foreach (var entry in Legend)
         {
-            var itemWidth = 18.0f + ImGui.CalcTextSize(entry.Label).X + ImGui.GetStyle().ItemSpacing.X;
+            var itemWidth = iconSize + 3.0f + ImGui.CalcTextSize(entry.Label).X
+                            + ImGui.GetStyle().ItemSpacing.X;
             if (usedWidth > 0.0f && usedWidth + itemWidth > availableWidth)
             {
                 usedWidth = 0.0f;
@@ -239,7 +242,13 @@ public sealed class AtlasWindow : Window, IDisposable
                 ImGui.SameLine();
             }
 
-            ImGui.TextColored(entry.Color, MarkerGlyph(entry.Kind));
+            var iconMinimum = ImGui.GetCursorScreenPos();
+            ImGui.Dummy(new Vector2(iconSize, iconSize));
+            DrawLegendIcon(
+                drawList,
+                iconMinimum + new Vector2(iconSize * 0.5f),
+                entry,
+                markers);
             ImGui.SameLine(0.0f, 3.0f);
             ImGui.TextDisabled(entry.Label);
             usedWidth += itemWidth;
@@ -247,6 +256,46 @@ public sealed class AtlasWindow : Window, IDisposable
 
         ImGui.Spacing();
         return ImGui.GetCursorPosY() - startY;
+    }
+
+    private void DrawLegendIcon(
+        ImDrawListPtr drawList,
+        Vector2 point,
+        LegendEntry entry,
+        IReadOnlyList<AtlasMarker> markers)
+    {
+        if (entry.Style == LegendStyle.Player)
+        {
+            DrawPlayer(drawList, point, 0.0f);
+            return;
+        }
+
+        if (entry.Style == LegendStyle.PotPrediction)
+        {
+            DrawPotPredictionCore(drawList, point);
+            return;
+        }
+
+        var representative = entry.Style == LegendStyle.LiveGameIcon
+            ? markers.LastOrDefault(marker => marker.Kind == entry.Kind && marker.IconId != 0)
+            : null;
+        if (representative is not null)
+        {
+            DrawMarker(drawList, point, representative);
+            return;
+        }
+
+        var marker = new AtlasMarker(
+            $"legend:{entry.Kind}:{entry.Style}",
+            entry.Kind,
+            entry.Label,
+            Vector3.Zero,
+            DateTimeOffset.MinValue,
+            true,
+            0,
+            IsChecked: entry.Style == LegendStyle.CheckedTreasure,
+            TreasureType: entry.Style == LegendStyle.SilverTreasure ? "silver" : string.Empty);
+        DrawMarker(drawList, point, marker);
     }
 
     private void DrawField(
@@ -514,9 +563,7 @@ public sealed class AtlasWindow : Window, IDisposable
         var color = MarkerColor(AtlasMarkerKind.PotPrediction);
         var packedColor = ImGui.GetColorU32(color);
         var shadow = ImGui.GetColorU32(new Vector4(0.02f, 0.02f, 0.01f, 0.94f));
-        drawList.AddCircleFilled(point, 12.0f, shadow);
-        DrawDiamond(drawList, point, 8.0f, packedColor);
-        drawList.AddCircle(point, 15.0f, packedColor, 0, 2.5f);
+        DrawPotPredictionCore(drawList, point);
 
         var remaining = prediction.NextOccurrenceUtc - DateTimeOffset.UtcNow;
         var totalSeconds = Math.Max(0, (int)Math.Ceiling(remaining.TotalSeconds));
@@ -532,6 +579,15 @@ public sealed class AtlasWindow : Window, IDisposable
             shadow,
             3.0f);
         drawList.AddText(textMinimum, packedColor, label);
+    }
+
+    private static void DrawPotPredictionCore(ImDrawListPtr drawList, Vector2 point)
+    {
+        var packedColor = ImGui.GetColorU32(MarkerColor(AtlasMarkerKind.PotPrediction));
+        var shadow = ImGui.GetColorU32(new Vector4(0.02f, 0.02f, 0.01f, 0.94f));
+        drawList.AddCircleFilled(point, 12.0f, shadow);
+        DrawDiamond(drawList, point, 8.0f, packedColor);
+        drawList.AddCircle(point, 15.0f, packedColor, 0, 2.5f);
     }
 
     private static void DrawPlayer(ImDrawListPtr drawList, Vector2 point, float? rotation)
@@ -601,7 +657,21 @@ public sealed class AtlasWindow : Window, IDisposable
             _ => "\u2022",
         };
 
-    private readonly record struct LegendEntry(AtlasMarkerKind Kind, string Label, Vector4 Color);
+    private enum LegendStyle
+    {
+        Marker,
+        Player,
+        CheckedTreasure,
+        SilverTreasure,
+        LiveGameIcon,
+        PotPrediction,
+    }
+
+    private readonly record struct LegendEntry(
+        AtlasMarkerKind Kind,
+        string Label,
+        Vector4 Color,
+        LegendStyle Style = LegendStyle.Marker);
 
     private readonly record struct FieldBounds(float MinimumX, float MaximumX, float MinimumZ, float MaximumZ)
     {
