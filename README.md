@@ -1,0 +1,62 @@
+# Crescent Atlas
+
+Crescent Atlas is an independent Dalamud plugin for Final Fantasy XIV's
+Occult Crescent. It provides a passive field display, event notifications,
+and a local observation collector. No BOCCHI source code or data is included.
+
+The first release is a North Horn data-collection build. It never automates
+movement, interaction, or combat and never uploads observations.
+
+## Current features
+
+- Enumerates regular treasure candidate positions from the active client layout.
+- Detects currently loaded treasure objects.
+- Draws a bright direct line and distance from the player to loaded treasures
+  within 120 yalms.
+- Draws a nearest-neighbour exploration route through treasure candidates.
+- Reads active FATEs through Dalamud's public `IFateTable` API.
+- Reads active Critical Encounters through a read-only, fail-closed client view.
+- Records Event Objects as discovery candidates so carrot IDs can be confirmed
+  from live North Horn sessions.
+- Learns Magic Pot timing per field session: one observation produces a
+  provisional estimate; two observations use the measured interval and
+  alternating location.
+- Shows all confirmed markers in a dedicated click-through atlas without
+  opening or controlling the standard game map.
+
+## Collection data
+
+Data is written below Dalamud's Crescent Atlas configuration directory:
+
+- `collection/sessions/<session>.jsonl` — append-only observations for one run.
+- `collection/snapshot.json` — deduplicated aggregate across runs.
+
+Collection files are shared manually only after you review them. They do not
+intentionally contain character names, account IDs, world names, or chat.
+
+## Commands
+
+- `/catlas` or `/catlas map` toggles the atlas.
+- `/catlas collect on` enables collection.
+- `/catlas collect off` disables collection.
+- `/catlas click` switches between click-through and layout mode.
+- `/catlas flush` flushes observations to disk.
+- `/catlas folder` prints the collection output directory.
+- `/catlas status` prints current collection status.
+
+## Installation for data collection
+
+Build with the local Dalamud development environment, or download the release
+ZIP. For a local development install, point Dalamud's Dev Plugin Locations at
+`CrescentAtlas.dll`.
+
+## Validation boundary
+
+The project builds against Dalamud API 15 and its pure Magic Pot prediction
+logic has offline smoke tests. North Horn territory identity, map calibration,
+carrot IDs, Magic Pot FATE IDs, and live-game behavior still require validation
+inside FFXIV before any collected dataset is treated as authoritative.
+
+## License
+
+MIT

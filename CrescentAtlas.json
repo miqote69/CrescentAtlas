@@ -1,0 +1,14 @@
+{
+  "Author": "miqote69",
+  "Name": "Crescent Atlas",
+  "Punchline": "A display-only map, event notifier, and field-data collector for the Occult Crescent.",
+  "Description": "Collects local field observations and displays map markers and event notifications without automating movement or interaction.",
+  "ApplicableVersion": "any",
+  "RepoUrl": "https://github.com/miqote69/CrescentAtlas",
+  "Tags": [
+    "occult crescent",
+    "map",
+    "notifications",
+    "field operations"
+  ]
+}

@@ -1,0 +1,26 @@
+[
+  {
+    "Author": "miqote69",
+    "Name": "Crescent Atlas",
+    "Description": "Display-only Occult Crescent atlas, event notifier, and local field-data collector.",
+    "InternalName": "CrescentAtlas",
+    "AssemblyVersion": "0.1.0",
+    "TestingAssemblyVersion": null,
+    "RepoUrl": "https://github.com/miqote69/CrescentAtlas",
+    "ApplicableVersion": "any",
+    "DalamudApiLevel": 15,
+    "Punchline": "A passive atlas and observation collector for the Occult Crescent.",
+    "Tags": [
+      "occult crescent",
+      "map",
+      "notifications"
+    ],
+    "MinimumDalamudVersion": "15.0.0.0",
+    "IsHide": false,
+    "IsTestingExclusive": true,
+    "DownloadLinkInstall": "https://github.com/miqote69/CrescentAtlas/releases/download/v0.1.0/CrescentAtlas.zip",
+    "DownloadLinkTesting": "https://github.com/miqote69/CrescentAtlas/releases/download/v0.1.0/CrescentAtlas.zip",
+    "DownloadLinkUpdate": "https://github.com/miqote69/CrescentAtlas/releases/download/v0.1.0/CrescentAtlas.zip",
+    "LastUpdate": 1785378508
+  }
+]
