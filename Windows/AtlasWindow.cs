@@ -24,6 +24,7 @@ public sealed class AtlasWindow : Window, IDisposable
     private const float MinimumMapZoom = 1.0f;
     private const float MaximumMapZoom = 4.0f;
     private const float MapZoomStep = 0.25f;
+    private const float MinimumMapOpacity = 0.03f;
 
     private static readonly Vector4 BackgroundColor = new(0.035f, 0.045f, 0.055f, 0.96f);
     private static readonly Vector4 GridColor = new(0.28f, 0.34f, 0.39f, 0.23f);
@@ -103,7 +104,7 @@ public sealed class AtlasWindow : Window, IDisposable
 
     public override void Draw()
     {
-        var opacity = Math.Clamp(configuration.MapOpacity, 0.15f, 1.0f);
+        var opacity = Math.Clamp(configuration.MapOpacity, MinimumMapOpacity, 1.0f);
         ImGui.PushStyleVar(ImGuiStyleVar.Alpha, opacity);
         try
         {
@@ -133,9 +134,9 @@ public sealed class AtlasWindow : Window, IDisposable
 
         if (!configuration.MapClickThrough)
         {
-            var opacity = Math.Clamp(configuration.MapOpacity, 0.15f, 1.0f);
+            var opacity = Math.Clamp(configuration.MapOpacity, MinimumMapOpacity, 1.0f);
             ImGui.SetNextItemWidth(180.0f);
-            if (ImGui.SliderFloat("Map opacity", ref opacity, 0.15f, 1.0f, "%.2f"))
+            if (ImGui.SliderFloat("Map opacity", ref opacity, MinimumMapOpacity, 1.0f, "%.2f"))
             {
                 configuration.MapOpacity = opacity;
                 saveConfiguration();
