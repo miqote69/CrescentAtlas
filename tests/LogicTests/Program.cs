@@ -118,8 +118,23 @@ Assert(
         0,
         180,
         120,
-        null) == 200,
-    "CE battle start countdown is derived from registration and warmup timing");
+        null) == 80,
+    "CE registration countdown does not add the later warmup phase");
+Assert(
+    DynamicEventNameMatcher.IsMatch(
+        "エルムギガース",
+        "求道の人造人間「エルムギガース」"),
+    "CE standard UI short enemy name matches full dynamic-event name");
+Assert(
+    DynamicEventNameMatcher.IsMatch(
+        "求道の人造人間 エルムギガース",
+        "求道の人造人間「エルムギガース」"),
+    "CE name matching tolerates UI punctuation differences");
+Assert(
+    !DynamicEventNameMatcher.IsMatch(
+        "エルムギガース",
+        "自然の歌い手「イアムベー」"),
+    "different CE names do not match");
 Assert(
     DynamicEventTimeResolver.Resolve(
         "Battle",

@@ -102,10 +102,7 @@ public sealed unsafe class DynamicEventSnapshotSource : ICriticalEncounterSnapsh
 
         var byName = displayedEvents.FirstOrDefault(displayedEvent =>
             !string.IsNullOrWhiteSpace(name)
-            && string.Equals(
-                displayedEvent.Name.Trim(),
-                name.Trim(),
-                StringComparison.Ordinal));
+            && DynamicEventNameMatcher.IsMatch(displayedEvent.Name, name));
         return byName?.TimeLeft;
     }
 

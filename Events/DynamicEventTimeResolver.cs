@@ -22,9 +22,9 @@ public static class DynamicEventTimeResolver
         if (state is not ("Register" or "Warmup") || startTimestamp <= 0)
             return -1;
 
-        var battleStartUnixSeconds = (long)startTimestamp
-                                     + secondsRegistrationTime
-                                     + secondsWarmupTime;
+        var battleStartUnixSeconds = state == "Register"
+            ? (long)startTimestamp + secondsRegistrationTime
+            : (long)startTimestamp + secondsRegistrationTime + secondsWarmupTime;
         var countdown = battleStartUnixSeconds - nowUnixSeconds;
         return countdown is >= 0 and <= MaximumPlausibleCountdownSeconds
             ? countdown
