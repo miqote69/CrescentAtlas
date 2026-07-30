@@ -32,6 +32,12 @@ public sealed class MutableAtlasDataSource : IAtlasDataSource
         }
     }
 
+    public void SetPlayerPosition(Vector3? playerPosition)
+    {
+        lock (sync)
+            PlayerPosition = playerPosition;
+    }
+
     public void ReplaceSource(AtlasMarkerKind kind, IEnumerable<AtlasMarker> replacement)
     {
         lock (sync)

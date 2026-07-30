@@ -161,6 +161,10 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnFrameworkUpdate(IFramework framework)
     {
+        // Keep display-only guides tied to the live per-frame position. The
+        // heavier scanners remain throttled by PollInterval below.
+        atlasData.SetPlayerPosition(ObjectTable.LocalPlayer?.Position);
+
         var now = DateTimeOffset.UtcNow;
         if (now < nextPollUtc)
             return;

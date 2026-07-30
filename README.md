@@ -18,6 +18,7 @@ movement, interaction, or combat and never uploads observations.
 - Detects currently loaded treasure objects.
 - Draws a bright direct line and distance from the player to loaded treasures
   within 120 yalms, both on the dedicated atlas and over the game view.
+- Updates guide-line player tracking every rendered frame for smooth movement.
 - Always highlights the nearest known treasure candidate with an orange guide
   line, even when no treasure is currently present at that spot.
 - Draws a nearest-neighbour exploration route through treasure candidates.
@@ -32,6 +33,7 @@ movement, interaction, or combat and never uploads observations.
   opening or controlling the standard game map.
 - Uses the current in-game map texture and Dalamud's standard map-coordinate
   conversion so north, south, scale, and offsets match the game map.
+- Zooms the atlas from 100% to 400% with the mouse wheel in layout mode.
 - Keeps the atlas field free of marker-name and distance text; marker meanings
   remain available in the compact legend.
 

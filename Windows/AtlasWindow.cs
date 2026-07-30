@@ -20,6 +20,9 @@ public sealed class AtlasWindow : Window, IDisposable
     private const float BoundsPaddingWorld = 12.0f;
     private const float MarkerRadius = 5.0f;
     private const float NearbyTreasureDistance = 120.0f;
+    private const float MinimumMapZoom = 1.0f;
+    private const float MaximumMapZoom = 4.0f;
+    private const float MapZoomStep = 0.25f;
 
     private static readonly Vector4 BackgroundColor = new(0.035f, 0.045f, 0.055f, 0.96f);
     private static readonly Vector4 GridColor = new(0.28f, 0.34f, 0.39f, 0.23f);
@@ -42,6 +45,8 @@ public sealed class AtlasWindow : Window, IDisposable
     private readonly IDataManager dataManager;
     private readonly IClientState clientState;
     private readonly ITextureProvider textureProvider;
+    private float mapZoom = MinimumMapZoom;
+    private Vector2 mapCenter = new(0.5f, 0.5f);
 
     public string MapDiagnostic { get; private set; } = "Map not checked.";
 
@@ -123,7 +128,48 @@ public sealed class AtlasWindow : Window, IDisposable
 
         var canvasMinimum = ImGui.GetCursorScreenPos();
         ImGui.Dummy(canvasSize);
+        UpdateMapZoom(canvasMinimum, canvasSize);
         DrawField(canvasMinimum, canvasSize, visibleMarkers, dataSource.PlayerPosition);
+    }
+
+    private void UpdateMapZoom(Vector2 canvasMinimum, Vector2 canvasSize)
+    {
+        if (configuration.MapClickThrough || !ImGui.IsItemHovered())
+            return;
+
+        var wheel = ImGui.GetIO().MouseWheel;
+        if (Math.Abs(wheel) < float.Epsilon)
+            return;
+
+        var oldZoom = mapZoom;
+        var newZoom = Math.Clamp(
+            oldZoom + (MathF.Sign(wheel) * MapZoomStep),
+            MinimumMapZoom,
+            MaximumMapZoom);
+        if (Math.Abs(newZoom - oldZoom) < float.Epsilon)
+            return;
+
+        var side = Math.Min(canvasSize.X, canvasSize.Y);
+        var canvasCenter = canvasMinimum + (canvasSize * 0.5f);
+        var oldMapSize = new Vector2(side * oldZoom);
+        var oldMapMinimum = canvasCenter - (mapCenter * oldMapSize);
+        var mousePosition = ImGui.GetMousePos();
+        var mouseOnMap = new Vector2(
+            Math.Clamp((mousePosition.X - oldMapMinimum.X) / oldMapSize.X, 0.0f, 1.0f),
+            Math.Clamp((mousePosition.Y - oldMapMinimum.Y) / oldMapSize.Y, 0.0f, 1.0f));
+
+        var newMapSize = new Vector2(side * newZoom);
+        var newMapMinimum = mousePosition - (mouseOnMap * newMapSize);
+        mapCenter = ClampMapCenter((canvasCenter - newMapMinimum) / newMapSize, newZoom);
+        mapZoom = newZoom;
+    }
+
+    private static Vector2 ClampMapCenter(Vector2 center, float zoom)
+    {
+        var halfVisible = 0.5f / zoom;
+        return new Vector2(
+            Math.Clamp(center.X, halfVisible, 1.0f - halfVisible),
+            Math.Clamp(center.Y, halfVisible, 1.0f - halfVisible));
     }
 
     private static float DrawLegend()
@@ -170,9 +216,10 @@ public sealed class AtlasWindow : Window, IDisposable
         Func<Vector3, Vector2> project;
         if (TryGetGameMap(out var map, out var mapTexture))
         {
-            var side = Math.Min(canvasSize.X, canvasSize.Y);
+            var side = Math.Min(canvasSize.X, canvasSize.Y) * mapZoom;
             var mapSize = new Vector2(side, side);
-            var mapMinimum = canvasMinimum + ((canvasSize - mapSize) * 0.5f);
+            var canvasCenter = canvasMinimum + (canvasSize * 0.5f);
+            var mapMinimum = canvasCenter - (mapCenter * mapSize);
             var mapMaximum = mapMinimum + mapSize;
             drawList.AddImage(
                 mapTexture.Handle,
