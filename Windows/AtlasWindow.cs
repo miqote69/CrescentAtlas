@@ -27,11 +27,13 @@ public sealed class AtlasWindow : Window, IDisposable
     private static readonly Vector4 BackgroundColor = new(0.035f, 0.045f, 0.055f, 0.96f);
     private static readonly Vector4 GridColor = new(0.28f, 0.34f, 0.39f, 0.23f);
     private static readonly Vector4 BorderColor = new(0.55f, 0.64f, 0.69f, 0.62f);
+    private static readonly Vector4 CheckedTreasureColor = new(0.30f, 1.00f, 0.42f, 1.0f);
 
     private static readonly LegendEntry[] Legend =
     [
         new(AtlasMarkerKind.Player, "Player", new Vector4(0.96f, 0.96f, 1.00f, 1.0f)),
-        new(AtlasMarkerKind.TreasureCandidate, "Treasure candidate", new Vector4(0.20f, 0.92f, 1.00f, 1.0f)),
+        new(AtlasMarkerKind.TreasureCandidate, "Unchecked treasure", new Vector4(0.20f, 0.92f, 1.00f, 1.0f)),
+        new(AtlasMarkerKind.TreasureCandidate, "Checked treasure", CheckedTreasureColor),
         new(AtlasMarkerKind.ActiveTreasure, "Active treasure", new Vector4(0.26f, 0.92f, 1.00f, 1.0f)),
         new(AtlasMarkerKind.Carrot, "Carrot", new Vector4(1.00f, 0.55f, 0.18f, 1.0f)),
         new(AtlasMarkerKind.Fate, "FATE", new Vector4(0.78f, 0.42f, 1.00f, 1.0f)),
@@ -46,6 +48,7 @@ public sealed class AtlasWindow : Window, IDisposable
     private readonly IDataManager dataManager;
     private readonly IClientState clientState;
     private readonly ITextureProvider textureProvider;
+    private readonly System.Action saveConfiguration;
     private float mapZoom = MinimumMapZoom;
     private Vector2 mapCenter = new(0.5f, 0.5f);
 
@@ -56,7 +59,8 @@ public sealed class AtlasWindow : Window, IDisposable
         Configuration configuration,
         IDataManager dataManager,
         IClientState clientState,
-        ITextureProvider textureProvider)
+        ITextureProvider textureProvider,
+        System.Action saveConfiguration)
         : base("Crescent Atlas###CrescentAtlasMap")
     {
         this.dataSource = dataSource;
@@ -64,6 +68,7 @@ public sealed class AtlasWindow : Window, IDisposable
         this.dataManager = dataManager;
         this.clientState = clientState;
         this.textureProvider = textureProvider;
+        this.saveConfiguration = saveConfiguration;
         IsOpen = configuration.MapVisible;
 
         Flags |= ImGuiWindowFlags.NoFocusOnAppearing
@@ -122,6 +127,17 @@ public sealed class AtlasWindow : Window, IDisposable
         ImGui.TextDisabled(configuration.MapClickThrough
             ? "Click-through mode"
             : "Drag edge to resize / wheel to zoom");
+
+        if (!configuration.MapClickThrough)
+        {
+            var opacity = Math.Clamp(configuration.MapOpacity, 0.15f, 1.0f);
+            ImGui.SetNextItemWidth(180.0f);
+            if (ImGui.SliderFloat("Map opacity", ref opacity, 0.15f, 1.0f, "%.2f"))
+            {
+                configuration.MapOpacity = opacity;
+                saveConfiguration();
+            }
+        }
 
         var legendHeight = DrawLegend();
         var available = ImGui.GetContentRegionAvail();
@@ -344,7 +360,7 @@ public sealed class AtlasWindow : Window, IDisposable
 
         var playerScreen = project(player);
         var maximumDistanceSquared = NearbyTreasureDistance * NearbyTreasureDistance;
-        var lineColor = ImGui.GetColorU32(new Vector4(0.18f, 0.95f, 1.00f, 0.92f));
+        var lineColor = ImGui.GetColorU32(new Vector4(0.20f, 1.00f, 0.38f, 0.96f));
 
         foreach (var marker in markers.Where(marker =>
                      marker.Kind == AtlasMarkerKind.ActiveTreasure
@@ -366,7 +382,9 @@ public sealed class AtlasWindow : Window, IDisposable
             return;
 
         var nearest = markers
-            .Where(marker => marker.Kind == AtlasMarkerKind.TreasureCandidate)
+            .Where(marker =>
+                marker.Kind == AtlasMarkerKind.TreasureCandidate
+                && !marker.IsChecked)
             .MinBy(marker => HorizontalDistanceSquared(player, marker.Position));
         if (nearest is null)
             return;
@@ -399,8 +417,10 @@ public sealed class AtlasWindow : Window, IDisposable
 
     private static void DrawMarker(ImDrawListPtr drawList, Vector2 point, AtlasMarker marker)
     {
-        var color = MarkerColor(marker.Kind);
-        if (!marker.IsActive)
+        var color = marker.Kind == AtlasMarkerKind.TreasureCandidate && marker.IsChecked
+            ? CheckedTreasureColor
+            : MarkerColor(marker.Kind);
+        if (!marker.IsActive && marker.Kind != AtlasMarkerKind.TreasureCandidate)
             color.W *= 0.45f;
 
         var packedColor = ImGui.GetColorU32(color);
@@ -413,6 +433,12 @@ public sealed class AtlasWindow : Window, IDisposable
             drawList.AddCircleFilled(point, radius + 2.5f, shadowColor);
             drawList.AddCircleFilled(point, radius, packedColor);
             drawList.AddCircle(point, radius + 3.5f, ringColor, 0, 2.0f);
+            if (marker.IsChecked)
+            {
+                var checkColor = ImGui.GetColorU32(new Vector4(0.03f, 0.12f, 0.05f, 1.0f));
+                drawList.AddLine(point + new Vector2(-3.0f, 0.0f), point + new Vector2(-0.5f, 3.0f), checkColor, 2.0f);
+                drawList.AddLine(point + new Vector2(-0.5f, 3.0f), point + new Vector2(4.0f, -3.0f), checkColor, 2.0f);
+            }
         }
         else if (marker.Kind is AtlasMarkerKind.ActiveTreasure or AtlasMarkerKind.PotChest)
         {

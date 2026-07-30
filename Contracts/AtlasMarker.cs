@@ -22,4 +22,5 @@ public sealed record AtlasMarker(
     bool IsActive,
     uint TerritoryId,
     uint DataId = 0,
-    uint EventId = 0);
+    uint EventId = 0,
+    bool IsChecked = false);

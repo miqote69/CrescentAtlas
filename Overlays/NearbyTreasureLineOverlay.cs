@@ -24,7 +24,7 @@ public sealed class NearbyTreasureLineOverlay(
 
         var maximumDistanceSquared = MaximumDistance * MaximumDistance;
         var drawList = ImGui.GetForegroundDrawList();
-        var lineColor = ImGui.GetColorU32(new Vector4(0.18f, 0.95f, 1.00f, 0.92f));
+        var lineColor = ImGui.GetColorU32(new Vector4(0.20f, 1.00f, 0.38f, 0.96f));
         var shadowColor = ImGui.GetColorU32(new Vector4(0.01f, 0.03f, 0.04f, 0.78f));
         var markers = dataSource.GetMarkers();
 
@@ -59,7 +59,9 @@ public sealed class NearbyTreasureLineOverlay(
         uint shadowColor)
     {
         var nearest = markers
-            .Where(marker => marker.Kind == AtlasMarkerKind.TreasureCandidate)
+            .Where(marker =>
+                marker.Kind == AtlasMarkerKind.TreasureCandidate
+                && !marker.IsChecked)
             .MinBy(marker => HorizontalDistanceSquared(player, marker.Position));
         if (nearest is null
             || !gameGui.WorldToScreen(nearest.Position, out var spotScreen))

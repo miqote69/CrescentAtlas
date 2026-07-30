@@ -56,6 +56,28 @@ public sealed class MutableAtlasDataSource : IAtlasDataSource
             PotPrediction = prediction;
     }
 
+    public void MarkNearbyTreasureCandidatesChecked(Vector3 playerPosition, float radius)
+    {
+        var radiusSquared = radius * radius;
+        lock (sync)
+        {
+            foreach (var key in markers
+                         .Where(pair =>
+                             pair.Value.Kind == AtlasMarkerKind.TreasureCandidate
+                             && !pair.Value.IsChecked
+                             && HorizontalDistanceSquared(playerPosition, pair.Value.Position) <= radiusSquared)
+                         .Select(pair => pair.Key)
+                         .ToArray())
+            {
+                markers[key] = markers[key] with { IsChecked = true };
+            }
+        }
+    }
+
+    private static float HorizontalDistanceSquared(Vector3 left, Vector3 right)
+        => ((left.X - right.X) * (left.X - right.X))
+           + ((left.Z - right.Z) * (left.Z - right.Z));
+
     public void ReplaceSource(AtlasMarkerKind kind, IEnumerable<AtlasMarker> replacement)
     {
         lock (sync)

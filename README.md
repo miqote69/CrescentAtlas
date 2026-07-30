@@ -22,7 +22,12 @@ movement, interaction, or combat and never uploads observations.
 - Draws an FFXIV-style player arrow that rotates with the character's live
   facing direction.
 - Always highlights the nearest known treasure candidate with an orange guide
-  line, even when no treasure is currently present at that spot.
+  line when no treasure is currently present at that unchecked spot.
+- Uses green guide lines for loaded treasures and orange guide lines for
+  unchecked candidate locations where no treasure is known to be present.
+- Tracks the current field-entry route: treasure candidates become checked
+  after the player comes within 35 yalms, with unchecked points shown in cyan
+  and checked points in green.
 - Emphasizes treasure candidate points with bright filled markers and rings.
 - Reads active FATEs through Dalamud's public `IFateTable` API.
 - Reads active Critical Encounters through a read-only, fail-closed client view.
@@ -41,6 +46,7 @@ movement, interaction, or combat and never uploads observations.
 - Zooms the atlas from 100% to 400% with the mouse wheel in layout mode.
 - Starts upgraded installations in layout mode so dragging any window edge or
   corner resizes the atlas directly.
+- Provides a persisted map-opacity slider while the atlas is in layout mode.
 - Keeps the atlas field free of marker-name and distance text; marker meanings
   remain available in the compact legend.
 
