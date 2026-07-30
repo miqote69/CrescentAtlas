@@ -7,6 +7,7 @@
     "AssemblyVersion": "0.1.38.0",
     "TestingAssemblyVersion": "0.1.38.0",
     "RepoUrl": "https://github.com/miqote69/CrescentAtlas",
+    "IconUrl": "https://raw.githubusercontent.com/miqote69/CrescentAtlas/main/images/icon-v1.png",
     "ApplicableVersion": "any",
     "DalamudApiLevel": 15,
     "TestingDalamudApiLevel": 15,

@@ -6,6 +6,7 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <IsPackable>false</IsPackable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <IconUrl>https://raw.githubusercontent.com/miqote69/CrescentAtlas/main/images/icon-v1.png</IconUrl>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="tests\**\*.cs" />
