@@ -4,8 +4,8 @@
     "Name": "Crescent Atlas",
     "Description": "DEVELOPMENT PROTOTYPE. DO NOT USE outside active testing. May crash FFXIV or Dalamud. Display-only Occult Crescent atlas and local collector.",
     "InternalName": "CrescentAtlas",
-    "AssemblyVersion": "0.1.33.0",
-    "TestingAssemblyVersion": "0.1.33.0",
+    "AssemblyVersion": "0.1.34.0",
+    "TestingAssemblyVersion": "0.1.34.0",
     "RepoUrl": "https://github.com/miqote69/CrescentAtlas",
     "ApplicableVersion": "any",
     "DalamudApiLevel": 15,
@@ -19,9 +19,9 @@
     "MinimumDalamudVersion": "15.0.0.0",
     "IsHide": false,
     "IsTestingExclusive": false,
-    "DownloadLinkInstall": "https://github.com/miqote69/CrescentAtlas/releases/download/v0.1.33/CrescentAtlas.zip",
-    "DownloadLinkTesting": "https://github.com/miqote69/CrescentAtlas/releases/download/v0.1.33/CrescentAtlas.zip",
-    "DownloadLinkUpdate": "https://github.com/miqote69/CrescentAtlas/releases/download/v0.1.33/CrescentAtlas.zip",
-    "LastUpdate": 1785412389
+    "DownloadLinkInstall": "https://github.com/miqote69/CrescentAtlas/releases/download/v0.1.34/CrescentAtlas.zip",
+    "DownloadLinkTesting": "https://github.com/miqote69/CrescentAtlas/releases/download/v0.1.34/CrescentAtlas.zip",
+    "DownloadLinkUpdate": "https://github.com/miqote69/CrescentAtlas/releases/download/v0.1.34/CrescentAtlas.zip",
+    "LastUpdate": 1785414858
   }
 ]
