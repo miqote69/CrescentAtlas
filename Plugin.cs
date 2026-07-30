@@ -11,6 +11,7 @@ using Dalamud.IoC;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
+using FFXIVClientStructs.FFXIV.Client.UI;
 
 namespace CrescentAtlas;
 
@@ -125,7 +126,8 @@ public sealed class Plugin : IDalamudPlugin
                 ClientState,
                 TextureProvider,
                 islandVisitStore.GetVisitsDescending,
-                SaveConfiguration);
+                SaveConfiguration,
+                PlayChatSoundEffect);
             treasureLineOverlay = new NearbyTreasureLineOverlay(GameGui, atlasData, configuration);
             windowSystem.AddWindow(atlasWindow);
             BootstrapDiagnostics.Write("atlas window and overlay initialized");
@@ -461,7 +463,13 @@ public sealed class Plugin : IDalamudPlugin
                     ? $"[Crescent Atlas] FATE発生: {observation.Name}"
                     : $"[Crescent Atlas] FATE: {observation.Name}");
 
-            if (!configuration.PotNotificationsEnabled || !IsPotFate(observation.EventId, observation.Name))
+            if (!IsPotFate(observation.EventId, observation.Name))
+                continue;
+
+            if (configuration.PotSoundEnabled)
+                PlayChatSoundEffect(configuration.PotSoundEffect);
+
+            if (!configuration.PotNotificationsEnabled)
                 continue;
 
             var prediction = potPredictionTracker.Observe(new PotObservation(
@@ -668,6 +676,18 @@ public sealed class Plugin : IDalamudPlugin
 
     private string T(string english, string japanese)
         => configuration.Language == UiLanguage.Japanese ? japanese : english;
+
+    private static unsafe void PlayChatSoundEffect(uint effectId)
+    {
+        try
+        {
+            UIGlobals.PlayChatSoundEffect(Math.Clamp(effectId, 1u, 16u));
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to play chat sound effect {EffectId}", effectId);
+        }
+    }
 
     private sealed class ConditionalObservationSink(
         IObservationSink inner,

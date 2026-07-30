@@ -26,6 +26,8 @@ public sealed class AtlasWindow : Window, IDisposable
     private const float MinimumMapZoom = 1.0f;
     private const float MaximumMapZoom = 4.0f;
     private const float MapZoomStep = 0.25f;
+    private const float PlayerLegendIconHalfSize = 13.0f;
+    private const float PlayerMapIconHalfSize = 18.0f;
     private const uint PlayerMapIconId = 60443;
     private static readonly Vector4 BackgroundColor = new(0.035f, 0.045f, 0.055f, 0.96f);
     private static readonly Vector4 GridColor = new(0.28f, 0.34f, 0.39f, 0.23f);
@@ -61,6 +63,7 @@ public sealed class AtlasWindow : Window, IDisposable
     private readonly ITextureProvider textureProvider;
     private readonly Func<IReadOnlyList<IslandVisitRecord>> visitHistoryProvider;
     private readonly System.Action saveConfiguration;
+    private readonly System.Action<uint> playChatSoundEffect;
     private readonly string versionLabel;
     private float mapZoom = MinimumMapZoom;
     private Vector2 mapCenter = new(0.5f, 0.5f);
@@ -75,7 +78,8 @@ public sealed class AtlasWindow : Window, IDisposable
         IClientState clientState,
         ITextureProvider textureProvider,
         Func<IReadOnlyList<IslandVisitRecord>> visitHistoryProvider,
-        System.Action saveConfiguration)
+        System.Action saveConfiguration,
+        System.Action<uint> playChatSoundEffect)
         : base("Crescent Atlas###CrescentAtlasMap")
     {
         this.dataSource = dataSource;
@@ -85,6 +89,7 @@ public sealed class AtlasWindow : Window, IDisposable
         this.textureProvider = textureProvider;
         this.visitHistoryProvider = visitHistoryProvider;
         this.saveConfiguration = saveConfiguration;
+        this.playChatSoundEffect = playChatSoundEffect;
         versionLabel = FormatVersionLabel(typeof(AtlasWindow).Assembly.GetName().Version);
         IsOpen = configuration.MapVisible;
 
@@ -276,6 +281,44 @@ public sealed class AtlasWindow : Window, IDisposable
             {
                 SetLanguage(UiLanguage.English);
             }
+
+            ImGui.EndMenu();
+        }
+
+        if (ImGui.BeginMenu($"{T("Sound", "サウンド")}###menu-sound"))
+        {
+            if (ImGui.MenuItem(
+                    $"{T("Magic Pot alert", "マジックポット通知音")}###pot-sound-enabled",
+                    string.Empty,
+                    configuration.PotSoundEnabled))
+            {
+                configuration.PotSoundEnabled = !configuration.PotSoundEnabled;
+                saveConfiguration();
+            }
+
+            var selectedEffect = Math.Clamp(configuration.PotSoundEffect, 1u, 16u);
+            if (ImGui.BeginMenu(
+                    $"{T("Sound effect", "通知音")}: <se.{selectedEffect}>###pot-sound-effect"))
+            {
+                for (uint effectId = 1; effectId <= 16; effectId++)
+                {
+                    if (!ImGui.MenuItem(
+                            $"<se.{effectId}>###pot-sound-{effectId}",
+                            string.Empty,
+                            selectedEffect == effectId))
+                    {
+                        continue;
+                    }
+
+                    configuration.PotSoundEffect = effectId;
+                    saveConfiguration();
+                }
+
+                ImGui.EndMenu();
+            }
+
+            if (ImGui.MenuItem($"{T("Test sound", "試聴")}###pot-sound-test"))
+                playChatSoundEffect(selectedEffect);
 
             ImGui.EndMenu();
         }
@@ -649,7 +692,7 @@ public sealed class AtlasWindow : Window, IDisposable
     {
         if (entry.Style == LegendStyle.Player)
         {
-            DrawPlayer(drawList, point, 0.0f);
+            DrawPlayer(drawList, point, 0.0f, PlayerLegendIconHalfSize);
             return;
         }
 
@@ -762,7 +805,7 @@ public sealed class AtlasWindow : Window, IDisposable
             DrawPotPrediction(drawList, project(potPrediction.PredictedPosition), potPrediction);
 
         if (playerPosition is { } position)
-            DrawPlayer(drawList, project(position), playerRotation);
+            DrawPlayer(drawList, project(position), playerRotation, PlayerMapIconHalfSize);
         else
             DrawMissingPlayerNotice(drawList, canvasMinimum);
 
@@ -1244,38 +1287,43 @@ public sealed class AtlasWindow : Window, IDisposable
         drawList.AddCircle(point, 15.0f, packedColor, 0, 2.5f);
     }
 
-    private void DrawPlayer(ImDrawListPtr drawList, Vector2 point, float? rotation)
+    private void DrawPlayer(
+        ImDrawListPtr drawList,
+        Vector2 point,
+        float? rotation,
+        float halfSize)
     {
         var angle = rotation ?? 0.0f;
         var forward = new Vector2(MathF.Sin(angle), MathF.Cos(angle));
         var right = new Vector2(forward.Y, -forward.X);
 
-        if (TryDrawRotatedPlayerIcon(drawList, point, forward, right))
+        if (TryDrawRotatedPlayerIcon(drawList, point, forward, right, halfSize))
             return;
 
+        var scale = halfSize / PlayerLegendIconHalfSize;
         var shadow = ImGui.GetColorU32(new Vector4(0.01f, 0.02f, 0.03f, 0.92f));
         var border = ImGui.GetColorU32(new Vector4(0.98f, 0.98f, 1.00f, 1.0f));
         var fill = ImGui.GetColorU32(new Vector4(1.00f, 0.76f, 0.18f, 1.0f));
 
-        var outerTip = point + (forward * 14.0f);
-        var outerBack = point - (forward * 8.0f);
-        var outerLeft = outerBack - (right * 8.5f);
-        var outerRight = outerBack + (right * 8.5f);
-        drawList.AddCircleFilled(point - (forward * 2.0f), 9.5f, shadow);
+        var outerTip = point + (forward * (14.0f * scale));
+        var outerBack = point - (forward * (8.0f * scale));
+        var outerLeft = outerBack - (right * (8.5f * scale));
+        var outerRight = outerBack + (right * (8.5f * scale));
+        drawList.AddCircleFilled(point - (forward * (2.0f * scale)), 9.5f * scale, shadow);
         drawList.AddTriangleFilled(outerTip, outerRight, outerLeft, shadow);
 
-        var borderTip = point + (forward * 12.0f);
-        var borderBack = point - (forward * 6.5f);
-        var borderLeft = borderBack - (right * 7.0f);
-        var borderRight = borderBack + (right * 7.0f);
-        drawList.AddCircleFilled(point - (forward * 1.5f), 7.5f, border);
+        var borderTip = point + (forward * (12.0f * scale));
+        var borderBack = point - (forward * (6.5f * scale));
+        var borderLeft = borderBack - (right * (7.0f * scale));
+        var borderRight = borderBack + (right * (7.0f * scale));
+        drawList.AddCircleFilled(point - (forward * (1.5f * scale)), 7.5f * scale, border);
         drawList.AddTriangleFilled(borderTip, borderRight, borderLeft, border);
 
-        var fillTip = point + (forward * 9.5f);
-        var fillBack = point - (forward * 4.5f);
-        var fillLeft = fillBack - (right * 4.8f);
-        var fillRight = fillBack + (right * 4.8f);
-        drawList.AddCircleFilled(point - forward, 5.2f, fill);
+        var fillTip = point + (forward * (9.5f * scale));
+        var fillBack = point - (forward * (4.5f * scale));
+        var fillLeft = fillBack - (right * (4.8f * scale));
+        var fillRight = fillBack + (right * (4.8f * scale));
+        drawList.AddCircleFilled(point - (forward * scale), 5.2f * scale, fill);
         drawList.AddTriangleFilled(fillTip, fillRight, fillLeft, fill);
     }
 
@@ -1283,7 +1331,8 @@ public sealed class AtlasWindow : Window, IDisposable
         ImDrawListPtr drawList,
         Vector2 point,
         Vector2 forward,
-        Vector2 right)
+        Vector2 right,
+        float halfSize)
     {
         try
         {
@@ -1293,7 +1342,6 @@ public sealed class AtlasWindow : Window, IDisposable
             if (texture.Width <= 1 || texture.Height <= 1)
                 return false;
 
-            const float halfSize = 13.0f;
             var topLeft = point + (forward * halfSize) - (right * halfSize);
             var topRight = point + (forward * halfSize) + (right * halfSize);
             var bottomRight = point - (forward * halfSize) + (right * halfSize);
