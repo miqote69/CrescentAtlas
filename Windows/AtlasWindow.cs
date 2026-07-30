@@ -31,7 +31,7 @@ public sealed class AtlasWindow : Window, IDisposable
     private static readonly LegendEntry[] Legend =
     [
         new(AtlasMarkerKind.Player, "Player", new Vector4(0.96f, 0.96f, 1.00f, 1.0f)),
-        new(AtlasMarkerKind.TreasureCandidate, "Treasure candidate", new Vector4(0.55f, 0.73f, 0.85f, 1.0f)),
+        new(AtlasMarkerKind.TreasureCandidate, "Treasure candidate", new Vector4(0.20f, 0.92f, 1.00f, 1.0f)),
         new(AtlasMarkerKind.ActiveTreasure, "Active treasure", new Vector4(0.26f, 0.92f, 1.00f, 1.0f)),
         new(AtlasMarkerKind.Carrot, "Carrot", new Vector4(1.00f, 0.55f, 0.18f, 1.0f)),
         new(AtlasMarkerKind.Fate, "FATE", new Vector4(0.78f, 0.42f, 1.00f, 1.0f)),
@@ -245,7 +245,6 @@ public sealed class AtlasWindow : Window, IDisposable
             project = fallback.Project;
         }
 
-        DrawTreasureCandidateRoute(drawList, project, markers, playerPosition);
         DrawNearestTreasureSpot(drawList, project, markers, playerPosition);
         DrawNearbyTreasureLines(drawList, project, markers, playerPosition);
 
@@ -324,49 +323,6 @@ public sealed class AtlasWindow : Window, IDisposable
         return mapMinimum + (normalized * mapSize);
     }
 
-    private static void DrawTreasureCandidateRoute(
-        ImDrawListPtr drawList,
-        Func<Vector3, Vector2> project,
-        IReadOnlyList<AtlasMarker> markers,
-        Vector3? playerPosition)
-    {
-        if (playerPosition is not { } player)
-            return;
-
-        var remaining = markers
-            .Where(marker => marker.Kind == AtlasMarkerKind.TreasureCandidate)
-            .Select(marker => marker.Position)
-            .ToList();
-        if (remaining.Count == 0)
-            return;
-
-        var current = player;
-        var currentScreen = project(current);
-        var routeColor = ImGui.GetColorU32(new Vector4(0.36f, 0.80f, 0.92f, 0.45f));
-
-        while (remaining.Count > 0)
-        {
-            var closestIndex = 0;
-            var closestDistance = Vector3.DistanceSquared(current, remaining[0]);
-            for (var index = 1; index < remaining.Count; index++)
-            {
-                var distance = Vector3.DistanceSquared(current, remaining[index]);
-                if (distance >= closestDistance)
-                    continue;
-
-                closestIndex = index;
-                closestDistance = distance;
-            }
-
-            var next = remaining[closestIndex];
-            var nextScreen = project(next);
-            drawList.AddLine(currentScreen, nextScreen, routeColor, 1.5f);
-            current = next;
-            currentScreen = nextScreen;
-            remaining.RemoveAt(closestIndex);
-        }
-    }
-
     private static void DrawNearbyTreasureLines(
         ImDrawListPtr drawList,
         Func<Vector3, Vector2> project,
@@ -438,11 +394,15 @@ public sealed class AtlasWindow : Window, IDisposable
             color.W *= 0.45f;
 
         var packedColor = ImGui.GetColorU32(color);
-        var radius = marker.Kind == AtlasMarkerKind.TreasureCandidate ? MarkerRadius - 1.0f : MarkerRadius;
+        var radius = marker.Kind == AtlasMarkerKind.TreasureCandidate ? MarkerRadius + 1.5f : MarkerRadius;
 
         if (marker.Kind == AtlasMarkerKind.TreasureCandidate)
         {
-            drawList.AddCircle(point, radius, packedColor, 0, 1.5f);
+            var shadowColor = ImGui.GetColorU32(new Vector4(0.01f, 0.04f, 0.06f, 0.92f));
+            var ringColor = ImGui.GetColorU32(new Vector4(color.X, color.Y, color.Z, color.W * 0.72f));
+            drawList.AddCircleFilled(point, radius + 2.5f, shadowColor);
+            drawList.AddCircleFilled(point, radius, packedColor);
+            drawList.AddCircle(point, radius + 3.5f, ringColor, 0, 2.0f);
         }
         else if (marker.Kind is AtlasMarkerKind.ActiveTreasure or AtlasMarkerKind.PotChest)
         {

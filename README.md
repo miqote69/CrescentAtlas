@@ -21,7 +21,7 @@ movement, interaction, or combat and never uploads observations.
 - Updates guide-line player tracking every rendered frame for smooth movement.
 - Always highlights the nearest known treasure candidate with an orange guide
   line, even when no treasure is currently present at that spot.
-- Draws a nearest-neighbour exploration route through treasure candidates.
+- Emphasizes treasure candidate points with bright filled markers and rings.
 - Reads active FATEs through Dalamud's public `IFateTable` API.
 - Reads active Critical Encounters through a read-only, fail-closed client view.
 - Records Event Objects as discovery candidates so carrot IDs can be confirmed
