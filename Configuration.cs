@@ -7,6 +7,8 @@ public sealed class Configuration : IPluginConfiguration
 {
     public int Version { get; set; } = 3;
 
+    public UiLanguage Language { get; set; } = UiLanguage.Japanese;
+
     public bool CollectionEnabled { get; set; } = true;
 
     public bool MapVisible { get; set; } = true;
@@ -46,4 +48,10 @@ public sealed class Configuration : IPluginConfiguration
     public HashSet<uint> ConfirmedCarrotEventIds { get; set; } = [];
 
     public HashSet<uint> ConfirmedPotFateIds { get; set; } = [];
+}
+
+public enum UiLanguage
+{
+    Japanese,
+    English,
 }

@@ -38,20 +38,20 @@ public sealed class AtlasWindow : Window, IDisposable
 
     private static readonly LegendEntry[] Legend =
     [
-        new(AtlasMarkerKind.Player, "Player", new Vector4(0.96f, 0.96f, 1.00f, 1.0f), LegendStyle.Player),
-        new(AtlasMarkerKind.TreasureCandidate, "Unchecked treasure", new Vector4(0.20f, 0.92f, 1.00f, 1.0f)),
-        new(AtlasMarkerKind.TreasureCandidate, "Checked treasure", CheckedTreasureColor, LegendStyle.CheckedTreasure),
-        new(AtlasMarkerKind.TreasureCandidate, "Bronze treasure", BronzeTreasureColor, LegendStyle.BronzeTreasure),
-        new(AtlasMarkerKind.TreasureCandidate, "Silver treasure", SilverTreasureColor, LegendStyle.SilverTreasure),
-        new(AtlasMarkerKind.ActiveTreasure, "Active treasure", new Vector4(0.26f, 0.92f, 1.00f, 1.0f)),
-        new(AtlasMarkerKind.Carrot, "Carrot", new Vector4(1.00f, 0.55f, 0.18f, 1.0f)),
-        new(AtlasMarkerKind.Fate, "FATE", new Vector4(0.78f, 0.42f, 1.00f, 1.0f), LegendStyle.LiveGameIcon),
-        new(AtlasMarkerKind.CriticalEncounter, "Critical encounter", new Vector4(1.00f, 0.24f, 0.31f, 1.0f), LegendStyle.LiveGameIcon),
-        new(AtlasMarkerKind.CriticalEncounter, "Forked Tower", new Vector4(0.38f, 0.88f, 1.00f, 1.0f), LegendStyle.ForkedTower),
-        new(AtlasMarkerKind.PotFate, "Magic pot", new Vector4(1.00f, 0.83f, 0.25f, 1.0f), LegendStyle.LiveGameIcon),
-        new(AtlasMarkerKind.PotPrediction, "Magic pot prediction", new Vector4(1.00f, 0.72f, 0.08f, 1.0f), LegendStyle.PotPrediction),
-        new(AtlasMarkerKind.PotTarget, "Magic Pot target", new Vector4(0.45f, 1.00f, 0.48f, 1.0f)),
-        new(AtlasMarkerKind.Aetheryte, "Aetheryte", new Vector4(0.42f, 0.90f, 1.00f, 1.0f), LegendStyle.LiveGameIcon),
+        new(AtlasMarkerKind.Player, "Player", "プレイヤー", new Vector4(0.96f, 0.96f, 1.00f, 1.0f), LegendStyle.Player),
+        new(AtlasMarkerKind.TreasureCandidate, "Unchecked treasure", "未確認の宝箱", new Vector4(0.20f, 0.92f, 1.00f, 1.0f)),
+        new(AtlasMarkerKind.TreasureCandidate, "Checked treasure", "確認済みの宝箱", CheckedTreasureColor, LegendStyle.CheckedTreasure),
+        new(AtlasMarkerKind.TreasureCandidate, "Bronze treasure", "銅箱", BronzeTreasureColor, LegendStyle.BronzeTreasure),
+        new(AtlasMarkerKind.TreasureCandidate, "Silver treasure", "銀箱", SilverTreasureColor, LegendStyle.SilverTreasure),
+        new(AtlasMarkerKind.ActiveTreasure, "Active treasure", "出現中の宝箱", new Vector4(0.26f, 0.92f, 1.00f, 1.0f)),
+        new(AtlasMarkerKind.Carrot, "Carrot", "にんじん", new Vector4(1.00f, 0.55f, 0.18f, 1.0f)),
+        new(AtlasMarkerKind.Fate, "FATE", "FATE", new Vector4(0.78f, 0.42f, 1.00f, 1.0f), LegendStyle.LiveGameIcon),
+        new(AtlasMarkerKind.CriticalEncounter, "Critical encounter", "クリティカルエンカウント", new Vector4(1.00f, 0.24f, 0.31f, 1.0f), LegendStyle.LiveGameIcon),
+        new(AtlasMarkerKind.CriticalEncounter, "Forked Tower", "フォークタワー", new Vector4(0.38f, 0.88f, 1.00f, 1.0f), LegendStyle.ForkedTower),
+        new(AtlasMarkerKind.PotFate, "Magic Pot", "マジックポット", new Vector4(1.00f, 0.83f, 0.25f, 1.0f), LegendStyle.LiveGameIcon),
+        new(AtlasMarkerKind.PotPrediction, "Magic Pot prediction", "マジックポット予想", new Vector4(1.00f, 0.72f, 0.08f, 1.0f), LegendStyle.PotPrediction),
+        new(AtlasMarkerKind.PotTarget, "Magical Elixir target", "マジカルエリクサー目標", new Vector4(0.45f, 1.00f, 0.48f, 1.0f)),
+        new(AtlasMarkerKind.Aetheryte, "Aetheryte", "エーテライト", new Vector4(0.42f, 0.90f, 1.00f, 1.0f), LegendStyle.LiveGameIcon),
     ];
 
     private readonly IAtlasDataSource dataSource;
@@ -110,8 +110,8 @@ public sealed class AtlasWindow : Window, IDisposable
             {
                 ImGui.BeginTooltip();
                 ImGui.TextUnformatted(configuration.MapControlsExpanded
-                    ? "Hide map controls"
-                    : "Show map controls");
+                    ? T("Hide map controls", "マップ操作を隠す")
+                    : T("Show map controls", "マップ操作を表示"));
                 ImGui.EndTooltip();
             },
         });
@@ -171,17 +171,21 @@ public sealed class AtlasWindow : Window, IDisposable
         if (configuration.MapControlsExpanded)
         {
             var territoryName = string.IsNullOrWhiteSpace(dataSource.TerritoryName)
-                ? "Unknown territory"
+                ? T("Unknown territory", "不明なエリア")
                 : dataSource.TerritoryName;
-            ImGui.TextUnformatted($"{territoryName}  (Territory {dataSource.TerritoryId})");
+            ImGui.TextUnformatted(configuration.Language == UiLanguage.Japanese
+                ? $"{territoryName}  (エリア {dataSource.TerritoryId})"
+                : $"{territoryName}  (Territory {dataSource.TerritoryId})");
             ImGui.SameLine();
             ImGui.TextDisabled(configuration.MapClickThrough
-                ? "Click-through mode"
-                : "Drag map to pan / wheel to zoom / drag edge to resize");
+                ? T("Click-through mode", "クリック透過モード")
+                : T(
+                    "Drag map to pan / wheel to zoom / drag edge to resize",
+                    "ドラッグで移動 / ホイールで拡大縮小 / 端をドラッグでサイズ変更"));
 
             if (!configuration.MapClickThrough)
             {
-                if (ImGui.Button("Reset treasure checks"))
+                if (ImGui.Button(T("Reset treasure checks", "宝箱の確認状態をリセット")))
                     dataSource.ResetTreasureChecks();
             }
 
@@ -204,9 +208,9 @@ public sealed class AtlasWindow : Window, IDisposable
             dataSource.PlayerRotation);
     }
 
-    private static void DrawOutsideAreaNotice()
+    private void DrawOutsideAreaNotice()
     {
-        const string message = "\u30A8\u30EA\u30A2\u5916";
+        var message = T("Outside Occult Crescent", "クレセントアイルのエリア外");
         var available = ImGui.GetContentRegionAvail();
         var canvasSize = new Vector2(
             Math.Max(1.0f, available.X),
@@ -238,21 +242,42 @@ public sealed class AtlasWindow : Window, IDisposable
         if (!ImGui.BeginMenuBar())
             return;
 
-        if (ImGui.MenuItem("Map###menu-map", string.Empty, currentPage == AtlasPage.Map))
+        if (ImGui.MenuItem($"{T("Map", "マップ")}###menu-map", string.Empty, currentPage == AtlasPage.Map))
             currentPage = AtlasPage.Map;
         if (ImGui.MenuItem(
-                "Icon guide###menu-icon-guide",
+                $"{T("Icon guide", "アイコン説明")}###menu-icon-guide",
                 string.Empty,
                 currentPage == AtlasPage.IconGuide))
         {
             currentPage = AtlasPage.IconGuide;
         }
         if (ImGui.MenuItem(
-                "突入履歴###menu-visit-history",
+                $"{T("Visit history", "突入履歴")}###menu-visit-history",
                 string.Empty,
                 currentPage == AtlasPage.VisitHistory))
         {
             currentPage = AtlasPage.VisitHistory;
+        }
+
+        if (ImGui.BeginMenu($"{T("Language", "言語")}###menu-language"))
+        {
+            if (ImGui.MenuItem(
+                    "日本語###language-ja",
+                    string.Empty,
+                    configuration.Language == UiLanguage.Japanese))
+            {
+                SetLanguage(UiLanguage.Japanese);
+            }
+
+            if (ImGui.MenuItem(
+                    "English###language-en",
+                    string.Empty,
+                    configuration.Language == UiLanguage.English))
+            {
+                SetLanguage(UiLanguage.English);
+            }
+
+            ImGui.EndMenu();
         }
 
         var versionSize = ImGui.CalcTextSize(versionLabel);
@@ -272,10 +297,24 @@ public sealed class AtlasWindow : Window, IDisposable
             ? "v?"
             : $"v{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
 
+    private string T(string english, string japanese)
+        => configuration.Language == UiLanguage.Japanese ? japanese : english;
+
+    private void SetLanguage(UiLanguage language)
+    {
+        if (configuration.Language == language)
+            return;
+
+        configuration.Language = language;
+        saveConfiguration();
+    }
+
     private void DrawIconGuide(IReadOnlyList<AtlasMarker> markers)
     {
-        ImGui.TextUnformatted("Icon guide");
-        ImGui.TextDisabled("Map symbols used by Crescent Atlas.");
+        ImGui.TextUnformatted(T("Icon guide", "アイコン説明"));
+        ImGui.TextDisabled(T(
+            "Map symbols used by Crescent Atlas.",
+            "Crescent Atlasで使用するマップアイコンの説明です。"));
         ImGui.Separator();
         DrawLegend(markers);
     }
@@ -286,13 +325,15 @@ public sealed class AtlasWindow : Window, IDisposable
             .OrderByDescending(static visit => visit.EnteredAtUtc)
             .ToArray();
 
-        ImGui.TextUnformatted("クレセントアイル 突入履歴");
-        ImGui.TextDisabled("突入・退出時刻を新しい順に表示します。時刻はローカル時刻です。");
+        ImGui.TextUnformatted(T("Occult Crescent visit history", "クレセントアイル 突入履歴"));
+        ImGui.TextDisabled(T(
+            "Entry and exit times are shown newest first in local time.",
+            "突入・退出時刻を新しい順に表示します。時刻はローカル時刻です。"));
         ImGui.Separator();
 
         if (visits.Length == 0)
         {
-            ImGui.TextDisabled("突入履歴はまだありません。");
+            ImGui.TextDisabled(T("No visit history yet.", "突入履歴はまだありません。"));
             return;
         }
 
@@ -312,11 +353,11 @@ public sealed class AtlasWindow : Window, IDisposable
                     | ImGuiTableFlags.SizingStretchProp;
         if (ImGui.BeginTable("##CrescentAtlasVisitHistoryTable", 5, flags))
         {
-            ImGui.TableSetupColumn("突入", ImGuiTableColumnFlags.WidthFixed, 132.0f);
-            ImGui.TableSetupColumn("退出", ImGuiTableColumnFlags.WidthFixed, 132.0f);
-            ImGui.TableSetupColumn("滞在", ImGuiTableColumnFlags.WidthFixed, 72.0f);
-            ImGui.TableSetupColumn("エリア");
-            ImGui.TableSetupColumn("島識別");
+            ImGui.TableSetupColumn(T("Entered", "突入"), ImGuiTableColumnFlags.WidthFixed, 132.0f);
+            ImGui.TableSetupColumn(T("Exited", "退出"), ImGuiTableColumnFlags.WidthFixed, 132.0f);
+            ImGui.TableSetupColumn(T("Duration", "滞在"), ImGuiTableColumnFlags.WidthFixed, 72.0f);
+            ImGui.TableSetupColumn(T("Area", "エリア"));
+            ImGui.TableSetupColumn(T("Island ID", "島識別"));
             ImGui.TableHeadersRow();
 
             foreach (var visit in visits)
@@ -332,12 +373,16 @@ public sealed class AtlasWindow : Window, IDisposable
                 if (exitedLocal is { } exited)
                     ImGui.TextUnformatted(exited.ToString("yyyy/MM/dd HH:mm:ss"));
                 else
-                    ImGui.TextColored(new Vector4(0.42f, 1.00f, 0.52f, 1.0f), "滞在中");
+                    ImGui.TextColored(
+                        new Vector4(0.42f, 1.00f, 0.52f, 1.0f),
+                        T("Active", "滞在中"));
                 ImGui.TableSetColumnIndex(2);
                 ImGui.TextUnformatted(FormatVisitDuration(durationEnd - visit.EnteredAtUtc));
                 ImGui.TableSetColumnIndex(3);
                 ImGui.TextUnformatted(string.IsNullOrWhiteSpace(visit.TerritoryName)
-                    ? $"Territory {visit.TerritoryId}"
+                    ? configuration.Language == UiLanguage.Japanese
+                        ? $"エリア {visit.TerritoryId}"
+                        : $"Territory {visit.TerritoryId}"
                     : visit.TerritoryName);
                 ImGui.TableSetColumnIndex(4);
                 ImGui.TextUnformatted(visit.IslandKey);
@@ -345,9 +390,13 @@ public sealed class AtlasWindow : Window, IDisposable
                     && ImGui.IsItemHovered())
                 {
                     ImGui.SetTooltip(
-                        $"Visit ID: {visit.VisitId}\n" +
-                        $"Instance pointer: {visit.InstancePointer}\n" +
-                        $"Last seen: {visit.LastSeenAtUtc.ToLocalTime():yyyy/MM/dd HH:mm:ss}");
+                        configuration.Language == UiLanguage.Japanese
+                            ? $"訪問ID: {visit.VisitId}\n" +
+                              $"インスタンスポインター: {visit.InstancePointer}\n" +
+                              $"最終確認: {visit.LastSeenAtUtc.ToLocalTime():yyyy/MM/dd HH:mm:ss}"
+                            : $"Visit ID: {visit.VisitId}\n" +
+                              $"Instance pointer: {visit.InstancePointer}\n" +
+                              $"Last seen: {visit.LastSeenAtUtc.ToLocalTime():yyyy/MM/dd HH:mm:ss}");
                 }
             }
 
@@ -357,12 +406,14 @@ public sealed class AtlasWindow : Window, IDisposable
         ImGui.EndChild();
     }
 
-    private static string FormatVisitDuration(TimeSpan duration)
+    private string FormatVisitDuration(TimeSpan duration)
     {
         var totalMinutes = Math.Max(0, (int)duration.TotalMinutes);
         return totalMinutes >= 60
             ? $"{totalMinutes / 60}:{totalMinutes % 60:00}"
-            : $"{totalMinutes}分";
+            : configuration.Language == UiLanguage.Japanese
+                ? $"{totalMinutes}分"
+                : $"{totalMinutes} min";
     }
 
     private void DrawMapFilters()
@@ -382,17 +433,17 @@ public sealed class AtlasWindow : Window, IDisposable
         var usedWidth = 0.0f;
         var availableWidth = Math.Max(100.0f, ImGui.GetContentRegionAvail().X);
         changed |= DrawFilterCheckbox(
-            "Bronze chest",
+            T("Bronze chest", "銅箱"),
             ref showBronzeTreasure,
             ref usedWidth,
             availableWidth);
         changed |= DrawFilterCheckbox(
-            "Silver chest",
+            T("Silver chest", "銀箱"),
             ref showSilverTreasure,
             ref usedWidth,
             availableWidth);
         changed |= DrawFilterCheckbox(
-            "Magic Pot target",
+            T("Magical Elixir target", "マジカルエリクサー目標"),
             ref showPotTarget,
             ref usedWidth,
             availableWidth);
@@ -407,17 +458,17 @@ public sealed class AtlasWindow : Window, IDisposable
             ref usedWidth,
             availableWidth);
         changed |= DrawFilterCheckbox(
-            "FATE/CE details",
+            T("FATE/CE details", "FATE/CE詳細"),
             ref detailedEventDisplay,
             ref usedWidth,
             availableWidth);
         changed |= DrawFilterCheckbox(
-            "Forked Tower",
+            T("Forked Tower", "フォークタワー"),
             ref showForkedTower,
             ref usedWidth,
             availableWidth);
         changed |= DrawFilterCheckbox(
-            "Pot prediction",
+            T("Pot prediction", "ポット予想"),
             ref showPotPrediction,
             ref usedWidth,
             availableWidth);
@@ -562,7 +613,8 @@ public sealed class AtlasWindow : Window, IDisposable
 
         foreach (var entry in Legend)
         {
-            var itemWidth = iconSize + 3.0f + ImGui.CalcTextSize(entry.Label).X
+            var label = entry.Label(configuration.Language);
+            var itemWidth = iconSize + 3.0f + ImGui.CalcTextSize(label).X
                             + ImGui.GetStyle().ItemSpacing.X;
             if (usedWidth > 0.0f && usedWidth + itemWidth > availableWidth)
             {
@@ -581,7 +633,7 @@ public sealed class AtlasWindow : Window, IDisposable
                 entry,
                 markers);
             ImGui.SameLine(0.0f, 3.0f);
-            ImGui.TextDisabled(entry.Label);
+            ImGui.TextDisabled(label);
             usedWidth += itemWidth;
         }
 
@@ -635,7 +687,7 @@ public sealed class AtlasWindow : Window, IDisposable
         var marker = new AtlasMarker(
             $"legend:{entry.Kind}:{entry.Style}",
             entry.Kind,
-            entry.Label,
+            entry.Label(configuration.Language),
             Vector3.Zero,
             DateTimeOffset.MinValue,
             true,
@@ -1045,15 +1097,15 @@ public sealed class AtlasWindow : Window, IDisposable
         var timeLabel = marker.Kind == AtlasMarkerKind.CriticalEncounter
             ? marker.EventState switch
             {
-                "Register" or "Warmup" => "開始まで",
-                _ => "残り",
+                "Register" or "Warmup" => T("Starts in", "開始まで"),
+                _ => T("Remaining", "残り"),
             }
-            : "残り";
+            : T("Remaining", "残り");
         var nameLine = CompactMarkerLabel(marker.Label, 18);
         var timeLine = hasRemainingTime
             ? $"{timeLabel} {minutes:00}:{seconds:00}"
             : $"{timeLabel} --:--";
-        var progressLine = $"進捗 {progress}%";
+        var progressLine = $"{T("Progress", "進捗")} {progress}%";
         var nameLineSize = ImGui.CalcTextSize(nameLine);
         var timeLineSize = ImGui.CalcTextSize(timeLine);
         var progressLineSize = ImGui.CalcTextSize(progressLine);
@@ -1101,10 +1153,10 @@ public sealed class AtlasWindow : Window, IDisposable
             progressLine);
     }
 
-    private static string CompactMarkerLabel(string label, int maximumCharacters)
+    private string CompactMarkerLabel(string label, int maximumCharacters)
     {
         if (string.IsNullOrWhiteSpace(label))
-            return "Unknown event";
+            return T("Unknown event", "不明なイベント");
 
         var trimmed = label.Trim();
         return trimmed.Length <= maximumCharacters
@@ -1156,8 +1208,8 @@ public sealed class AtlasWindow : Window, IDisposable
             ? $"{totalSeconds / 3600:00}:{(totalSeconds / 60) % 60:00}:{totalSeconds % 60:00}"
             : $"{totalSeconds / 60:00}:{totalSeconds % 60:00}";
         var predictedLocal = prediction.NextOccurrenceUtc.ToLocalTime();
-        var firstLine = $"予想時間 {predictedLocal:HH:mm:ss}";
-        var secondLine = $"あと {countdown}";
+        var firstLine = $"{T("Predicted time", "予想時間")} {predictedLocal:HH:mm:ss}";
+        var secondLine = $"{T("In", "あと")} {countdown}";
         var firstLineSize = ImGui.CalcTextSize(firstLine);
         var secondLineSize = ImGui.CalcTextSize(secondLine);
         var lineHeight = Math.Max(firstLineSize.Y, secondLineSize.Y);
@@ -1270,12 +1322,12 @@ public sealed class AtlasWindow : Window, IDisposable
             color);
     }
 
-    private static void DrawMissingPlayerNotice(ImDrawListPtr drawList, Vector2 canvasMinimum)
+    private void DrawMissingPlayerNotice(ImDrawListPtr drawList, Vector2 canvasMinimum)
     {
         drawList.AddText(
             canvasMinimum + new Vector2(12.0f, 10.0f),
             ImGui.GetColorU32(new Vector4(0.72f, 0.76f, 0.80f, 0.8f)),
-            "Waiting for player position");
+            T("Waiting for player position", "プレイヤー位置を取得中"));
     }
 
     private static Vector4 MarkerColor(AtlasMarkerKind kind)
@@ -1318,9 +1370,14 @@ public sealed class AtlasWindow : Window, IDisposable
 
     private readonly record struct LegendEntry(
         AtlasMarkerKind Kind,
-        string Label,
+        string EnglishLabel,
+        string JapaneseLabel,
         Vector4 Color,
-        LegendStyle Style = LegendStyle.Marker);
+        LegendStyle Style = LegendStyle.Marker)
+    {
+        public string Label(UiLanguage language)
+            => language == UiLanguage.Japanese ? JapaneseLabel : EnglishLabel;
+    }
 
     private readonly record struct FieldBounds(float MinimumX, float MaximumX, float MinimumZ, float MaximumZ)
     {

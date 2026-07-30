@@ -126,7 +126,7 @@ public sealed class Plugin : IDalamudPlugin
                 TextureProvider,
                 islandVisitStore.GetVisitsDescending,
                 SaveConfiguration);
-            treasureLineOverlay = new NearbyTreasureLineOverlay(GameGui, atlasData);
+            treasureLineOverlay = new NearbyTreasureLineOverlay(GameGui, atlasData, configuration);
             windowSystem.AddWindow(atlasWindow);
             BootstrapDiagnostics.Write("atlas window and overlay initialized");
 
@@ -143,7 +143,9 @@ public sealed class Plugin : IDalamudPlugin
 
             nextPollUtc = DateTimeOffset.UtcNow;
             nextFlushUtc = DateTimeOffset.UtcNow + FlushInterval;
-            ChatGui.Print("[Crescent Atlas] Loaded. /catlas toggles the display-only map.");
+            ChatGui.Print(T(
+                "[Crescent Atlas] Loaded. /catlas toggles the display-only map.",
+                "[Crescent Atlas] 読み込み完了。/catlas で表示専用マップを切り替えます。"));
             BootstrapDiagnostics.Write("constructor completed successfully");
         }
         catch (Exception ex)
@@ -227,19 +229,27 @@ public sealed class Plugin : IDalamudPlugin
                 if (configuration.CollectionEnabled)
                     scannedTerritoryId = 0;
                 SaveConfiguration();
-                ChatGui.Print($"[Crescent Atlas] Collection {(configuration.CollectionEnabled ? "enabled" : "disabled")}.");
+                ChatGui.Print(configuration.Language == UiLanguage.Japanese
+                    ? $"[Crescent Atlas] データ収集を{(configuration.CollectionEnabled ? "有効" : "無効")}にしました。"
+                    : $"[Crescent Atlas] Collection {(configuration.CollectionEnabled ? "enabled" : "disabled")}.");
                 break;
             case "click":
                 configuration.MapClickThrough = !configuration.MapClickThrough;
                 SaveConfiguration();
-                ChatGui.Print($"[Crescent Atlas] Map click-through {(configuration.MapClickThrough ? "enabled" : "disabled")}.");
+                ChatGui.Print(configuration.Language == UiLanguage.Japanese
+                    ? $"[Crescent Atlas] マップのクリック透過を{(configuration.MapClickThrough ? "有効" : "無効")}にしました。"
+                    : $"[Crescent Atlas] Map click-through {(configuration.MapClickThrough ? "enabled" : "disabled")}.");
                 break;
             case "flush":
                 observationStore.Flush();
-                ChatGui.Print($"[Crescent Atlas] Saved {observationStore.SessionObservationCount} observations.");
+                ChatGui.Print(configuration.Language == UiLanguage.Japanese
+                    ? $"[Crescent Atlas] {observationStore.SessionObservationCount}件の観測データを保存しました。"
+                    : $"[Crescent Atlas] Saved {observationStore.SessionObservationCount} observations.");
                 break;
             case "folder":
-                ChatGui.Print($"[Crescent Atlas] Collection folder: {observationStore.OutputDirectory}");
+                ChatGui.Print(T(
+                    $"[Crescent Atlas] Collection folder: {observationStore.OutputDirectory}",
+                    $"[Crescent Atlas] 収集フォルダー: {observationStore.OutputDirectory}"));
                 break;
             case "status":
                 var activeVisit = islandVisitStore.ActiveVisit;
@@ -250,10 +260,14 @@ public sealed class Plugin : IDalamudPlugin
                     $"[Crescent Atlas] visit={activeVisit?.VisitId ?? "none"}, " +
                     $"island={activeVisit?.IslandKey ?? "unknown"}");
                 ChatGui.Print($"[Crescent Atlas] {atlasWindow.MapDiagnostic}");
-                ChatGui.Print($"[Crescent Atlas] Diagnostic log: {BootstrapDiagnostics.LogPath}");
+                ChatGui.Print(T(
+                    $"[Crescent Atlas] Diagnostic log: {BootstrapDiagnostics.LogPath}",
+                    $"[Crescent Atlas] 診断ログ: {BootstrapDiagnostics.LogPath}"));
                 break;
             case "log":
-                ChatGui.Print($"[Crescent Atlas] Diagnostic log: {BootstrapDiagnostics.LogPath}");
+                ChatGui.Print(T(
+                    $"[Crescent Atlas] Diagnostic log: {BootstrapDiagnostics.LogPath}",
+                    $"[Crescent Atlas] 診断ログ: {BootstrapDiagnostics.LogPath}"));
                 break;
             default:
                 ChatGui.Print("[Crescent Atlas] /catlas [map|collect on|collect off|click|flush|folder|status|log]");
@@ -443,7 +457,9 @@ public sealed class Plugin : IDalamudPlugin
         foreach (var observation in batch.Observations)
         {
             if (configuration.FateNotificationsEnabled)
-                ChatGui.Print($"[Crescent Atlas] FATE: {observation.Name}");
+                ChatGui.Print(configuration.Language == UiLanguage.Japanese
+                    ? $"[Crescent Atlas] FATE発生: {observation.Name}"
+                    : $"[Crescent Atlas] FATE: {observation.Name}");
 
             if (!configuration.PotNotificationsEnabled || !IsPotFate(observation.EventId, observation.Name))
                 continue;
@@ -495,7 +511,9 @@ public sealed class Plugin : IDalamudPlugin
         if (configuration.CriticalEncounterNotificationsEnabled)
         {
             foreach (var observation in batch.Observations)
-                ChatGui.Print($"[Crescent Atlas] Critical Encounter: {observation.Name}");
+                ChatGui.Print(configuration.Language == UiLanguage.Japanese
+                    ? $"[Crescent Atlas] クリティカルエンカウント発生: {observation.Name}"
+                    : $"[Crescent Atlas] Critical Encounter: {observation.Name}");
         }
     }
 
@@ -525,19 +543,25 @@ public sealed class Plugin : IDalamudPlugin
         if (configuration.TreasureNotificationsEnabled)
         {
             foreach (var marker in treasures.Where(marker => !previousTreasureKeys.Contains(marker.Key)))
-                ChatGui.Print($"[Crescent Atlas] Treasure loaded: {marker.Label}");
+                ChatGui.Print(configuration.Language == UiLanguage.Japanese
+                    ? $"[Crescent Atlas] 宝箱を検知: {marker.Label}"
+                    : $"[Crescent Atlas] Treasure loaded: {marker.Label}");
         }
 
         if (configuration.CarrotNotificationsEnabled)
         {
             foreach (var marker in carrots.Where(marker => !previousCarrotKeys.Contains(marker.Key)))
-                ChatGui.Print($"[Crescent Atlas] EventObj candidate: {marker.Label}");
+                ChatGui.Print(configuration.Language == UiLanguage.Japanese
+                    ? $"[Crescent Atlas] にんじん候補を検知: {marker.Label}"
+                    : $"[Crescent Atlas] Carrot candidate: {marker.Label}");
         }
 
         if (configuration.PotNotificationsEnabled)
         {
             foreach (var marker in potTargets.Where(marker => !previousPotTargetKeys.Contains(marker.Key)))
-                ChatGui.Print($"[Crescent Atlas] Magic Pot target: {marker.Label}");
+                ChatGui.Print(configuration.Language == UiLanguage.Japanese
+                    ? $"[Crescent Atlas] マジカルエリクサー目標を検知: {marker.Label}"
+                    : $"[Crescent Atlas] Magical Elixir target: {marker.Label}");
         }
 
         previousTreasureKeys = treasureKeys;
@@ -596,10 +620,20 @@ public sealed class Plugin : IDalamudPlugin
 
         var location = prediction.PredictedPosition is { } position
             ? $"X={position.X:F1}, Z={position.Z:F1}"
-            : "location unknown";
-        ChatGui.Print(
-            $"[Crescent Atlas] Magic Pot next estimate: {next.ToLocalTime():HH:mm:ss} / {location} / " +
-            $"{prediction.Confidence} ({prediction.ObservationCount} observations)");
+            : T("location unknown", "場所不明");
+        var confidence = configuration.Language == UiLanguage.Japanese
+            ? prediction.Confidence switch
+            {
+                PotPredictionConfidence.Provisional => "暫定",
+                PotPredictionConfidence.Confirmed => "確定",
+                _ => "不明",
+            }
+            : prediction.Confidence.ToString();
+        ChatGui.Print(configuration.Language == UiLanguage.Japanese
+            ? $"[Crescent Atlas] マジックポット次回予想: {next.ToLocalTime():HH:mm:ss} / {location} / " +
+              $"{confidence}（観測{prediction.ObservationCount}回）"
+            : $"[Crescent Atlas] Magic Pot next estimate: {next.ToLocalTime():HH:mm:ss} / {location} / " +
+              $"{confidence} ({prediction.ObservationCount} observations)");
     }
 
     private void RecordAll(IEnumerable<ObservationRecord> observations)
@@ -631,6 +665,9 @@ public sealed class Plugin : IDalamudPlugin
 
     private void SaveConfiguration()
         => PluginInterface.SavePluginConfig(configuration);
+
+    private string T(string english, string japanese)
+        => configuration.Language == UiLanguage.Japanese ? japanese : english;
 
     private sealed class ConditionalObservationSink(
         IObservationSink inner,

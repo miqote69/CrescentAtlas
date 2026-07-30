@@ -10,7 +10,8 @@ namespace CrescentAtlas.Overlays;
 /// </summary>
 public sealed class NearbyTreasureLineOverlay(
     IGameGui gameGui,
-    IAtlasDataSource dataSource)
+    IAtlasDataSource dataSource,
+    Configuration configuration)
 {
     private const float MaximumDistance = 120.0f;
 
@@ -79,7 +80,9 @@ public sealed class NearbyTreasureLineOverlay(
         drawList.AddText(
             spotScreen + new Vector2(15.0f, 9.0f),
             spotColor,
-            $"Nearest treasure spot  {distance:F0}y");
+            configuration.Language == UiLanguage.Japanese
+                ? $"最寄りの宝箱ポイント  {distance:F0}y"
+                : $"Nearest treasure spot  {distance:F0}y");
     }
 
     private static float HorizontalDistanceSquared(Vector3 left, Vector3 right)
