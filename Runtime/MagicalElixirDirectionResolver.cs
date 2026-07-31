@@ -17,6 +17,7 @@ public enum CompassDirection
 public enum MagicalElixirDistanceBand
 {
     Unknown,
+    VeryNear,
     Near,
     Far,
     VeryFar,
@@ -36,7 +37,9 @@ public sealed record MagicalElixirDirectionCandidate(
 public sealed record MagicalElixirLocationEstimate(
     Vector3 Position,
     float MeanAngularErrorDegrees,
-    float MaximumAngularErrorDegrees);
+    float MaximumAngularErrorDegrees,
+    float UncertaintyRadiusYalms,
+    bool IsReliable);
 
 public static class MagicalElixirDirectionResolver
 {
@@ -150,7 +153,7 @@ public static class MagicalElixirDirectionResolver
         if (hints.Count == 0)
             return null;
 
-        var ordered = hints.OrderBy(hint => hint.ObservedAtUtc).ToArray();
+        var ordered = ReduceCorrelatedHints(hints);
         if (ordered.Length == 1)
         {
             var hint = ordered[0];
@@ -160,7 +163,12 @@ public static class MagicalElixirDirectionResolver
                 MathF.Sin(radians) * distance,
                 0.0f,
                 -MathF.Cos(radians) * distance);
-            return new MagicalElixirLocationEstimate(initialPosition, 0.0f, 0.0f);
+            return new MagicalElixirLocationEstimate(
+                initialPosition,
+                0.0f,
+                0.0f,
+                UncertaintyRadius(hint.DistanceBand),
+                false);
         }
 
         const float searchMargin = 500.0f;
@@ -200,7 +208,9 @@ public static class MagicalElixirDirectionResolver
         return new MagicalElixirLocationEstimate(
             position,
             errors.Average(),
-            errors.Max());
+            errors.Max(),
+            UncertaintyRadius(ordered[^1].DistanceBand),
+            HasReliableFix(ordered));
     }
 
     public static IReadOnlyList<MagicalElixirDirectionCandidate> Resolve(
@@ -297,6 +307,13 @@ public static class MagicalElixirDirectionResolver
             return MagicalElixirDistanceBand.VeryFar;
         }
 
+        if (text.Contains("\u3068\u3066\u3082\u8fd1\u304f", StringComparison.Ordinal)
+            || normalized.Contains("very near", StringComparison.Ordinal)
+            || normalized.Contains("very close", StringComparison.Ordinal))
+        {
+            return MagicalElixirDistanceBand.VeryNear;
+        }
+
         if (text.Contains("\u8fd1\u304f", StringComparison.Ordinal)
             || normalized.Contains("near", StringComparison.Ordinal)
             || normalized.Contains("close", StringComparison.Ordinal))
@@ -347,15 +364,20 @@ public static class MagicalElixirDirectionResolver
         var angularError = AngularErrorDegrees(
             DirectionDegrees(hint.Direction),
             BearingDegrees(hint.PlayerPosition, candidate));
-        var angularScore = MathF.Pow(angularError / 22.5f, 2.0f);
-        if (angularError > DefaultHalfWidthDegrees)
-            angularScore += MathF.Pow((angularError - DefaultHalfWidthDegrees) / 8.0f, 2.0f) * 4.0f;
+        const float directionSectorHalfWidth = 22.5f;
+        var sectorExcess = MathF.Max(0.0f, angularError - directionSectorHalfWidth);
+        var angularScore = MathF.Pow(sectorExcess / 8.0f, 2.0f)
+                           + (0.04f * MathF.Pow(angularError / directionSectorHalfWidth, 2.0f));
 
         var distance = Vector2.Distance(
             new Vector2(hint.PlayerPosition.X, hint.PlayerPosition.Z),
             new Vector2(candidate.X, candidate.Z));
         var distanceScore = hint.DistanceBand switch
         {
+            MagicalElixirDistanceBand.VeryNear when distance > 25.0f
+                => MathF.Pow((distance - 25.0f) / 12.0f, 2.0f),
+            MagicalElixirDistanceBand.Near when distance < 20.0f
+                => MathF.Pow((20.0f - distance) / 15.0f, 2.0f),
             MagicalElixirDistanceBand.Near when distance > 100.0f
                 => MathF.Pow((distance - 100.0f) / 40.0f, 2.0f),
             MagicalElixirDistanceBand.Far when distance < 100.0f
@@ -372,10 +394,62 @@ public static class MagicalElixirDirectionResolver
     private static float NominalDistance(MagicalElixirDistanceBand distanceBand)
         => distanceBand switch
         {
+            MagicalElixirDistanceBand.VeryNear => 12.0f,
             MagicalElixirDistanceBand.Near => 60.0f,
             MagicalElixirDistanceBand.Far => 150.0f,
             MagicalElixirDistanceBand.VeryFar => 300.0f,
             _ => 150.0f,
+        };
+
+    private static MagicalElixirDirectionHint[] ReduceCorrelatedHints(
+        IReadOnlyCollection<MagicalElixirDirectionHint> hints)
+    {
+        var ordered = hints.OrderBy(hint => hint.ObservedAtUtc).ToArray();
+        var reduced = new List<MagicalElixirDirectionHint>(ordered.Length);
+        foreach (var hint in ordered)
+        {
+            if (reduced.Count > 0
+                && reduced[^1].Direction == hint.Direction
+                && reduced[^1].DistanceBand == hint.DistanceBand)
+            {
+                reduced[^1] = hint;
+            }
+            else
+            {
+                reduced.Add(hint);
+            }
+        }
+
+        return reduced.ToArray();
+    }
+
+    private static bool HasReliableFix(IReadOnlyList<MagicalElixirDirectionHint> hints)
+    {
+        var latestBand = hints[^1].DistanceBand;
+        if (latestBand == MagicalElixirDistanceBand.VeryNear)
+            return true;
+        if (latestBand != MagicalElixirDistanceBand.Near)
+            return false;
+
+        var axes = hints
+            .Select(hint => DirectionDegrees(hint.Direction) % 180.0f)
+            .Distinct()
+            .ToArray();
+        return axes.Any(left => axes.Any(right =>
+        {
+            var difference = MathF.Abs(left - right);
+            return MathF.Min(difference, 180.0f - difference) >= 22.5f;
+        }));
+    }
+
+    private static float UncertaintyRadius(MagicalElixirDistanceBand distanceBand)
+        => distanceBand switch
+        {
+            MagicalElixirDistanceBand.VeryNear => 25.0f,
+            MagicalElixirDistanceBand.Near => 70.0f,
+            MagicalElixirDistanceBand.Far => 140.0f,
+            MagicalElixirDistanceBand.VeryFar => 600.0f,
+            _ => 250.0f,
         };
 
     private static string SpotLocationKey(ConfirmedPotTargetObservation spot)

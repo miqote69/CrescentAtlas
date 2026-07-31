@@ -76,6 +76,7 @@ public sealed class NearbyTreasureLineOverlay(
         foreach (var target in markers.Where(marker =>
                      marker.Kind == AtlasMarkerKind.PotTarget
                      && marker.IsActive
+                     && !marker.EventState.Equals("direction-search-area", StringComparison.Ordinal)
                      && Vector3.DistanceSquared(player, marker.Position) <= maximumDistanceSquared))
         {
             var isDirectionCandidate = target.EventState.Equals(

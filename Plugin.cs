@@ -900,35 +900,57 @@ public sealed class Plugin : IDalamudPlugin
         if (magicalElixirDirectionHints.Count == 0)
             return [];
 
+        var latestHint = magicalElixirDirectionHints[^1];
+        var estimateUpdated = false;
+        if (cachedUnknownElixirEstimate is null
+            || cachedUnknownElixirEstimateHintUtc != latestHint.ObservedAtUtc)
+        {
+            cachedUnknownElixirEstimate = MagicalElixirDirectionResolver.EstimateUnknownLocation(
+                magicalElixirDirectionHints);
+            cachedUnknownElixirEstimateHintUtc = latestHint.ObservedAtUtc;
+            estimateUpdated = true;
+        }
+
+        var estimate = cachedUnknownElixirEstimate;
+        if (estimate is null)
+            return [];
+        if (estimateUpdated)
+        {
+            BootstrapDiagnostics.Write(FormattableString.Invariant(
+                $"Magical Elixir unknown target estimated; position={estimate.Position.X:F1},{estimate.Position.Y:F1},{estimate.Position.Z:F1}; meanError={estimate.MeanAngularErrorDegrees:F1}; maxError={estimate.MaximumAngularErrorDegrees:F1}; uncertainty={estimate.UncertaintyRadiusYalms:F0}; reliable={estimate.IsReliable}; hints={magicalElixirDirectionHints.Count}"));
+        }
+
+        if (!estimate.IsReliable)
+        {
+            var searchLabel = configuration.Language == UiLanguage.Japanese
+                ? $"\u30a8\u30ea\u30af\u30b5\u30fc\u63a2\u7d22\u7bc4\u56f2\uff08{DirectionLabel(latestHint.Direction, true)}\uff09"
+                : $"Elixir search area ({DirectionLabel(latestHint.Direction, false)})";
+            return
+            [
+                new AtlasMarker(
+                    $"elixir-direction-search:{territoryId}",
+                    AtlasMarkerKind.PotTarget,
+                    searchLabel,
+                    estimate.Position,
+                    now,
+                    IsActive: true,
+                    territoryId,
+                    DataId: 0,
+                    TreasureType: "unknown",
+                    EventState: "direction-search-area",
+                    UncertaintyRadiusYalms: estimate.UncertaintyRadiusYalms),
+            ];
+        }
+
         var candidates = MagicalElixirDirectionResolver.Resolve(
             territoryId,
             knownPotTargetSpots,
             magicalElixirDirectionHints);
         if (candidates.Count == 0)
         {
-            var latestHintUtc = magicalElixirDirectionHints[^1].ObservedAtUtc;
-            var estimateUpdated = false;
-            if (cachedUnknownElixirEstimate is null
-                || cachedUnknownElixirEstimateHintUtc != latestHintUtc)
-            {
-                cachedUnknownElixirEstimate = MagicalElixirDirectionResolver.EstimateUnknownLocation(
-                    magicalElixirDirectionHints);
-                cachedUnknownElixirEstimateHintUtc = latestHintUtc;
-                estimateUpdated = true;
-            }
-
-            var estimate = cachedUnknownElixirEstimate;
-            if (estimate is null)
-                return [];
-
             var estimatedLabel = configuration.Language == UiLanguage.Japanese
-                ? $"未登録エリクサー推定（{DirectionLabel(magicalElixirDirectionHints[^1].Direction, true)}）"
-                : $"Unregistered Elixir estimate ({DirectionLabel(magicalElixirDirectionHints[^1].Direction, false)})";
-            if (estimateUpdated)
-            {
-                BootstrapDiagnostics.Write(FormattableString.Invariant(
-                    $"Magical Elixir unknown target estimated; position={estimate.Position.X:F1},{estimate.Position.Y:F1},{estimate.Position.Z:F1}; meanError={estimate.MeanAngularErrorDegrees:F1}; maxError={estimate.MaximumAngularErrorDegrees:F1}; hints={magicalElixirDirectionHints.Count}"));
-            }
+                ? $"未登録エリクサー推定（{DirectionLabel(latestHint.Direction, true)}）"
+                : $"Unregistered Elixir estimate ({DirectionLabel(latestHint.Direction, false)})";
             return
             [
                 new AtlasMarker(
@@ -945,7 +967,7 @@ public sealed class Plugin : IDalamudPlugin
             ];
         }
 
-        var latestDirection = magicalElixirDirectionHints[^1].Direction;
+        var latestDirection = latestHint.Direction;
         return candidates.Select((candidate, index) =>
         {
             var treasureType = MagicalElixirMapMarkerClassifier.ResolveTreasureType(

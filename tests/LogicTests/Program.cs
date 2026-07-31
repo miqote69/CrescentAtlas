@@ -70,6 +70,13 @@ Assert(
     && nearBand == MagicalElixirDistanceBand.Near,
     "Japanese nearby Magical Elixir messages retain their distance band");
 Assert(
+    MagicalElixirDirectionResolver.TryParse(
+        "財宝の気配を、北東方向のとても近くから感じているようだ！",
+        out _,
+        out var veryNearBand)
+    && veryNearBand == MagicalElixirDistanceBand.VeryNear,
+    "Japanese very-near Magical Elixir messages retain their narrow distance band");
+Assert(
     MagicalElixirDirectionResolver.BearingDegrees(Vector3.Zero, new Vector3(0, 0, -10)) == 0.0f,
     "negative world Z is map north");
 Assert(
@@ -113,6 +120,50 @@ Assert(
         new Vector2(unknownTarget.X, unknownTarget.Z)) <= 35.0f
     && unknownEstimate.MaximumAngularErrorDegrees <= MagicalElixirDirectionResolver.DefaultHalfWidthDegrees,
     "an unregistered Elixir target remains visible and converges near the observed destination");
+var secondUnknownTarget = new Vector3(47.6f, 3.8843424f, -218.3f);
+var secondUnknownHints = new MagicalElixirDirectionHint[]
+{
+    new(CompassDirection.NorthEast, new(-496.2308f, 52.755604f, 224.48422f), origin, "very far northeast", MagicalElixirDistanceBand.VeryFar),
+    new(CompassDirection.SouthWest, new(330.03757f, 38.29322f, -581.82806f), origin.AddSeconds(26), "very far southwest", MagicalElixirDistanceBand.VeryFar),
+    new(CompassDirection.SouthWest, new(265.8566f, 31.211512f, -567.1656f), origin.AddSeconds(34), "very far southwest", MagicalElixirDistanceBand.VeryFar),
+    new(CompassDirection.SouthWest, new(210.27594f, 17.239101f, -518.3449f), origin.AddSeconds(39), "very far southwest", MagicalElixirDistanceBand.VeryFar),
+    new(CompassDirection.NorthEast, new(-551.4197f, 66.67442f, 578.6547f), origin.AddSeconds(65), "very far northeast", MagicalElixirDistanceBand.VeryFar),
+    new(CompassDirection.NorthEast, new(-541.237f, 57.77471f, 511.3516f), origin.AddSeconds(70), "very far northeast", MagicalElixirDistanceBand.VeryFar),
+    new(CompassDirection.NorthEast, new(-505.36682f, 43.401787f, 444.83197f), origin.AddSeconds(76), "very far northeast", MagicalElixirDistanceBand.VeryFar),
+    new(CompassDirection.NorthEast, new(-475.8879f, 29.896624f, 375.64084f), origin.AddSeconds(81), "very far northeast", MagicalElixirDistanceBand.VeryFar),
+    new(CompassDirection.NorthEast, new(-453.32617f, 16.80894f, 304.99564f), origin.AddSeconds(86), "very far northeast", MagicalElixirDistanceBand.VeryFar),
+    new(CompassDirection.NorthEast, new(-439.4996f, 5.028363f, 227.2316f), origin.AddSeconds(91), "very far northeast", MagicalElixirDistanceBand.VeryFar),
+    new(CompassDirection.North, new(-16.773022f, 2.1012855f, -43.08181f), origin.AddSeconds(114), "far north", MagicalElixirDistanceBand.Far),
+    new(CompassDirection.NorthEast, new(-76.78556f, 3.8826878f, -88.23583f), origin.AddSeconds(123), "far northeast", MagicalElixirDistanceBand.Far),
+    new(CompassDirection.NorthEast, new(-31.53759f, 2.998665f, -148.12483f), origin.AddSeconds(128), "far northeast", MagicalElixirDistanceBand.Far),
+    new(CompassDirection.NorthEast, new(14.1212635f, 3.3294985f, -176.82266f), origin.AddSeconds(135), "near northeast", MagicalElixirDistanceBand.Near),
+    new(CompassDirection.NorthEast, new(40.63087f, 3.6832187f, -206.76562f), origin.AddSeconds(140), "very near northeast", MagicalElixirDistanceBand.VeryNear),
+};
+var earlySearchEstimate = MagicalElixirDirectionResolver.EstimateUnknownLocation(
+    secondUnknownHints.Take(4).ToArray());
+Assert(
+    earlySearchEstimate is { IsReliable: false, UncertaintyRadiusYalms: >= 600.0f },
+    "collinear very-far hints remain a broad search area instead of a precise destination");
+var farSearchEstimate = MagicalElixirDirectionResolver.EstimateUnknownLocation(
+    secondUnknownHints.Take(13).ToArray());
+Assert(
+    farSearchEstimate is { IsReliable: false, UncertaintyRadiusYalms: >= 140.0f },
+    "far-only hints remain explicitly uncertain");
+var nearFixEstimate = MagicalElixirDirectionResolver.EstimateUnknownLocation(
+    secondUnknownHints.Take(14).ToArray());
+Assert(
+    nearFixEstimate is { IsReliable: true }
+    && Vector2.Distance(
+        new(nearFixEstimate.Position.X, nearFixEstimate.Position.Z),
+        new(secondUnknownTarget.X, secondUnknownTarget.Z)) <= 70.0f,
+    "a near hint with angular diversity enables a bounded destination fix");
+var veryNearFixEstimate = MagicalElixirDirectionResolver.EstimateUnknownLocation(secondUnknownHints);
+Assert(
+    veryNearFixEstimate is { IsReliable: true, UncertaintyRadiusYalms: <= 25.0f }
+    && Vector2.Distance(
+        new(veryNearFixEstimate.Position.X, veryNearFixEstimate.Position.Z),
+        new(secondUnknownTarget.X, secondUnknownTarget.Z)) <= 25.0f,
+    "a very-near hint produces a tight final destination fix");
 Assert(
     !PotPredictionDisplayPolicy.ShouldShow(true, true, true, hasActivePotFate: true),
     "the next Magic Pot prediction is hidden while a Pot FATE is active");

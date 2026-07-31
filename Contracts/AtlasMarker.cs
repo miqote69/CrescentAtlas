@@ -29,4 +29,5 @@ public sealed record AtlasMarker(
     uint IconId = 0,
     byte Progress = 0,
     long TimeRemainingSeconds = 0,
-    string EventState = "");
+    string EventState = "",
+    float UncertaintyRadiusYalms = 0.0f);

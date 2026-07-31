@@ -965,6 +965,7 @@ public sealed class AtlasWindow : Window, IDisposable
         DrawDebugDetectionRange(drawList, project, playerPosition);
         DrawNearestTreasureSpot(drawList, project, markers, playerPosition);
         DrawNearbyTreasureLines(drawList, project, markers, playerPosition);
+        DrawElixirSearchAreas(drawList, project, markers);
 
         foreach (var marker in markers.Where(marker => marker.Kind != AtlasMarkerKind.Player))
             DrawMarker(
@@ -1070,6 +1071,7 @@ public sealed class AtlasWindow : Window, IDisposable
                      (marker.Kind == AtlasMarkerKind.ActiveTreasure
                       || marker.Kind == AtlasMarkerKind.PotTarget
                          && configuration.ShowPotTarget)
+                     && !IsElixirSearchArea(marker)
                      && Vector3.DistanceSquared(player, marker.Position) <= maximumDistanceSquared))
         {
             var lineColor = ImGui.GetColorU32(
@@ -1117,6 +1119,35 @@ public sealed class AtlasWindow : Window, IDisposable
             center + new Vector2(-projectedRadius + 5.0f, -projectedRadius + 5.0f),
             ringColor,
             label);
+    }
+
+    private static void DrawElixirSearchAreas(
+        ImDrawListPtr drawList,
+        Func<Vector3, Vector2> project,
+        IReadOnlyList<AtlasMarker> markers)
+    {
+        foreach (var marker in markers.Where(IsElixirSearchArea))
+        {
+            var radius = marker.UncertaintyRadiusYalms;
+            if (!float.IsFinite(radius) || radius <= 0.0f)
+                continue;
+
+            var center = project(marker.Position);
+            var left = project(marker.Position - new Vector3(radius, 0.0f, 0.0f));
+            var right = project(marker.Position + new Vector3(radius, 0.0f, 0.0f));
+            var top = project(marker.Position - new Vector3(0.0f, 0.0f, radius));
+            var bottom = project(marker.Position + new Vector3(0.0f, 0.0f, radius));
+            var projectedRadius = (
+                Vector2.Distance(left, right)
+                + Vector2.Distance(top, bottom)) * 0.25f;
+            if (!float.IsFinite(projectedRadius) || projectedRadius <= 1.0f)
+                continue;
+
+            var fill = ImGui.GetColorU32(new Vector4(1.00f, 0.64f, 0.05f, 0.08f));
+            var ring = ImGui.GetColorU32(new Vector4(1.00f, 0.72f, 0.12f, 0.86f));
+            drawList.AddCircleFilled(center, projectedRadius, fill, 96);
+            drawList.AddCircle(center, projectedRadius, ring, 96, 2.0f);
+        }
     }
 
     private static void DrawNearestTreasureSpot(
@@ -1326,7 +1357,12 @@ public sealed class AtlasWindow : Window, IDisposable
 
     private static bool IsElixirDirectionCandidate(AtlasMarker marker)
         => marker.Kind == AtlasMarkerKind.PotTarget
-           && marker.EventState.Equals("direction-candidate", StringComparison.Ordinal);
+           && (marker.EventState.Equals("direction-candidate", StringComparison.Ordinal)
+               || IsElixirSearchArea(marker));
+
+    private static bool IsElixirSearchArea(AtlasMarker marker)
+        => marker.Kind == AtlasMarkerKind.PotTarget
+           && marker.EventState.Equals("direction-search-area", StringComparison.Ordinal);
 
     private static void DrawActivePotFateHalo(ImDrawListPtr drawList, Vector2 point)
     {
