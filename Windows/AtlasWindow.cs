@@ -1067,7 +1067,9 @@ public sealed class AtlasWindow : Window, IDisposable
         {
             var lineColor = ImGui.GetColorU32(
                 marker.Kind == AtlasMarkerKind.PotTarget
-                    ? new Vector4(0.45f, 1.00f, 0.48f, 0.98f)
+                    ? IsElixirDirectionCandidate(marker)
+                        ? new Vector4(1.00f, 0.72f, 0.12f, 0.98f)
+                        : new Vector4(0.45f, 1.00f, 0.48f, 0.98f)
                     : new Vector4(0.20f, 1.00f, 0.38f, 0.96f));
             var treasureScreen = project(marker.Position);
             if (configuration.ShowTreasureGuideLines)
@@ -1184,6 +1186,12 @@ public sealed class AtlasWindow : Window, IDisposable
             return;
         }
 
+        if (IsElixirDirectionCandidate(marker))
+        {
+            DrawElixirDirectionCandidateIcon(drawList, point);
+            return;
+        }
+
         if (marker.Kind is AtlasMarkerKind.Fate
                 or AtlasMarkerKind.CriticalEncounter
                 or AtlasMarkerKind.PotFate
@@ -1274,6 +1282,42 @@ public sealed class AtlasWindow : Window, IDisposable
             drawList.AddLine(leafBase, leafTip, leaves, 2.6f);
         }
     }
+
+    private static void DrawElixirDirectionCandidateIcon(ImDrawListPtr drawList, Vector2 point)
+    {
+        var shadow = ImGui.GetColorU32(new Vector4(0.02f, 0.025f, 0.03f, 0.98f));
+        var outer = ImGui.GetColorU32(new Vector4(1.00f, 0.64f, 0.05f, 1.0f));
+        var highlight = ImGui.GetColorU32(new Vector4(1.00f, 0.91f, 0.42f, 1.0f));
+        var center = ImGui.GetColorU32(new Vector4(0.06f, 0.10f, 0.13f, 1.0f));
+        var needle = ImGui.GetColorU32(new Vector4(0.22f, 0.94f, 1.00f, 1.0f));
+
+        drawList.AddCircleFilled(point, MarkerRadius + 7.0f, shadow, 32);
+        drawList.AddCircleFilled(point, MarkerRadius + 5.0f, outer, 32);
+        drawList.AddCircleFilled(point, MarkerRadius + 1.5f, center, 32);
+        drawList.AddCircle(point, MarkerRadius + 5.0f, highlight, 32, 1.5f);
+
+        var north = point + new Vector2(0.0f, -(MarkerRadius + 3.0f));
+        var south = point + new Vector2(0.0f, MarkerRadius + 3.0f);
+        var east = point + new Vector2(MarkerRadius + 3.0f, 0.0f);
+        var west = point + new Vector2(-(MarkerRadius + 3.0f), 0.0f);
+        drawList.AddTriangleFilled(
+            north,
+            point + new Vector2(3.0f, 1.5f),
+            point + new Vector2(-3.0f, 1.5f),
+            needle);
+        drawList.AddTriangleFilled(
+            south,
+            point + new Vector2(2.0f, -1.0f),
+            point + new Vector2(-2.0f, -1.0f),
+            highlight);
+        drawList.AddLine(west, east, highlight, 1.6f);
+        drawList.AddCircleFilled(point, 2.7f, needle, 16);
+        drawList.AddCircle(point, 2.7f, shadow, 16, 1.0f);
+    }
+
+    private static bool IsElixirDirectionCandidate(AtlasMarker marker)
+        => marker.Kind == AtlasMarkerKind.PotTarget
+           && marker.EventState.Equals("direction-candidate", StringComparison.Ordinal);
 
     private void DrawEventStatus(
         ImDrawListPtr drawList,

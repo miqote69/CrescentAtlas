@@ -914,7 +914,8 @@ public sealed class Plugin : IDalamudPlugin
                 IsActive: true,
                 territoryId,
                 candidate.Spot.DataId,
-                TreasureType: treasureType);
+                TreasureType: treasureType,
+                EventState: "direction-candidate");
         }).ToArray();
     }
 

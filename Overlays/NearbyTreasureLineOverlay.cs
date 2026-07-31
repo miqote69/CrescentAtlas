@@ -73,12 +73,17 @@ public sealed class NearbyTreasureLineOverlay(
         uint shadowColor)
     {
         var maximumDistanceSquared = MaximumDistance * MaximumDistance;
-        var targetColor = ImGui.GetColorU32(new Vector4(0.45f, 1.00f, 0.48f, 0.98f));
         foreach (var target in markers.Where(marker =>
                      marker.Kind == AtlasMarkerKind.PotTarget
                      && marker.IsActive
                      && Vector3.DistanceSquared(player, marker.Position) <= maximumDistanceSquared))
         {
+            var isDirectionCandidate = target.EventState.Equals(
+                "direction-candidate",
+                StringComparison.Ordinal);
+            var targetColor = ImGui.GetColorU32(isDirectionCandidate
+                ? new Vector4(1.00f, 0.72f, 0.12f, 0.98f)
+                : new Vector4(0.45f, 1.00f, 0.48f, 0.98f));
             if (!gameGui.WorldToScreen(target.Position, out var targetScreen))
                 continue;
 
@@ -90,6 +95,20 @@ public sealed class NearbyTreasureLineOverlay(
 
             drawList.AddCircle(targetScreen, 14.0f, shadowColor, 0, 5.0f);
             drawList.AddCircle(targetScreen, 13.0f, targetColor, 0, 3.0f);
+            if (isDirectionCandidate)
+            {
+                drawList.AddLine(
+                    targetScreen + new Vector2(-7.0f, 0.0f),
+                    targetScreen + new Vector2(7.0f, 0.0f),
+                    targetColor,
+                    2.0f);
+                drawList.AddLine(
+                    targetScreen + new Vector2(0.0f, -7.0f),
+                    targetScreen + new Vector2(0.0f, 7.0f),
+                    targetColor,
+                    2.0f);
+                drawList.AddCircleFilled(targetScreen, 2.5f, targetColor, 12);
+            }
 
             var distance = Vector3.Distance(player, target.Position);
             drawList.AddText(
