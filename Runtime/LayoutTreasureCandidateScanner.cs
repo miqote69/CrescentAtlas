@@ -50,7 +50,7 @@ public sealed class LayoutTreasureCandidateScanner(IDataManager dataManager, IPl
                     continue;
 
                 var position = transform->Translation;
-                if (!IsFinite(position) || position.Y <= -10.0f)
+                if (!TreasureLayerClassifier.IsSurfaceCandidate(position))
                     continue;
 
                 var treasureRowId = Unsafe.Read<uint>((byte*)instance + 0x30);
@@ -110,12 +110,5 @@ public sealed class LayoutTreasureCandidateScanner(IDataManager dataManager, IPl
             .OrderBy(marker => marker.Position.X)
             .ThenBy(marker => marker.Position.Z)
             .ToArray();
-    }
-
-    private static bool IsFinite(Vector3 position)
-    {
-        return float.IsFinite(position.X)
-            && float.IsFinite(position.Y)
-            && float.IsFinite(position.Z);
     }
 }

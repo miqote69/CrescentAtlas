@@ -79,6 +79,22 @@ Assert(
         Vector3.Zero,
         120.0f) is null,
     "carrot guidance is absent until a real carrot is loaded");
+Assert(
+    TreasureLayerClassifier.IsSurfaceCandidate(
+        new Vector3(-928.6488f, -11.245972f, -744.9607f)),
+    "the newly observed low-elevation surface coffer is retained");
+Assert(
+    TreasureLayerClassifier.IsSurfaceCandidate(
+        new Vector3(-876.0f, -48.85687f, -903.0f)),
+    "confirmed low North Horn surface positions remain on the surface map");
+Assert(
+    !TreasureLayerClassifier.IsSurfaceCandidate(
+        new Vector3(-287.76996f, -92.02722f, 125.65808f)),
+    "confirmed subterranean treasure positions stay off the surface map");
+Assert(
+    !TreasureLayerClassifier.IsSurfaceCandidate(
+        new Vector3(float.NaN, 0.0f, 0.0f)),
+    "invalid layout positions are rejected");
 var firstPosition = new Vector3(10, 0, 20);
 var secondPosition = new Vector3(40, 0, 50);
 var tracker = new PotPredictionTracker();
