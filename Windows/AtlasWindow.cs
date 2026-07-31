@@ -546,7 +546,7 @@ public sealed class AtlasWindow : Window, IDisposable
 
         var showBronzeTreasure = configuration.ShowBronzeTreasure;
         var showSilverTreasure = configuration.ShowSilverTreasure;
-        var showPotTarget = configuration.ShowPotTarget;
+        var showCarrots = configuration.ShowCarrots;
         var showFates = configuration.ShowFates;
         var showCriticalEncounters = configuration.ShowCriticalEncounters;
         var detailedEventDisplay = configuration.DetailedEventDisplay;
@@ -567,8 +567,8 @@ public sealed class AtlasWindow : Window, IDisposable
             ref usedWidth,
             availableWidth);
         changed |= DrawFilterCheckbox(
-            T("Magical Elixir target", "マジカルエリクサー目標"),
-            ref showPotTarget,
+            T("Carrot", "にんじん"),
+            ref showCarrots,
             ref usedWidth,
             availableWidth);
         changed |= DrawFilterCheckbox(
@@ -606,7 +606,7 @@ public sealed class AtlasWindow : Window, IDisposable
         {
             configuration.ShowBronzeTreasure = showBronzeTreasure;
             configuration.ShowSilverTreasure = showSilverTreasure;
-            configuration.ShowPotTarget = showPotTarget;
+            configuration.ShowCarrots = showCarrots;
             configuration.ShowFates = showFates;
             configuration.ShowCriticalEncounters = showCriticalEncounters;
             configuration.DetailedEventDisplay = detailedEventDisplay;
@@ -646,8 +646,8 @@ public sealed class AtlasWindow : Window, IDisposable
             return configuration.ShowForkedTower;
         if (marker.Kind == AtlasMarkerKind.CriticalEncounter)
             return configuration.ShowCriticalEncounters;
-        if (marker.Kind == AtlasMarkerKind.PotTarget)
-            return configuration.ShowPotTarget;
+        if (marker.Kind == AtlasMarkerKind.Carrot)
+            return configuration.ShowCarrots;
         if (IsSilverTreasure(marker))
             return configuration.ShowSilverTreasure;
         if (IsBronzeTreasure(marker))

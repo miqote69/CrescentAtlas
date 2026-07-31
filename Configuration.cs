@@ -30,6 +30,8 @@ public sealed class Configuration : IPluginConfiguration
 
     public bool ShowPotTarget { get; set; } = true;
 
+    public bool ShowCarrots { get; set; } = true;
+
     public bool ShowFates { get; set; } = true;
 
     public bool ShowCriticalEncounters { get; set; } = true;
