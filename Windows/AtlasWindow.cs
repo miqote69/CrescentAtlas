@@ -69,6 +69,7 @@ public sealed class AtlasWindow : Window, IDisposable
     private readonly System.Action saveConfiguration;
     private readonly System.Action<uint> playChatSoundEffect;
     private readonly System.Action playJapanesePotAdvanceVoice;
+    private readonly System.Action playJapanesePotAppearedVoice;
     private readonly string versionLabel;
     private float mapZoom = MinimumMapZoom;
     private Vector2 mapCenter = new(0.5f, 0.5f);
@@ -86,7 +87,8 @@ public sealed class AtlasWindow : Window, IDisposable
         System.Action resetTreasureChecks,
         System.Action saveConfiguration,
         System.Action<uint> playChatSoundEffect,
-        System.Action playJapanesePotAdvanceVoice)
+        System.Action playJapanesePotAdvanceVoice,
+        System.Action playJapanesePotAppearedVoice)
         : base("Crescent Atlas###CrescentAtlasMap")
     {
         this.dataSource = dataSource;
@@ -99,6 +101,7 @@ public sealed class AtlasWindow : Window, IDisposable
         this.saveConfiguration = saveConfiguration;
         this.playChatSoundEffect = playChatSoundEffect;
         this.playJapanesePotAdvanceVoice = playJapanesePotAdvanceVoice;
+        this.playJapanesePotAppearedVoice = playJapanesePotAppearedVoice;
         versionLabel = FormatVersionLabel(typeof(AtlasWindow).Assembly.GetName().Version);
         IsOpen = configuration.MapVisible;
 
@@ -207,6 +210,11 @@ public sealed class AtlasWindow : Window, IDisposable
         if (currentPage == AtlasPage.VisitHistory)
         {
             DrawVisitHistory();
+            return;
+        }
+        if (currentPage == AtlasPage.SoundSettings)
+        {
+            DrawSoundSettings();
             return;
         }
         if (!dataSource.IsInOccultCrescent)
@@ -332,13 +340,6 @@ public sealed class AtlasWindow : Window, IDisposable
         {
             currentPage = AtlasPage.IconGuide;
         }
-        if (ImGui.MenuItem(
-                $"{T("Visit history", "突入履歴")}###menu-visit-history",
-                string.Empty,
-                currentPage == AtlasPage.VisitHistory))
-        {
-            currentPage = AtlasPage.VisitHistory;
-        }
 
         if (ImGui.BeginMenu($"{T("Language", "言語")}###menu-language"))
         {
@@ -361,80 +362,20 @@ public sealed class AtlasWindow : Window, IDisposable
             ImGui.EndMenu();
         }
 
-        if (ImGui.BeginMenu($"{T("Sound", "サウンド")}###menu-sound"))
+        if (ImGui.MenuItem(
+                $"{T("Sound settings", "サウンド設定")}###menu-sound-settings",
+                string.Empty,
+                currentPage == AtlasPage.SoundSettings))
         {
-            if (ImGui.MenuItem(
-                    $"{T("3-minute Magic Pot alert", "マジックポット3分前通知")}###pot-three-minute-notification",
-                    string.Empty,
-                    configuration.PotThreeMinuteNotificationEnabled))
-            {
-                configuration.PotThreeMinuteNotificationEnabled =
-                    !configuration.PotThreeMinuteNotificationEnabled;
-                saveConfiguration();
-            }
+            currentPage = AtlasPage.SoundSettings;
+        }
 
-            if (ImGui.MenuItem(
-                    $"{T("Magic Pot alert", "マジックポット通知音")}###pot-sound-enabled",
-                    string.Empty,
-                    configuration.PotSoundEnabled))
-            {
-                configuration.PotSoundEnabled = !configuration.PotSoundEnabled;
-                saveConfiguration();
-            }
-
-            var selectedEffect = Math.Clamp(configuration.PotSoundEffect, 1u, 16u);
-            var selectedMode = configuration.PotThreeMinuteSoundMode;
-            var selectedModeLabel = selectedMode == PotThreeMinuteSoundMode.JapaneseVocalSynth
-                ? T("Japanese vocal synth", "日本語ボーカルシンセ")
-                : T("FFXIV sound effect", "FF14効果音");
-            if (ImGui.BeginMenu(
-                    $"{T("3-minute alert sound", "3分前の通知音")}: {selectedModeLabel}###pot-three-minute-sound-mode"))
-            {
-                if (ImGui.MenuItem(
-                        $"{T("FFXIV sound effect", "FF14効果音")}###pot-three-minute-game-sound",
-                        string.Empty,
-                        selectedMode == PotThreeMinuteSoundMode.GameSoundEffect))
-                {
-                    configuration.PotThreeMinuteSoundMode = PotThreeMinuteSoundMode.GameSoundEffect;
-                    saveConfiguration();
-                    playChatSoundEffect(selectedEffect);
-                }
-
-                if (ImGui.MenuItem(
-                        $"{T("Japanese vocal synth", "日本語ボーカルシンセ")}###pot-three-minute-japanese-voice",
-                        string.Empty,
-                        selectedMode == PotThreeMinuteSoundMode.JapaneseVocalSynth))
-                {
-                    configuration.PotThreeMinuteSoundMode = PotThreeMinuteSoundMode.JapaneseVocalSynth;
-                    saveConfiguration();
-                    playJapanesePotAdvanceVoice();
-                }
-
-                ImGui.EndMenu();
-            }
-
-            if (ImGui.BeginMenu(
-                    $"{T("Sound effect", "通知音")}: <se.{selectedEffect}>###pot-sound-effect"))
-            {
-                for (uint effectId = 1; effectId <= 16; effectId++)
-                {
-                    if (!ImGui.MenuItem(
-                            $"<se.{effectId}>###pot-sound-{effectId}",
-                            string.Empty,
-                            selectedEffect == effectId))
-                    {
-                        continue;
-                    }
-
-                    configuration.PotSoundEffect = effectId;
-                    saveConfiguration();
-                    playChatSoundEffect(effectId);
-                }
-
-                ImGui.EndMenu();
-            }
-
-            ImGui.EndMenu();
+        if (ImGui.MenuItem(
+                $"{T("Visit history", "突入履歴")}###menu-visit-history",
+                string.Empty,
+                currentPage == AtlasPage.VisitHistory))
+        {
+            currentPage = AtlasPage.VisitHistory;
         }
 
         var versionSize = ImGui.CalcTextSize(versionLabel);
@@ -464,6 +405,98 @@ public sealed class AtlasWindow : Window, IDisposable
 
         configuration.Language = language;
         saveConfiguration();
+    }
+
+    private void DrawSoundSettings()
+    {
+        ImGui.TextUnformatted(T("Sound settings", "サウンド設定"));
+        ImGui.TextDisabled(T(
+            "Configure Magic Pot prediction and appearance alerts.",
+            "マジックポットの予想通知と出現通知を設定します。"));
+        ImGui.Separator();
+
+        var soundEnabled = configuration.PotSoundEnabled;
+        if (ImGui.Checkbox(T("Enable Magic Pot sounds", "マジックポット通知音を有効化"), ref soundEnabled))
+        {
+            configuration.PotSoundEnabled = soundEnabled;
+            saveConfiguration();
+        }
+
+        ImGui.Spacing();
+        ImGui.TextUnformatted(T("3-minute prediction alert", "3分前の予想通知"));
+        var advanceEnabled = configuration.PotThreeMinuteNotificationEnabled;
+        if (ImGui.Checkbox(T("Enable 3-minute alert", "3分前通知を有効化"), ref advanceEnabled))
+        {
+            configuration.PotThreeMinuteNotificationEnabled = advanceEnabled;
+            saveConfiguration();
+        }
+        DrawSoundModeSelector(
+            "advance",
+            configuration.PotThreeMinuteSoundMode,
+            mode => configuration.PotThreeMinuteSoundMode = mode,
+            playJapanesePotAdvanceVoice);
+
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+        ImGui.TextUnformatted(T("Magic Pot appearance alert", "マジックポット出現通知"));
+        DrawSoundModeSelector(
+            "appearance",
+            configuration.PotAppearanceSoundMode,
+            mode => configuration.PotAppearanceSoundMode = mode,
+            playJapanesePotAppearedVoice);
+
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+        var selectedEffect = Math.Clamp(configuration.PotSoundEffect, 1u, 16u);
+        ImGui.TextUnformatted(T("FFXIV sound effect", "FF14効果音"));
+        ImGui.SameLine();
+        if (ImGui.BeginCombo("##pot-sound-effect", $"<se.{selectedEffect}>"))
+        {
+            for (uint effectId = 1; effectId <= 16; effectId++)
+            {
+                if (!ImGui.Selectable($"<se.{effectId}>", selectedEffect == effectId))
+                    continue;
+
+                configuration.PotSoundEffect = effectId;
+                saveConfiguration();
+                playChatSoundEffect(effectId);
+            }
+
+            ImGui.EndCombo();
+        }
+
+        ImGui.TextDisabled(T(
+            "Selecting a sound plays it once.",
+            "音声を選択すると一度だけ再生します。"));
+    }
+
+    private void DrawSoundModeSelector(
+        string id,
+        PotThreeMinuteSoundMode selectedMode,
+        System.Action<PotThreeMinuteSoundMode> setMode,
+        System.Action playJapaneseVoice)
+    {
+        ImGui.PushID(id);
+        if (ImGui.RadioButton(
+                T("FFXIV sound effect", "FF14効果音"),
+                selectedMode == PotThreeMinuteSoundMode.GameSoundEffect))
+        {
+            setMode(PotThreeMinuteSoundMode.GameSoundEffect);
+            saveConfiguration();
+            playChatSoundEffect(Math.Clamp(configuration.PotSoundEffect, 1u, 16u));
+        }
+
+        if (ImGui.RadioButton(
+                T("Japanese vocal synth", "日本語ボーカルシンセ"),
+                selectedMode == PotThreeMinuteSoundMode.JapaneseVocalSynth))
+        {
+            setMode(PotThreeMinuteSoundMode.JapaneseVocalSynth);
+            saveConfiguration();
+            playJapaneseVoice();
+        }
+        ImGui.PopID();
     }
 
     private void DrawIconGuide(IReadOnlyList<AtlasMarker> markers)
@@ -1570,6 +1603,7 @@ public sealed class AtlasWindow : Window, IDisposable
     {
         Map,
         IconGuide,
+        SoundSettings,
         VisitHistory,
     }
 

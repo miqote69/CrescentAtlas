@@ -20,6 +20,7 @@ public sealed class Plugin : IDalamudPlugin
     private const string CommandName = "/catlas";
     private const string LegacyNorthHornInstanceKey = "territory-1346";
     private const string JapanesePotAlertFileName = "CrescentAtlas.PotAlert.ja.wav";
+    private const string JapanesePotAppearedFileName = "CrescentAtlas.PotAppeared.ja.wav";
     private const float TreasureCandidateObjectMatchRadius = 12.0f;
     private const float CarrotSpotMatchRadius = 5.0f;
     private static readonly HashSet<uint> MagicPotEventIds = [2072, 2073];
@@ -148,7 +149,8 @@ public sealed class Plugin : IDalamudPlugin
                 ResetTreasureChecks,
                 SaveConfiguration,
                 PlayChatSoundEffect,
-                PlayJapanesePotAdvanceVoice);
+                PlayJapanesePotAdvanceVoice,
+                PlayJapanesePotAppearedVoice);
             treasureLineOverlay = new NearbyTreasureLineOverlay(GameGui, atlasData, configuration);
             windowSystem.AddWindow(atlasWindow);
             BootstrapDiagnostics.Write("atlas window and overlay initialized");
@@ -521,7 +523,7 @@ public sealed class Plugin : IDalamudPlugin
                 continue;
 
             if (configuration.PotSoundEnabled)
-                PlayChatSoundEffect(configuration.PotSoundEffect);
+                PlayPotAppearanceAlertSound();
 
             if (!configuration.PotNotificationsEnabled)
                 continue;
@@ -902,21 +904,42 @@ public sealed class Plugin : IDalamudPlugin
     }
 
     private void PlayJapanesePotAdvanceVoice()
+        => PlayJapaneseVoiceFile(
+            JapanesePotAlertFileName,
+            "Japanese Magic Pot advance voice");
+
+    private void PlayPotAppearanceAlertSound()
+    {
+        if (configuration.PotAppearanceSoundMode == PotThreeMinuteSoundMode.JapaneseVocalSynth)
+        {
+            PlayJapanesePotAppearedVoice();
+            return;
+        }
+
+        PlayChatSoundEffect(configuration.PotSoundEffect);
+    }
+
+    private void PlayJapanesePotAppearedVoice()
+        => PlayJapaneseVoiceFile(
+            JapanesePotAppearedFileName,
+            "Japanese Magic Pot appearance voice");
+
+    private void PlayJapaneseVoiceFile(string fileName, string description)
     {
         try
         {
             var assemblyDirectory = PluginInterface.AssemblyLocation.DirectoryName;
             var path = System.IO.Path.Combine(
                 assemblyDirectory ?? string.Empty,
-                JapanesePotAlertFileName);
+                fileName);
             if (NotificationAudioPlayer.TryPlayFile(path))
                 return;
 
-            Log.Warning("Japanese Magic Pot alert voice is unavailable at {Path}.", path);
+            Log.Warning("{Description} is unavailable at {Path}.", description, path);
         }
         catch (Exception ex)
         {
-            Log.Warning(ex, "Failed to play the Japanese Magic Pot alert voice.");
+            Log.Warning(ex, "Failed to play {Description}.", description);
         }
 
         PlayChatSoundEffect(configuration.PotSoundEffect);

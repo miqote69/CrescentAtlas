@@ -14,12 +14,14 @@ $manifestPath = Join-Path $buildDirectory 'CrescentAtlas.json'
 $assemblyPath = Join-Path $buildDirectory 'CrescentAtlas.dll'
 $dependenciesPath = Join-Path $buildDirectory 'CrescentAtlas.deps.json'
 $japanesePotAlertPath = Join-Path $buildDirectory 'CrescentAtlas.PotAlert.ja.wav'
+$japanesePotAppearedPath = Join-Path $buildDirectory 'CrescentAtlas.PotAppeared.ja.wav'
 
 foreach ($requiredPath in @(
     $manifestPath,
     $assemblyPath,
     $dependenciesPath,
-    $japanesePotAlertPath
+    $japanesePotAlertPath,
+    $japanesePotAppearedPath
 )) {
     if (-not (Test-Path -LiteralPath $requiredPath -PathType Leaf)) {
         throw "Required build output is missing: $requiredPath"
@@ -51,7 +53,8 @@ Compress-Archive -LiteralPath @(
     $assemblyPath,
     $dependenciesPath,
     $manifestPath,
-    $japanesePotAlertPath
+    $japanesePotAlertPath,
+    $japanesePotAppearedPath
 ) -DestinationPath $resolvedOutput
 
 $archive = [IO.Compression.ZipFile]::OpenRead($resolvedOutput)
@@ -61,7 +64,8 @@ try {
         'CrescentAtlas.dll',
         'CrescentAtlas.deps.json',
         'CrescentAtlas.json',
-        'CrescentAtlas.PotAlert.ja.wav'
+        'CrescentAtlas.PotAlert.ja.wav',
+        'CrescentAtlas.PotAppeared.ja.wav'
     )
     if (Compare-Object -ReferenceObject $expectedNames -DifferenceObject $entryNames) {
         throw "Release archive contains unexpected entries: $($entryNames -join ', ')"

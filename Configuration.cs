@@ -63,6 +63,9 @@ public sealed class Configuration : IPluginConfiguration
     public PotThreeMinuteSoundMode PotThreeMinuteSoundMode { get; set; } =
         PotThreeMinuteSoundMode.GameSoundEffect;
 
+    public PotThreeMinuteSoundMode PotAppearanceSoundMode { get; set; } =
+        PotThreeMinuteSoundMode.GameSoundEffect;
+
     public HashSet<uint> ConfirmedCarrotDataIds { get; set; } =
         [ConfirmedCarrotObjects.FortuneCarrotDataId];
 
