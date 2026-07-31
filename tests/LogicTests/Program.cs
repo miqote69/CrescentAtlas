@@ -159,6 +159,25 @@ atlas.ReplaceSource(
 atlas.MarkAbsentNearbyTreasureCandidatesChecked(Vector3.Zero, 10.0f, [], 2.0f);
 Assert(atlas.GetMarkers().Single().IsChecked, "nearby absent treasure is checked");
 
+var restoredAtlas = new MutableAtlasDataSource();
+restoredAtlas.SetContext(true, 1346, "North Horn", Vector3.Zero, 0.0f);
+restoredAtlas.ReplaceSource(
+    AtlasMarkerKind.TreasureCandidate,
+    [
+        new AtlasMarker(
+            "treasure:persisted",
+            AtlasMarkerKind.TreasureCandidate,
+            "Persisted treasure",
+            Vector3.Zero,
+            origin,
+            true,
+            1346),
+    ]);
+restoredAtlas.RestoreTreasureChecks(new HashSet<string> { "treasure:persisted" });
+Assert(
+    restoredAtlas.GetMarkers().Single().IsChecked,
+    "persisted treasure check is restored after a plugin reload");
+
 atlas.ResetTreasureChecks();
 Assert(!atlas.GetMarkers().Single().IsChecked, "reset clears treasure checks");
 atlas.MarkAbsentNearbyTreasureCandidatesChecked(Vector3.Zero, 10.0f, [], 2.0f);

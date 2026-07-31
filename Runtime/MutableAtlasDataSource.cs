@@ -110,6 +110,22 @@ public sealed class MutableAtlasDataSource : IAtlasDataSource
         }
     }
 
+    public void RestoreTreasureChecks(IReadOnlySet<string> checkedKeys)
+    {
+        lock (sync)
+        {
+            foreach (var key in markers
+                         .Where(pair =>
+                             pair.Value.Kind == AtlasMarkerKind.TreasureCandidate
+                             && checkedKeys.Contains(pair.Key))
+                         .Select(pair => pair.Key)
+                         .ToArray())
+            {
+                markers[key] = markers[key] with { IsChecked = true };
+            }
+        }
+    }
+
     private static float HorizontalDistanceSquared(Vector3 left, Vector3 right)
         => ((left.X - right.X) * (left.X - right.X))
            + ((left.Z - right.Z) * (left.Z - right.Z));

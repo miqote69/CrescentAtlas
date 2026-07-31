@@ -64,6 +64,7 @@ public sealed class AtlasWindow : Window, IDisposable
     private readonly IClientState clientState;
     private readonly ITextureProvider textureProvider;
     private readonly Func<IReadOnlyList<IslandVisitRecord>> visitHistoryProvider;
+    private readonly System.Action resetTreasureChecks;
     private readonly System.Action saveConfiguration;
     private readonly System.Action<uint> playChatSoundEffect;
     private readonly string versionLabel;
@@ -80,6 +81,7 @@ public sealed class AtlasWindow : Window, IDisposable
         IClientState clientState,
         ITextureProvider textureProvider,
         Func<IReadOnlyList<IslandVisitRecord>> visitHistoryProvider,
+        System.Action resetTreasureChecks,
         System.Action saveConfiguration,
         System.Action<uint> playChatSoundEffect)
         : base("Crescent Atlas###CrescentAtlasMap")
@@ -90,6 +92,7 @@ public sealed class AtlasWindow : Window, IDisposable
         this.clientState = clientState;
         this.textureProvider = textureProvider;
         this.visitHistoryProvider = visitHistoryProvider;
+        this.resetTreasureChecks = resetTreasureChecks;
         this.saveConfiguration = saveConfiguration;
         this.playChatSoundEffect = playChatSoundEffect;
         versionLabel = FormatVersionLabel(typeof(AtlasWindow).Assembly.GetName().Version);
@@ -230,7 +233,7 @@ public sealed class AtlasWindow : Window, IDisposable
             if (!configuration.MapClickThrough)
             {
                 if (ImGui.Button(T("Reset treasure checks", "宝箱の確認状態をリセット")))
-                    dataSource.ResetTreasureChecks();
+                    resetTreasureChecks();
             }
 
             DrawMapFilters();

@@ -77,6 +77,7 @@ public sealed class Plugin : IDalamudPlugin
         try
         {
             configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+            configuration.CheckedTreasureKeys ??= [];
             BootstrapDiagnostics.Write($"configuration loaded; version={configuration.Version}");
             if (configuration.Version < 2)
             {
@@ -129,6 +130,7 @@ public sealed class Plugin : IDalamudPlugin
                 ClientState,
                 TextureProvider,
                 islandVisitStore.GetVisitsDescending,
+                ResetTreasureChecks,
                 SaveConfiguration,
                 PlayChatSoundEffect);
             treasureLineOverlay = new NearbyTreasureLineOverlay(GameGui, atlasData, configuration);
@@ -359,6 +361,8 @@ public sealed class Plugin : IDalamudPlugin
         var instanceKey = islandVisitStore.ActiveVisit is { } activeVisit
             ? $"island-visit:{activeVisit.VisitId}"
             : $"territory-{territoryId}:unidentified";
+        if (islandVisitStore.ActiveVisit is { } treasureCheckVisit)
+            SynchronizeTreasureCheckVisit(treasureCheckVisit.VisitId);
         atlasData.SetContext(
             true,
             territoryId,
@@ -383,6 +387,7 @@ public sealed class Plugin : IDalamudPlugin
                 now,
                 out var candidateObservations);
             atlasData.ReplaceSource(AtlasMarkerKind.TreasureCandidate, candidates);
+            atlasData.RestoreTreasureChecks(configuration.CheckedTreasureKeys);
             foreach (var candidate in candidates.Where(candidate =>
                          candidate.TreasureType.Equals("silver", StringComparison.OrdinalIgnoreCase)))
                 silverTreasureDataIds.Add(candidate.DataId);
@@ -405,11 +410,14 @@ public sealed class Plugin : IDalamudPlugin
         atlasData.ReplaceSource(AtlasMarkerKind.Carrot, carrots);
         atlasData.ReplaceSource(AtlasMarkerKind.PotTarget, potTargets);
         if (localPlayer is not null)
+        {
             atlasData.MarkAbsentNearbyTreasureCandidatesChecked(
                 localPlayer.Position,
                 TreasureCandidateCheckRadius,
                 treasures,
                 TreasureCandidateObjectMatchRadius);
+            PersistTreasureChecks();
+        }
         NotifyNewObjects(treasures, carrots, potTargets);
 
         PollFates(territoryId, territoryName, instanceKey, now, entering);
@@ -674,6 +682,37 @@ public sealed class Plugin : IDalamudPlugin
     {
         foreach (var observation in observations)
             observationStore.Record(observation);
+    }
+
+    private void SynchronizeTreasureCheckVisit(string visitId)
+    {
+        if (StringComparer.Ordinal.Equals(configuration.TreasureCheckVisitId, visitId))
+            return;
+
+        configuration.TreasureCheckVisitId = visitId;
+        configuration.CheckedTreasureKeys.Clear();
+        SaveConfiguration();
+    }
+
+    private void PersistTreasureChecks()
+    {
+        var changed = false;
+        foreach (var marker in atlasData.GetMarkers().Where(marker =>
+                     marker.Kind == AtlasMarkerKind.TreasureCandidate
+                     && marker.IsChecked))
+        {
+            changed |= configuration.CheckedTreasureKeys.Add(marker.Key);
+        }
+
+        if (changed)
+            SaveConfiguration();
+    }
+
+    private void ResetTreasureChecks()
+    {
+        atlasData.ResetTreasureChecks();
+        configuration.CheckedTreasureKeys.Clear();
+        SaveConfiguration();
     }
 
     private void ResetTerritoryState()

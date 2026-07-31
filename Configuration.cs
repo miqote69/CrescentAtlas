@@ -19,6 +19,10 @@ public sealed class Configuration : IPluginConfiguration
 
     public bool MapControlsExpanded { get; set; } = true;
 
+    public string TreasureCheckVisitId { get; set; } = string.Empty;
+
+    public HashSet<string> CheckedTreasureKeys { get; set; } = [];
+
     public bool ShowBronzeTreasure { get; set; } = true;
 
     public bool ShowSilverTreasure { get; set; } = true;
