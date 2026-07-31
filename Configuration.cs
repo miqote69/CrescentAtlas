@@ -60,6 +60,9 @@ public sealed class Configuration : IPluginConfiguration
 
     public uint PotSoundEffect { get; set; } = 1;
 
+    public PotThreeMinuteSoundMode PotThreeMinuteSoundMode { get; set; } =
+        PotThreeMinuteSoundMode.GameSoundEffect;
+
     public HashSet<uint> ConfirmedCarrotDataIds { get; set; } =
         [ConfirmedCarrotObjects.FortuneCarrotDataId];
 
@@ -72,4 +75,10 @@ public enum UiLanguage
 {
     Japanese,
     English,
+}
+
+public enum PotThreeMinuteSoundMode
+{
+    GameSoundEffect,
+    JapaneseVocalSynth,
 }

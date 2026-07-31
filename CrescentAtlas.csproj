@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
-    <Version>0.1.61</Version>
+    <Version>0.1.62</Version>
     <PackageProjectUrl>https://github.com/miqote69/CrescentAtlas</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <IsPackable>false</IsPackable>
@@ -10,5 +10,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="tests\**\*.cs" />
+    <Content Include="Assets\Audio\CrescentAtlas.PotAlert.ja.wav">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>CrescentAtlas.PotAlert.ja.wav</TargetPath>
+    </Content>
   </ItemGroup>
 </Project>

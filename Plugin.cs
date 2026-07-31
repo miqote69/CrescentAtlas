@@ -19,6 +19,7 @@ public sealed class Plugin : IDalamudPlugin
 {
     private const string CommandName = "/catlas";
     private const string LegacyNorthHornInstanceKey = "territory-1346";
+    private const string JapanesePotAlertFileName = "CrescentAtlas.PotAlert.ja.wav";
     private const float TreasureCandidateObjectMatchRadius = 12.0f;
     private const float CarrotSpotMatchRadius = 5.0f;
     private static readonly HashSet<uint> MagicPotEventIds = [2072, 2073];
@@ -146,7 +147,8 @@ public sealed class Plugin : IDalamudPlugin
                 islandVisitStore.GetVisitsDescending,
                 ResetTreasureChecks,
                 SaveConfiguration,
-                PlayChatSoundEffect);
+                PlayChatSoundEffect,
+                PlayJapanesePotAdvanceVoice);
             treasureLineOverlay = new NearbyTreasureLineOverlay(GameGui, atlasData, configuration);
             windowSystem.AddWindow(atlasWindow);
             BootstrapDiagnostics.Write("atlas window and overlay initialized");
@@ -781,7 +783,7 @@ public sealed class Plugin : IDalamudPlugin
             : $"[Crescent Atlas] Magic Pot is predicted in 3 minutes (estimated time {nextOccurrenceUtc.ToLocalTime():HH:mm:ss}).");
 
         if (configuration.PotSoundEnabled)
-            PlayChatSoundEffect(configuration.PotSoundEffect);
+            PlayPotAdvanceAlertSound();
     }
 
     private void PrintPotPrediction(PotPrediction prediction)
@@ -886,6 +888,38 @@ public sealed class Plugin : IDalamudPlugin
         {
             Log.Warning(ex, "Failed to play chat sound effect {EffectId}", effectId);
         }
+    }
+
+    private void PlayPotAdvanceAlertSound()
+    {
+        if (configuration.PotThreeMinuteSoundMode == PotThreeMinuteSoundMode.JapaneseVocalSynth)
+        {
+            PlayJapanesePotAdvanceVoice();
+            return;
+        }
+
+        PlayChatSoundEffect(configuration.PotSoundEffect);
+    }
+
+    private void PlayJapanesePotAdvanceVoice()
+    {
+        try
+        {
+            var assemblyDirectory = PluginInterface.AssemblyLocation.DirectoryName;
+            var path = System.IO.Path.Combine(
+                assemblyDirectory ?? string.Empty,
+                JapanesePotAlertFileName);
+            if (NotificationAudioPlayer.TryPlayFile(path))
+                return;
+
+            Log.Warning("Japanese Magic Pot alert voice is unavailable at {Path}.", path);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to play the Japanese Magic Pot alert voice.");
+        }
+
+        PlayChatSoundEffect(configuration.PotSoundEffect);
     }
 
     private sealed class ConditionalObservationSink(

@@ -68,6 +68,7 @@ public sealed class AtlasWindow : Window, IDisposable
     private readonly System.Action resetTreasureChecks;
     private readonly System.Action saveConfiguration;
     private readonly System.Action<uint> playChatSoundEffect;
+    private readonly System.Action playJapanesePotAdvanceVoice;
     private readonly string versionLabel;
     private float mapZoom = MinimumMapZoom;
     private Vector2 mapCenter = new(0.5f, 0.5f);
@@ -84,7 +85,8 @@ public sealed class AtlasWindow : Window, IDisposable
         Func<IReadOnlyList<IslandVisitRecord>> visitHistoryProvider,
         System.Action resetTreasureChecks,
         System.Action saveConfiguration,
-        System.Action<uint> playChatSoundEffect)
+        System.Action<uint> playChatSoundEffect,
+        System.Action playJapanesePotAdvanceVoice)
         : base("Crescent Atlas###CrescentAtlasMap")
     {
         this.dataSource = dataSource;
@@ -96,6 +98,7 @@ public sealed class AtlasWindow : Window, IDisposable
         this.resetTreasureChecks = resetTreasureChecks;
         this.saveConfiguration = saveConfiguration;
         this.playChatSoundEffect = playChatSoundEffect;
+        this.playJapanesePotAdvanceVoice = playJapanesePotAdvanceVoice;
         versionLabel = FormatVersionLabel(typeof(AtlasWindow).Assembly.GetName().Version);
         IsOpen = configuration.MapVisible;
 
@@ -380,6 +383,36 @@ public sealed class AtlasWindow : Window, IDisposable
             }
 
             var selectedEffect = Math.Clamp(configuration.PotSoundEffect, 1u, 16u);
+            var selectedMode = configuration.PotThreeMinuteSoundMode;
+            var selectedModeLabel = selectedMode == PotThreeMinuteSoundMode.JapaneseVocalSynth
+                ? T("Japanese vocal synth", "日本語ボーカルシンセ")
+                : T("FFXIV sound effect", "FF14効果音");
+            if (ImGui.BeginMenu(
+                    $"{T("3-minute alert sound", "3分前の通知音")}: {selectedModeLabel}###pot-three-minute-sound-mode"))
+            {
+                if (ImGui.MenuItem(
+                        $"{T("FFXIV sound effect", "FF14効果音")}###pot-three-minute-game-sound",
+                        string.Empty,
+                        selectedMode == PotThreeMinuteSoundMode.GameSoundEffect))
+                {
+                    configuration.PotThreeMinuteSoundMode = PotThreeMinuteSoundMode.GameSoundEffect;
+                    saveConfiguration();
+                    playChatSoundEffect(selectedEffect);
+                }
+
+                if (ImGui.MenuItem(
+                        $"{T("Japanese vocal synth", "日本語ボーカルシンセ")}###pot-three-minute-japanese-voice",
+                        string.Empty,
+                        selectedMode == PotThreeMinuteSoundMode.JapaneseVocalSynth))
+                {
+                    configuration.PotThreeMinuteSoundMode = PotThreeMinuteSoundMode.JapaneseVocalSynth;
+                    saveConfiguration();
+                    playJapanesePotAdvanceVoice();
+                }
+
+                ImGui.EndMenu();
+            }
+
             if (ImGui.BeginMenu(
                     $"{T("Sound effect", "通知音")}: <se.{selectedEffect}>###pot-sound-effect"))
             {

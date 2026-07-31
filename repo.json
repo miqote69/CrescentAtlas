@@ -4,8 +4,8 @@
     "Name": "Crescent Atlas",
     "Description": "Display-only Occult Crescent atlas with treasure spot checks and field markers, FATE/CE timers and progress, Magic Pot prediction and alerts, carrot and Forked Tower markers, aetherytes, visit history, and local observation collection. It does not automate movement or interaction.",
     "InternalName": "CrescentAtlas",
-    "AssemblyVersion": "0.1.61.0",
-    "TestingAssemblyVersion": "0.1.61.0",
+    "AssemblyVersion": "0.1.62.0",
+    "TestingAssemblyVersion": "0.1.62.0",
     "RepoUrl": "https://github.com/miqote69/CrescentAtlas",
     "IconUrl": "https://raw.githubusercontent.com/miqote69/CrescentAtlas/main/images/icon-v44.png",
     "ApplicableVersion": "any",
@@ -20,9 +20,9 @@
     "MinimumDalamudVersion": "15.0.0.0",
     "IsHide": false,
     "IsTestingExclusive": false,
-    "DownloadLinkInstall": "https://github.com/miqote69/CrescentAtlas/releases/download/v0.1.61/CrescentAtlas.zip",
-    "DownloadLinkTesting": "https://github.com/miqote69/CrescentAtlas/releases/download/v0.1.61/CrescentAtlas.zip",
-    "DownloadLinkUpdate": "https://github.com/miqote69/CrescentAtlas/releases/download/v0.1.61/CrescentAtlas.zip",
-    "LastUpdate": 1785468352
+    "DownloadLinkInstall": "https://github.com/miqote69/CrescentAtlas/releases/download/v0.1.62/CrescentAtlas.zip",
+    "DownloadLinkTesting": "https://github.com/miqote69/CrescentAtlas/releases/download/v0.1.62/CrescentAtlas.zip",
+    "DownloadLinkUpdate": "https://github.com/miqote69/CrescentAtlas/releases/download/v0.1.62/CrescentAtlas.zip",
+    "LastUpdate": 1785472472
   }
 ]
