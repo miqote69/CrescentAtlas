@@ -626,9 +626,6 @@ public sealed class Plugin : IDalamudPlugin
         if (prediction.NextOccurrenceUtc is not { } next)
             return;
 
-        var location = prediction.PredictedPosition is { } position
-            ? $"X={position.X:F1}, Z={position.Z:F1}"
-            : T("location unknown", "場所不明");
         var confidence = configuration.Language == UiLanguage.Japanese
             ? prediction.Confidence switch
             {
@@ -638,9 +635,9 @@ public sealed class Plugin : IDalamudPlugin
             }
             : prediction.Confidence.ToString();
         ChatGui.Print(configuration.Language == UiLanguage.Japanese
-            ? $"[Crescent Atlas] マジックポット次回予想: {next.ToLocalTime():HH:mm:ss} / {location} / " +
+            ? $"[Crescent Atlas] マジックポット次回予想: {next.ToLocalTime():HH:mm:ss} / " +
               $"{confidence}（観測{prediction.ObservationCount}回）"
-            : $"[Crescent Atlas] Magic Pot next estimate: {next.ToLocalTime():HH:mm:ss} / {location} / " +
+            : $"[Crescent Atlas] Magic Pot next estimate: {next.ToLocalTime():HH:mm:ss} / " +
               $"{confidence} ({prediction.ObservationCount} observations)");
     }
 
