@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using CrescentAtlas.Collection;
 using CrescentAtlas.Contracts;
 using CrescentAtlas.Data;
@@ -6,6 +7,7 @@ using CrescentAtlas.Notifications;
 using CrescentAtlas.Overlays;
 using CrescentAtlas.Runtime;
 using CrescentAtlas.Windows;
+using Dalamud.Game.Chat;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.Command;
 using Dalamud.Game.Text.SeStringHandling;
@@ -31,6 +33,7 @@ public sealed class Plugin : IDalamudPlugin
     private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(500);
     private static readonly TimeSpan FlushInterval = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan PotAdvanceNotificationLeadTime = TimeSpan.FromMinutes(3);
+    private static readonly TimeSpan MagicalElixirHintLifetime = TimeSpan.FromMinutes(30);
     [PluginService] private static IDalamudPluginInterface PluginInterface { get; set; } = null!;
     [PluginService] private static ICommandManager CommandManager { get; set; } = null!;
     [PluginService] private static IFramework Framework { get; set; } = null!;
@@ -49,6 +52,9 @@ public sealed class Plugin : IDalamudPlugin
     private readonly HashSet<uint> silverTreasureDataIds = [];
     private readonly HashSet<uint> potTargetDataIds = [];
     private readonly List<ConfirmedCarrotSpot> knownCarrotSpots = [];
+    private readonly List<ConfirmedPotTargetObservation> knownPotTargetSpots = [];
+    private readonly List<MagicalElixirDirectionHint> magicalElixirDirectionHints = [];
+    private readonly ConcurrentQueue<MagicalElixirDirectionHint> pendingMagicalElixirDirectionHints = new();
     private readonly MutableAtlasDataSource atlasData = new();
     private readonly OccultCrescentContext crescentContext;
     private readonly AetheryteMarkerProvider aetheryteMarkerProvider;
@@ -120,6 +126,7 @@ public sealed class Plugin : IDalamudPlugin
             observationStore = new ObservationStore(PluginInterface);
             BootstrapDiagnostics.Write($"observation store initialized; session={observationStore.SessionId}");
             RestoreCarrotSpots();
+            RestorePotTargetSpots();
             islandVisitStore = new IslandVisitStore(observationStore.OutputDirectory);
             BootstrapDiagnostics.Write($"island visit store initialized; path={islandVisitStore.OutputPath}");
             RestorePotObservations();
@@ -171,6 +178,7 @@ public sealed class Plugin : IDalamudPlugin
             PluginInterface.UiBuilder.OpenMainUi += ToggleMap;
             PluginInterface.UiBuilder.OpenConfigUi += ToggleMap;
             Framework.Update += OnFrameworkUpdate;
+            ChatGui.ChatMessage += OnChatMessage;
             BootstrapDiagnostics.Write("Dalamud callbacks registered");
 
             nextPollUtc = DateTimeOffset.UtcNow;
@@ -190,6 +198,7 @@ public sealed class Plugin : IDalamudPlugin
     public void Dispose()
     {
         BootstrapDiagnostics.Write("dispose entered");
+        ChatGui.ChatMessage -= OnChatMessage;
         Framework.Update -= OnFrameworkUpdate;
         PluginInterface.UiBuilder.OpenConfigUi -= ToggleMap;
         PluginInterface.UiBuilder.OpenMainUi -= ToggleMap;
@@ -244,6 +253,34 @@ public sealed class Plugin : IDalamudPlugin
         configuration.MapVisible = !configuration.MapVisible;
         atlasWindow.IsOpen = configuration.MapVisible;
         SaveConfiguration();
+    }
+
+    private void OnChatMessage(IHandleableChatMessage message)
+    {
+        try
+        {
+            if (ClientState.TerritoryType != 1346
+                || ObjectTable.LocalPlayer is not { } localPlayer
+                || !string.IsNullOrWhiteSpace(message.OriginalSender.ToString()))
+            {
+                return;
+            }
+
+            var text = message.OriginalMessage.ToString();
+            if (!MagicalElixirDirectionResolver.TryParse(text, out var direction))
+                return;
+
+            pendingMagicalElixirDirectionHints.Enqueue(new MagicalElixirDirectionHint(
+                direction,
+                localPlayer.Position,
+                DateTimeOffset.UtcNow,
+                text));
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to inspect a game chat message for a Magical Elixir direction hint.");
+            BootstrapDiagnostics.WriteException("Magical Elixir direction chat", ex);
+        }
     }
 
     private void OnCommand(string command, string arguments)
@@ -455,7 +492,27 @@ public sealed class Plugin : IDalamudPlugin
             out var mappedPotTargetObservations);
         if (configuration.CollectionEnabled)
             RecordAll(mappedPotTargetObservations);
-        var potTargets = MergePotTargets(loadedPotTargets, mappedPotTargets);
+        var confirmedPotTargets = MergePotTargets(loadedPotTargets, mappedPotTargets);
+        RememberPotTargetSpots(confirmedPotTargets);
+        AtlasMarker[] directionalPotTargets;
+        if (confirmedPotTargets.Length > 0)
+        {
+            magicalElixirDirectionHints.Clear();
+            while (pendingMagicalElixirDirectionHints.TryDequeue(out _))
+            {
+            }
+            directionalPotTargets = [];
+        }
+        else
+        {
+            ProcessMagicalElixirDirectionHints(
+                territoryId,
+                territoryName,
+                instanceKey,
+                now);
+            directionalPotTargets = BuildMagicalElixirDirectionCandidates(territoryId, now);
+        }
+        var potTargets = MergePotTargets(confirmedPotTargets, directionalPotTargets);
         atlasData.SetMagicalElixirState(potTargets.Length > 0);
         var liveCarrots = carrotCandidates
             .Where(marker => !marker.Key.Contains("carrot-candidate", StringComparison.Ordinal))
@@ -474,7 +531,7 @@ public sealed class Plugin : IDalamudPlugin
                 TreasureCandidateObjectMatchRadius);
             PersistTreasureChecks();
         }
-        NotifyNewObjects(treasures, liveCarrots, potTargets);
+        NotifyNewObjects(treasures, liveCarrots, confirmedPotTargets);
 
         PollFates(territoryId, territoryName, instanceKey, now, entering);
         if (mapLayer == OccultCrescentMapLayer.Surface)
@@ -732,6 +789,151 @@ public sealed class Plugin : IDalamudPlugin
             $"Carrot spot history restored; spots={knownCarrotSpots.Count}");
     }
 
+    private void RestorePotTargetSpots()
+    {
+        foreach (var bundled in ConfirmedPotTargetObservations.NorthHorn)
+            RememberPotTargetSpot(bundled);
+        foreach (var restored in PotTargetHistoryReader.Load(
+                     observationStore.OutputDirectory,
+                     ConfirmedPotTargetObservations.EventObjectDataIds))
+        {
+            RememberPotTargetSpot(restored);
+        }
+
+        BootstrapDiagnostics.Write(
+            $"Magical Elixir target history restored; spots={knownPotTargetSpots.Count}");
+    }
+
+    private void RememberPotTargetSpots(IEnumerable<AtlasMarker> targets)
+    {
+        foreach (var target in targets.Where(marker =>
+                     ConfirmedPotTargetObservations.EventObjectDataIds.Contains(marker.DataId)))
+        {
+            RememberPotTargetSpot(new ConfirmedPotTargetObservation(
+                target.TerritoryId,
+                target.DataId,
+                target.Label,
+                target.Position,
+                target.ObservedAtUtc));
+        }
+    }
+
+    private void RememberPotTargetSpot(ConfirmedPotTargetObservation spot)
+    {
+        const float matchRadius = 5.0f;
+        var matchRadiusSquared = matchRadius * matchRadius;
+        var index = knownPotTargetSpots.FindIndex(existing =>
+            existing.TerritoryId == spot.TerritoryId
+            && Vector3.DistanceSquared(existing.Position, spot.Position) <= matchRadiusSquared);
+        if (index >= 0)
+        {
+            if (spot.ObservedAtUtc >= knownPotTargetSpots[index].ObservedAtUtc)
+                knownPotTargetSpots[index] = spot;
+            return;
+        }
+
+        knownPotTargetSpots.Add(spot);
+    }
+
+    private void ProcessMagicalElixirDirectionHints(
+        uint territoryId,
+        string territoryName,
+        string instanceKey,
+        DateTimeOffset now)
+    {
+        magicalElixirDirectionHints.RemoveAll(hint =>
+            now - hint.ObservedAtUtc > MagicalElixirHintLifetime);
+
+        while (pendingMagicalElixirDirectionHints.TryDequeue(out var hint))
+        {
+            if (magicalElixirDirectionHints.Count > 0
+                && hint.ObservedAtUtc - magicalElixirDirectionHints[^1].ObservedAtUtc
+                > MagicalElixirHintLifetime)
+            {
+                magicalElixirDirectionHints.Clear();
+            }
+
+            magicalElixirDirectionHints.Add(hint);
+            BootstrapDiagnostics.Write(FormattableString.Invariant(
+                $"Magical Elixir direction hint; direction={hint.Direction}; player={hint.PlayerPosition.X:F2},{hint.PlayerPosition.Y:F2},{hint.PlayerPosition.Z:F2}; message={hint.Message}"));
+
+            if (!configuration.CollectionEnabled)
+                continue;
+
+            observationStore.Record(new ObservationRecord
+            {
+                SessionId = observationStore.SessionId,
+                ObservedAtUtc = hint.ObservedAtUtc,
+                Source = ObservationSource.Chat,
+                Kind = "magical-elixir-direction",
+                Key = $"{instanceKey}:{hint.ObservedAtUtc.UtcTicks}:{hint.Direction}",
+                TerritoryId = territoryId,
+                TerritoryName = territoryName,
+                Name = hint.Message,
+                X = hint.PlayerPosition.X,
+                Y = hint.PlayerPosition.Y,
+                Z = hint.PlayerPosition.Z,
+                IsActive = true,
+                Properties = new Dictionary<string, string>
+                {
+                    ["instanceKey"] = instanceKey,
+                    ["direction"] = hint.Direction.ToString(),
+                    ["playerX"] = hint.PlayerPosition.X.ToString("R", System.Globalization.CultureInfo.InvariantCulture),
+                    ["playerY"] = hint.PlayerPosition.Y.ToString("R", System.Globalization.CultureInfo.InvariantCulture),
+                    ["playerZ"] = hint.PlayerPosition.Z.ToString("R", System.Globalization.CultureInfo.InvariantCulture),
+                },
+            });
+        }
+    }
+
+    private AtlasMarker[] BuildMagicalElixirDirectionCandidates(
+        uint territoryId,
+        DateTimeOffset now)
+    {
+        var candidates = MagicalElixirDirectionResolver.Resolve(
+            territoryId,
+            knownPotTargetSpots,
+            magicalElixirDirectionHints);
+        if (candidates.Count == 0)
+            return [];
+
+        var latestDirection = magicalElixirDirectionHints[^1].Direction;
+        return candidates.Select((candidate, index) =>
+        {
+            var treasureType = MagicalElixirMapMarkerClassifier.ResolveTreasureType(
+                candidate.Spot.DataId);
+            var label = configuration.Language == UiLanguage.Japanese
+                ? $"\u30a8\u30ea\u30af\u30b5\u30fc\u5019\u88dc {index + 1}\uff08{DirectionLabel(latestDirection, true)}\uff09"
+                : $"Elixir candidate {index + 1} ({DirectionLabel(latestDirection, false)})";
+            return new AtlasMarker(
+                $"elixir-direction-candidate:{PotTargetHistoryReader.SpotKey(candidate.Spot)}",
+                AtlasMarkerKind.PotTarget,
+                label,
+                candidate.Spot.Position,
+                now,
+                IsActive: true,
+                territoryId,
+                candidate.Spot.DataId,
+                TreasureType: treasureType);
+        }).ToArray();
+    }
+
+    private static string DirectionLabel(CompassDirection direction, bool japanese)
+        => japanese
+            ? direction switch
+            {
+                CompassDirection.North => "\u5317",
+                CompassDirection.NorthEast => "\u5317\u6771",
+                CompassDirection.East => "\u6771",
+                CompassDirection.SouthEast => "\u5357\u6771",
+                CompassDirection.South => "\u5357",
+                CompassDirection.SouthWest => "\u5357\u897f",
+                CompassDirection.West => "\u897f",
+                CompassDirection.NorthWest => "\u5317\u897f",
+                _ => direction.ToString(),
+            }
+            : direction.ToString();
+
     private void RememberCarrotSpots(IEnumerable<AtlasMarker> carrots)
     {
         foreach (var carrot in carrots.Where(marker =>
@@ -898,6 +1100,10 @@ public sealed class Plugin : IDalamudPlugin
         previousTreasureKeys.Clear();
         previousCarrotKeys.Clear();
         previousPotTargetKeys.Clear();
+        magicalElixirDirectionHints.Clear();
+        while (pendingMagicalElixirDirectionHints.TryDequeue(out _))
+        {
+        }
         potAdvanceNotificationTracker.ResetAll();
         fateDetector.Reset();
         atlasData.SetPotPrediction(null);

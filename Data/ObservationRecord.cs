@@ -8,6 +8,7 @@ public enum ObservationSource
     FateTable,
     DynamicEvent,
     Status,
+    Chat,
     Manual,
 }
 

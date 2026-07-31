@@ -34,6 +34,62 @@ Assert(
         objectiveId: 123,
         levelObjectId: 456) == 0,
     "unrelated AgentMap markers are ignored");
+Assert(
+    MagicalElixirDirectionResolver.TryParse(
+        "\u5b9d\u306e\u6c17\u914d\u306f\u5317\u6771\u65b9\u5411\u304b\u3089\u611f\u3058\u308b\u3002",
+        out var japaneseDirection)
+    && japaneseDirection == CompassDirection.NorthEast,
+    "Japanese diagonal Magical Elixir direction messages are parsed");
+Assert(
+    MagicalElixirDirectionResolver.TryParse(
+        "The treasure is in the south-west direction.",
+        out var englishDirection)
+    && englishDirection == CompassDirection.SouthWest,
+    "English diagonal Magical Elixir direction messages are parsed");
+Assert(
+    MagicalElixirDirectionResolver.TryParse(
+        "Far, far to the northwest.",
+        out var conciseEnglishDirection)
+    && conciseEnglishDirection == CompassDirection.NorthWest,
+    "the concise English in-game distance and direction message is parsed");
+Assert(
+    !MagicalElixirDirectionResolver.TryParse("Travel north to continue.", out _),
+    "ordinary directional chat is not treated as an Elixir hint");
+Assert(
+    MagicalElixirDirectionResolver.BearingDegrees(Vector3.Zero, new Vector3(0, 0, -10)) == 0.0f,
+    "negative world Z is map north");
+Assert(
+    MagicalElixirDirectionResolver.BearingDegrees(Vector3.Zero, new Vector3(10, 0, 0)) == 90.0f,
+    "positive world X is map east");
+var directionSpots = new[]
+{
+    new ConfirmedPotTargetObservation(1346, 2014741, "North", new Vector3(0, 0, -100), origin),
+    new ConfirmedPotTargetObservation(1346, 2014742, "East", new Vector3(100, 0, 0), origin),
+    new ConfirmedPotTargetObservation(1346, 2014743, "South", new Vector3(0, 0, 100), origin),
+};
+var northCandidates = MagicalElixirDirectionResolver.Resolve(
+    1346,
+    directionSpots,
+    [new MagicalElixirDirectionHint(CompassDirection.North, Vector3.Zero, origin, "north")]);
+Assert(
+    northCandidates.Count == 1 && northCandidates[0].Spot.Name == "North",
+    "a direction hint eliminates fixed targets outside its cone");
+var potTargetHistoryLine =
+    """{"observedAtUtc":"2026-07-30T07:08:02Z","kind":"pot-target","territoryId":1346,"dataId":2014742,"name":"Silver target","x":12.5,"y":-4,"z":-88.25}""";
+Assert(
+    PotTargetHistoryReader.TryParseLine(
+        potTargetHistoryLine,
+        ConfirmedPotTargetObservations.EventObjectDataIds,
+        out var restoredPotTarget)
+    && restoredPotTarget.DataId == 2014742
+    && restoredPotTarget.Position == new Vector3(12.5f, -4.0f, -88.25f),
+    "historical Magical Elixir target coordinates are restored");
+Assert(
+    !PotTargetHistoryReader.TryParseLine(
+        potTargetHistoryLine.Replace("pot-target", "active-treasure", StringComparison.Ordinal),
+        ConfirmedPotTargetObservations.EventObjectDataIds,
+        out _),
+    "ordinary treasure records are not restored as Elixir targets");
 Assert(ConfirmedCarrotSpots.NorthHorn.Count == 8, "eight confirmed fixed carrot spots are bundled");
 var carrotHistoryLine =
     """{"observedAtUtc":"2026-07-30T06:45:43.1067071+00:00","kind":"carrot-candidate","territoryId":1346,"dataId":2010139,"x":-560.9,"y":50.74249,"z":-447}""";

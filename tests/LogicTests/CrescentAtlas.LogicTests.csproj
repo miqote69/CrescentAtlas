@@ -15,6 +15,7 @@
     <Compile Include="..\..\Data\ConfirmedCarrotObjects.cs" Link="ConfirmedCarrotObjects.cs" />
     <Compile Include="..\..\Data\ConfirmedCarrotSpots.cs" Link="ConfirmedCarrotSpots.cs" />
     <Compile Include="..\..\Data\ConfirmedPotTargetObservations.cs" Link="ConfirmedPotTargetObservations.cs" />
+    <Compile Include="..\..\Data\PotTargetHistoryReader.cs" Link="PotTargetHistoryReader.cs" />
     <Compile Include="..\..\Data\CarrotSpotHistoryReader.cs" Link="CarrotSpotHistoryReader.cs" />
     <Compile Include="..\..\Contracts\AtlasMarker.cs" Link="AtlasMarker.cs" />
     <Compile Include="..\..\Contracts\AtlasPotPrediction.cs" Link="AtlasPotPrediction.cs" />
@@ -24,6 +25,7 @@
     <Compile Include="..\..\Runtime\AtlasDetectionRanges.cs" Link="AtlasDetectionRanges.cs" />
     <Compile Include="..\..\Runtime\AtlasMarkerSelector.cs" Link="AtlasMarkerSelector.cs" />
     <Compile Include="..\..\Runtime\MagicalElixirMapMarkerClassifier.cs" Link="MagicalElixirMapMarkerClassifier.cs" />
+    <Compile Include="..\..\Runtime\MagicalElixirDirectionResolver.cs" Link="MagicalElixirDirectionResolver.cs" />
     <Compile Include="..\..\Runtime\TreasureLayerClassifier.cs" Link="TreasureLayerClassifier.cs" />
     <Compile Include="..\..\Events\DynamicEventTimeResolver.cs" Link="DynamicEventTimeResolver.cs" />
     <Compile Include="..\..\Events\DynamicEventNameMatcher.cs" Link="DynamicEventNameMatcher.cs" />
