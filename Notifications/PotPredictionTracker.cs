@@ -10,14 +10,19 @@ public sealed class PotPredictionTracker
         new(StringComparer.Ordinal);
     private readonly TimeSpan provisionalInterval;
     private readonly TimeSpan duplicateWindow;
+    private readonly IReadOnlyDictionary<uint, Vector3> knownEventPositions;
 
     public PotPredictionTracker(
         TimeSpan? provisionalInterval = null,
-        TimeSpan? duplicateWindow = null)
+        TimeSpan? duplicateWindow = null,
+        IReadOnlyDictionary<uint, Vector3>? knownEventPositions = null)
     {
         this.provisionalInterval =
             provisionalInterval ?? PotPredictionCalculator.DefaultInterval;
         this.duplicateWindow = duplicateWindow ?? TimeSpan.FromMinutes(25);
+        this.knownEventPositions = knownEventPositions is null
+            ? new Dictionary<uint, Vector3>()
+            : new Dictionary<uint, Vector3>(knownEventPositions);
     }
 
     public PotPrediction Observe(PotObservation observation)
@@ -36,18 +41,12 @@ public sealed class PotPredictionTracker
         if (!duplicate)
             instanceObservations.Add(observation);
 
-        return PotPredictionCalculator.Calculate(
-            observation.InstanceKey,
-            instanceObservations,
-            provisionalInterval);
+        return CalculateForInstance(observation.InstanceKey, instanceObservations);
     }
 
     public PotPrediction GetPrediction(string instanceKey) =>
         observations.TryGetValue(instanceKey, out var instanceObservations)
-            ? PotPredictionCalculator.Calculate(
-                instanceKey,
-                instanceObservations,
-                provisionalInterval)
+            ? CalculateForInstance(instanceKey, instanceObservations)
             : PotPrediction.Unknown(instanceKey);
 
     public PotPrediction GetUpcomingPrediction(string instanceKey, DateTimeOffset now)
@@ -55,10 +54,7 @@ public sealed class PotPredictionTracker
         if (!observations.TryGetValue(instanceKey, out var instanceObservations))
             return PotPrediction.Unknown(instanceKey);
 
-        var prediction = PotPredictionCalculator.Calculate(
-            instanceKey,
-            instanceObservations,
-            provisionalInterval);
+        var prediction = CalculateForInstance(instanceKey, instanceObservations);
         if (prediction.NextOccurrenceUtc is not { } next
             || prediction.EstimatedInterval is not { } interval
             || interval <= TimeSpan.Zero)
@@ -76,13 +72,8 @@ public sealed class PotPredictionTracker
             advances++;
         }
 
-        if (ordered.Length < 2)
-            return prediction with { NextOccurrenceUtc = next };
-
         var latest = ordered[^1];
-        var alternate = ordered
-            .Take(ordered.Length - 1)
-            .LastOrDefault(item => item.EventId != latest.EventId);
+        var alternate = FindAlternateObservation(ordered, latest);
         var predicted = advances % 2 == 0
             ? alternate ?? latest
             : latest;
@@ -98,6 +89,55 @@ public sealed class PotPredictionTracker
         observations.TryGetValue(instanceKey, out var instanceObservations)
             ? instanceObservations.ToArray()
             : Array.Empty<PotObservation>();
+
+    private PotPrediction CalculateForInstance(
+        string instanceKey,
+        IReadOnlyList<PotObservation> instanceObservations)
+    {
+        var prediction = PotPredictionCalculator.Calculate(
+            instanceKey,
+            instanceObservations,
+            provisionalInterval);
+        if (instanceObservations.Count != 1)
+            return prediction;
+
+        var latest = instanceObservations[0];
+        var alternate = FindKnownAlternate(latest);
+        return alternate is null
+            ? prediction
+            : prediction with
+            {
+                PredictedEventId = alternate.EventId,
+                PredictedPosition = alternate.Position,
+            };
+    }
+
+    private PotObservation? FindAlternateObservation(
+        IReadOnlyList<PotObservation> ordered,
+        PotObservation latest)
+    {
+        var observedAlternate = ordered
+            .Take(ordered.Count - 1)
+            .LastOrDefault(item => item.EventId != latest.EventId);
+        return observedAlternate ?? FindKnownAlternate(latest);
+    }
+
+    private PotObservation? FindKnownAlternate(PotObservation latest)
+    {
+        foreach (var known in knownEventPositions.OrderBy(item => item.Key))
+        {
+            if (known.Key == latest.EventId)
+                continue;
+
+            return new PotObservation(
+                latest.InstanceKey,
+                latest.ObservedAtUtc,
+                known.Key,
+                known.Value);
+        }
+
+        return null;
+    }
 
     public void Reset(string instanceKey) => observations.Remove(instanceKey);
 

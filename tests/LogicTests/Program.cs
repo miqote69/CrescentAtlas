@@ -45,6 +45,33 @@ Assert(
     firstNewIslandObservation.Confidence == PotPredictionConfidence.Provisional,
     "a new island unlocks a provisional prediction after one live observation");
 
+var fixedLocationTracker = new PotPredictionTracker(
+    knownEventPositions: new Dictionary<uint, Vector3>
+    {
+        [100] = firstPosition,
+        [200] = secondPosition,
+    });
+var fixedLocationPrediction = fixedLocationTracker.Observe(
+    new PotObservation("fixed-location", origin, 100, firstPosition));
+Assert(
+    fixedLocationPrediction.PredictedEventId == 200,
+    "first island observation predicts the opposite known Magic Pot event");
+Assert(
+    fixedLocationPrediction.PredictedPosition == secondPosition,
+    "first island observation predicts the opposite fixed location");
+var fixedLocationAfterMiss = fixedLocationTracker.GetUpcomingPrediction(
+    "fixed-location",
+    origin.AddMinutes(31));
+Assert(
+    fixedLocationAfterMiss.NextOccurrenceUtc == origin.AddMinutes(60),
+    "a missed provisional occurrence advances the prediction time");
+Assert(
+    fixedLocationAfterMiss.PredictedEventId == 100,
+    "a missed provisional occurrence advances the alternating location");
+Assert(
+    fixedLocationAfterMiss.PredictedPosition == firstPosition,
+    "a missed provisional occurrence returns to the observed fixed location");
+
 var advanceNotification = new PotAdvanceNotificationTracker();
 var advanceOccurrence = origin.AddMinutes(30);
 Assert(

@@ -51,7 +51,8 @@ public sealed class Plugin : IDalamudPlugin
     private readonly DynamicEventSnapshotSource encounterSource = new();
     private readonly FateEventDetector fateDetector;
     private readonly CriticalEncounterDetector encounterDetector;
-    private readonly PotPredictionTracker potPredictionTracker = new();
+    private readonly PotPredictionTracker potPredictionTracker =
+        new(knownEventPositions: ConfirmedMagicPotLocations.NorthHorn);
     private readonly PotAdvanceNotificationTracker potAdvanceNotificationTracker = new();
     private readonly WindowSystem windowSystem = new("CrescentAtlas");
     private readonly AtlasWindow atlasWindow;
