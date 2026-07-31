@@ -7,6 +7,7 @@ using CrescentAtlas.Overlays;
 using CrescentAtlas.Runtime;
 using CrescentAtlas.Windows;
 using Dalamud.Game.Command;
+using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.IoC;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
@@ -23,6 +24,8 @@ public sealed class Plugin : IDalamudPlugin
     private const string JapanesePotAppearedFileName = "CrescentAtlas.PotAppeared.ja.wav";
     private const float TreasureCandidateObjectMatchRadius = 12.0f;
     private const float CarrotSpotMatchRadius = 5.0f;
+    private const ushort SilverTreasureChatColor = 37;
+    private const ushort BronzeTreasureChatColor = 500;
     private static readonly HashSet<uint> MagicPotEventIds = [2072, 2073];
     private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(500);
     private static readonly TimeSpan FlushInterval = TimeSpan.FromSeconds(30);
@@ -625,14 +628,7 @@ public sealed class Plugin : IDalamudPlugin
         if (configuration.TreasureNotificationsEnabled)
         {
             foreach (var marker in treasures.Where(marker => !previousTreasureKeys.Contains(marker.Key)))
-            {
-                var isSilver = marker.TreasureType.Equals(
-                    "silver",
-                    StringComparison.OrdinalIgnoreCase);
-                ChatGui.Print(configuration.Language == UiLanguage.Japanese
-                    ? $"[Crescent Atlas] {(isSilver ? "銀箱" : "銅箱")}を検知: {marker.Label}"
-                    : $"[Crescent Atlas] {(isSilver ? "Silver" : "Bronze")} treasure loaded: {marker.Label}");
-            }
+                PrintTreasureDetected(marker);
         }
 
         if (configuration.CarrotNotificationsEnabled)
@@ -654,6 +650,28 @@ public sealed class Plugin : IDalamudPlugin
         previousTreasureKeys = treasureKeys;
         previousCarrotKeys = carrotKeys;
         previousPotTargetKeys = potTargetKeys;
+    }
+
+    private void PrintTreasureDetected(AtlasMarker marker)
+    {
+        var isSilver = marker.TreasureType.Equals(
+            "silver",
+            StringComparison.OrdinalIgnoreCase);
+        var typeLabel = configuration.Language == UiLanguage.Japanese
+            ? isSilver ? "銀" : "銅"
+            : isSilver ? "Silver" : "Bronze";
+        var prefix = configuration.Language == UiLanguage.Japanese
+            ? "[Crescent Atlas] 宝箱を検知: "
+            : "[Crescent Atlas] Treasure loaded: ";
+        var color = isSilver
+            ? SilverTreasureChatColor
+            : BronzeTreasureChatColor;
+
+        ChatGui.Print(
+            new SeStringBuilder()
+                .AddText(prefix)
+                .AddUiForeground(typeLabel, color)
+                .Build());
     }
 
     private bool IsPotFate(FateSnapshot fate) => IsPotFate(fate.FateId, fate.Name);
