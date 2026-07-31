@@ -213,7 +213,7 @@ public sealed class AtlasWindow : Window, IDisposable
 
         var visibleMarkers = territoryMarkers
             .Where(marker =>
-                OccultCrescentMapLayerPolicy.IsMarkerVisible(dataSource.MapLayer, marker.Kind)
+                OccultCrescentMapLayerPolicy.IsMarkerVisible(dataSource.MapLayer, marker)
                 && IsMarkerVisible(marker))
             .ToArray();
 

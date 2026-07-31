@@ -13,6 +13,8 @@
     <Compile Include="..\..\Notifications\PotObservationHistoryReader.cs" Link="PotObservationHistoryReader.cs" />
     <Compile Include="..\..\Data\ConfirmedMagicPotLocations.cs" Link="ConfirmedMagicPotLocations.cs" />
     <Compile Include="..\..\Data\ConfirmedCarrotObjects.cs" Link="ConfirmedCarrotObjects.cs" />
+    <Compile Include="..\..\Data\ConfirmedCarrotSpots.cs" Link="ConfirmedCarrotSpots.cs" />
+    <Compile Include="..\..\Data\CarrotSpotHistoryReader.cs" Link="CarrotSpotHistoryReader.cs" />
     <Compile Include="..\..\Contracts\AtlasMarker.cs" Link="AtlasMarker.cs" />
     <Compile Include="..\..\Contracts\AtlasPotPrediction.cs" Link="AtlasPotPrediction.cs" />
     <Compile Include="..\..\Contracts\OccultCrescentMapLayer.cs" Link="OccultCrescentMapLayer.cs" />

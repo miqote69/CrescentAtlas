@@ -13,6 +13,25 @@ Assert(
 Assert(
     !ConfirmedCarrotObjects.IsKnownDataId(2007457),
     "the Knowledge Crystal EventObj is not misclassified as a carrot");
+Assert(ConfirmedCarrotSpots.NorthHorn.Count == 8, "eight confirmed fixed carrot spots are bundled");
+var carrotHistoryLine =
+    """{"observedAtUtc":"2026-07-30T06:45:43.1067071+00:00","kind":"carrot-candidate","territoryId":1346,"dataId":2010139,"x":-560.9,"y":50.74249,"z":-447}""";
+Assert(
+    CarrotSpotHistoryReader.TryParseLine(
+        carrotHistoryLine,
+        ConfirmedCarrotObjects.FortuneCarrotDataId,
+        out var restoredCarrotSpot),
+    "confirmed carrot candidates from older logs restore as fixed spots");
+Assert(restoredCarrotSpot.TerritoryId == 1346, "restored carrot keeps its territory");
+Assert(
+    restoredCarrotSpot.Position == new Vector3(-560.9f, 50.74249f, -447.0f),
+    "restored carrot keeps its fixed position");
+Assert(
+    !CarrotSpotHistoryReader.TryParseLine(
+        carrotHistoryLine.Replace("2010139", "2007457", StringComparison.Ordinal),
+        ConfirmedCarrotObjects.FortuneCarrotDataId,
+        out _),
+    "unrelated EventObj candidates never become fixed carrot spots");
 var firstPosition = new Vector3(10, 0, 20);
 var secondPosition = new Vector3(40, 0, 50);
 var tracker = new PotPredictionTracker();
@@ -216,23 +235,75 @@ Assert(
 Assert(
     !OccultCrescentMapLayerPolicy.IsMarkerVisible(
         OccultCrescentMapLayer.Subterranean,
-        AtlasMarkerKind.TreasureCandidate),
+        new AtlasMarker(
+            "surface-treasure",
+            AtlasMarkerKind.TreasureCandidate,
+            "Treasure",
+            Vector3.Zero,
+            origin,
+            false,
+            1346)),
     "surface treasure candidates are hidden underground");
 Assert(
     !OccultCrescentMapLayerPolicy.IsMarkerVisible(
         OccultCrescentMapLayer.Subterranean,
-        AtlasMarkerKind.Fate),
+        new AtlasMarker(
+            "surface-fate",
+            AtlasMarkerKind.Fate,
+            "FATE",
+            Vector3.Zero,
+            origin,
+            true,
+            1346)),
     "surface FATE markers are hidden underground");
 Assert(
     !OccultCrescentMapLayerPolicy.IsMarkerVisible(
         OccultCrescentMapLayer.Subterranean,
-        AtlasMarkerKind.CriticalEncounter),
+        new AtlasMarker(
+            "surface-ce",
+            AtlasMarkerKind.CriticalEncounter,
+            "CE",
+            Vector3.Zero,
+            origin,
+            true,
+            1346)),
     "surface CE markers are hidden underground");
 Assert(
     OccultCrescentMapLayerPolicy.IsMarkerVisible(
         OccultCrescentMapLayer.Subterranean,
-        AtlasMarkerKind.ActiveTreasure),
+        new AtlasMarker(
+            "underground-treasure",
+            AtlasMarkerKind.ActiveTreasure,
+            "Treasure",
+            Vector3.Zero,
+            origin,
+            true,
+            1346)),
     "loaded underground treasure remains visible");
+Assert(
+    !OccultCrescentMapLayerPolicy.IsMarkerVisible(
+        OccultCrescentMapLayer.Subterranean,
+        new AtlasMarker(
+            "surface-carrot-spot",
+            AtlasMarkerKind.Carrot,
+            "Carrot spot",
+            Vector3.Zero,
+            origin,
+            false,
+            1346)),
+    "fixed surface carrot spots are hidden underground");
+Assert(
+    OccultCrescentMapLayerPolicy.IsMarkerVisible(
+        OccultCrescentMapLayer.Subterranean,
+        new AtlasMarker(
+            "loaded-underground-carrot",
+            AtlasMarkerKind.Carrot,
+            "Carrot",
+            Vector3.Zero,
+            origin,
+            true,
+            1346)),
+    "a loaded underground carrot remains visible");
 atlas.SetContext(
     true,
     1346,

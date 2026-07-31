@@ -15,11 +15,11 @@ public static class OccultCrescentMapLayerPolicy
             ? OccultCrescentMapLayer.Subterranean
             : OccultCrescentMapLayer.Surface;
 
-    public static bool IsMarkerVisible(OccultCrescentMapLayer layer, AtlasMarkerKind kind)
+    public static bool IsMarkerVisible(OccultCrescentMapLayer layer, AtlasMarker marker)
         => layer == OccultCrescentMapLayer.Surface
-           || kind is AtlasMarkerKind.ActiveTreasure
-               or AtlasMarkerKind.Carrot
+           || marker.Kind is AtlasMarkerKind.ActiveTreasure
                or AtlasMarkerKind.PotTarget
                or AtlasMarkerKind.Aetheryte
-               or AtlasMarkerKind.Player;
+               or AtlasMarkerKind.Player
+           || marker.Kind == AtlasMarkerKind.Carrot && marker.IsActive;
 }

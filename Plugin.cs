@@ -21,6 +21,7 @@ public sealed class Plugin : IDalamudPlugin
     private const string LegacyNorthHornInstanceKey = "territory-1346";
     private const float TreasureCandidateCheckRadius = 70.0f;
     private const float TreasureCandidateObjectMatchRadius = 12.0f;
+    private const float CarrotSpotMatchRadius = 5.0f;
     private static readonly HashSet<uint> MagicPotEventIds = [2072, 2073];
     private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(500);
     private static readonly TimeSpan FlushInterval = TimeSpan.FromSeconds(30);
@@ -42,6 +43,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly IslandVisitStore islandVisitStore;
     private readonly HashSet<uint> silverTreasureDataIds = [];
     private readonly HashSet<uint> potTargetDataIds = [];
+    private readonly List<ConfirmedCarrotSpot> knownCarrotSpots = [];
     private readonly MutableAtlasDataSource atlasData = new();
     private readonly OccultCrescentContext crescentContext;
     private readonly AetheryteMarkerProvider aetheryteMarkerProvider;
@@ -110,6 +112,7 @@ public sealed class Plugin : IDalamudPlugin
                 $"potTarget={potTargetDataIds.Count}");
             observationStore = new ObservationStore(PluginInterface);
             BootstrapDiagnostics.Write($"observation store initialized; session={observationStore.SessionId}");
+            RestoreCarrotSpots();
             islandVisitStore = new IslandVisitStore(observationStore.OutputDirectory);
             BootstrapDiagnostics.Write($"island visit store initialized; path={islandVisitStore.OutputPath}");
             RestorePotObservations();
@@ -437,9 +440,11 @@ public sealed class Plugin : IDalamudPlugin
         var treasures = objectMarkers.Where(marker => marker.Kind == AtlasMarkerKind.ActiveTreasure).ToArray();
         var carrotCandidates = objectMarkers.Where(marker => marker.Kind == AtlasMarkerKind.Carrot).ToArray();
         var potTargets = objectMarkers.Where(marker => marker.Kind == AtlasMarkerKind.PotTarget).ToArray();
-        var carrots = carrotCandidates
+        var liveCarrots = carrotCandidates
             .Where(marker => !marker.Key.Contains("carrot-candidate", StringComparison.Ordinal))
             .ToArray();
+        RememberCarrotSpots(liveCarrots);
+        var carrots = BuildCarrotMarkers(territoryId, liveCarrots);
         atlasData.ReplaceSource(AtlasMarkerKind.ActiveTreasure, treasures);
         atlasData.ReplaceSource(AtlasMarkerKind.Carrot, carrots);
         atlasData.ReplaceSource(AtlasMarkerKind.PotTarget, potTargets);
@@ -452,7 +457,7 @@ public sealed class Plugin : IDalamudPlugin
                 TreasureCandidateObjectMatchRadius);
             PersistTreasureChecks();
         }
-        NotifyNewObjects(treasures, carrots, potTargets);
+        NotifyNewObjects(treasures, liveCarrots, potTargets);
 
         PollFates(territoryId, territoryName, instanceKey, now, entering);
         if (mapLayer == OccultCrescentMapLayer.Surface)
@@ -663,6 +668,73 @@ public sealed class Plugin : IDalamudPlugin
         BootstrapDiagnostics.Write(
             $"Magic Pot history restored; source={restored.Count}; " +
             $"legacy={potPredictionTracker.GetObservations(LegacyNorthHornInstanceKey).Count}");
+    }
+
+    private void RestoreCarrotSpots()
+    {
+        knownCarrotSpots.AddRange(ConfirmedCarrotSpots.NorthHorn);
+        foreach (var restored in CarrotSpotHistoryReader.Load(
+                     observationStore.OutputDirectory,
+                     ConfirmedCarrotObjects.FortuneCarrotDataId))
+        {
+            RememberCarrotSpot(restored);
+        }
+
+        BootstrapDiagnostics.Write(
+            $"Carrot spot history restored; spots={knownCarrotSpots.Count}");
+    }
+
+    private void RememberCarrotSpots(IEnumerable<AtlasMarker> carrots)
+    {
+        foreach (var carrot in carrots.Where(marker =>
+                     marker.DataId == ConfirmedCarrotObjects.FortuneCarrotDataId))
+        {
+            RememberCarrotSpot(new ConfirmedCarrotSpot(
+                carrot.TerritoryId,
+                carrot.DataId,
+                carrot.Position,
+                carrot.ObservedAtUtc));
+        }
+    }
+
+    private void RememberCarrotSpot(ConfirmedCarrotSpot spot)
+    {
+        var matchRadiusSquared = CarrotSpotMatchRadius * CarrotSpotMatchRadius;
+        if (knownCarrotSpots.Any(existing =>
+                existing.TerritoryId == spot.TerritoryId
+                && Vector3.DistanceSquared(existing.Position, spot.Position) <= matchRadiusSquared))
+        {
+            return;
+        }
+
+        knownCarrotSpots.Add(spot);
+    }
+
+    private IReadOnlyList<AtlasMarker> BuildCarrotMarkers(
+        uint territoryId,
+        IReadOnlyCollection<AtlasMarker> liveCarrots)
+    {
+        var matchRadiusSquared = CarrotSpotMatchRadius * CarrotSpotMatchRadius;
+        var fixedSpots = knownCarrotSpots
+            .Where(spot =>
+                spot.TerritoryId == territoryId
+                && !liveCarrots.Any(carrot =>
+                    Vector3.DistanceSquared(carrot.Position, spot.Position) <= matchRadiusSquared))
+            .Select(spot => new AtlasMarker(
+                $"carrot-spot:{CarrotSpotHistoryReader.SpotKey(spot)}",
+                AtlasMarkerKind.Carrot,
+                "Carrot spot",
+                spot.Position,
+                spot.ConfirmedAtUtc,
+                IsActive: false,
+                spot.TerritoryId,
+                spot.DataId));
+
+        return liveCarrots
+            .Concat(fixedSpots)
+            .OrderByDescending(marker => marker.IsActive)
+            .ThenBy(marker => marker.Key, StringComparer.Ordinal)
+            .ToArray();
     }
 
     private void UpdatePotPrediction(string instanceKey, DateTimeOffset now)
