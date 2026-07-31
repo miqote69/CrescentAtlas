@@ -68,8 +68,6 @@ public sealed class Plugin : IDalamudPlugin
     private HashSet<string> previousTreasureKeys = new(StringComparer.Ordinal);
     private HashSet<string> previousCarrotKeys = new(StringComparer.Ordinal);
     private HashSet<string> previousPotTargetKeys = new(StringComparer.Ordinal);
-    private bool wasMagicalElixirActive;
-    private uint magicalElixirStatusId;
     private DateTimeOffset nextPollUtc;
     private DateTimeOffset nextFlushUtc;
     private DateTimeOffset nextLayoutScanUtc;
@@ -140,7 +138,6 @@ public sealed class Plugin : IDalamudPlugin
                     CarrotEventIds = configuration.ConfirmedCarrotEventIds,
                     SilverTreasureDataIds = silverTreasureDataIds,
                     PotTargetDataIds = potTargetDataIds,
-                    IsMagicalElixirActive = () => wasMagicalElixirActive,
                     IncludeUnclassifiedEventObjects = true,
                 });
             BootstrapDiagnostics.Write("collectors initialized");
@@ -405,7 +402,6 @@ public sealed class Plugin : IDalamudPlugin
             territoryName,
             localPlayer?.Position,
             localPlayer?.Rotation);
-        UpdateMagicalElixirState(localPlayer, territoryId, territoryName, instanceKey, now);
         if (mapChanged)
         {
             scannedTerritoryId = 0;
@@ -455,12 +451,12 @@ public sealed class Plugin : IDalamudPlugin
             territoryId,
             territoryName,
             mapId,
-            wasMagicalElixirActive,
             now,
             out var mappedPotTargetObservations);
         if (configuration.CollectionEnabled)
             RecordAll(mappedPotTargetObservations);
         var potTargets = MergePotTargets(loadedPotTargets, mappedPotTargets);
+        atlasData.SetMagicalElixirState(potTargets.Length > 0);
         var liveCarrots = carrotCandidates
             .Where(marker => !marker.Key.Contains("carrot-candidate", StringComparison.Ordinal))
             .ToArray();
@@ -676,95 +672,6 @@ public sealed class Plugin : IDalamudPlugin
         previousTreasureKeys = treasureKeys;
         previousCarrotKeys = carrotKeys;
         previousPotTargetKeys = potTargetKeys;
-    }
-
-    private void UpdateMagicalElixirState(
-        IPlayerCharacter? localPlayer,
-        uint territoryId,
-        string territoryName,
-        string instanceKey,
-        DateTimeOffset now)
-    {
-        var statusId = 0u;
-        var statusName = string.Empty;
-        if (localPlayer is not null)
-        {
-            foreach (var status in localPlayer.StatusList)
-            {
-                try
-                {
-                    if (!DataManager.GetExcelSheet<Lumina.Excel.Sheets.Status>()
-                        .TryGetRow(status.StatusId, out var statusRow))
-                    {
-                        continue;
-                    }
-
-                    var candidateName = statusRow.Name.ToString();
-                    if (!MagicalElixirStatusMatcher.IsMatch(candidateName))
-                        continue;
-
-                    statusId = status.StatusId;
-                    statusName = candidateName;
-                    break;
-                }
-                catch (Exception ex)
-                {
-                    Log.Debug(ex, "Failed to resolve status {StatusId}.", status.StatusId);
-                }
-            }
-        }
-
-        var isActive = statusId != 0;
-        atlasData.SetMagicalElixirState(isActive, statusId);
-        if (isActive == wasMagicalElixirActive
-            && (!isActive || statusId == magicalElixirStatusId))
-        {
-            return;
-        }
-
-        if (configuration.CollectionEnabled)
-        {
-            observationStore.Record(new ObservationRecord
-            {
-                SessionId = observationStore.SessionId,
-                ObservedAtUtc = now,
-                Source = ObservationSource.Status,
-                Kind = "magical-elixir-state",
-                Key = $"{instanceKey}:magical-elixir:{(isActive ? "active" : "inactive")}:{statusId}",
-                TerritoryId = territoryId,
-                TerritoryName = territoryName,
-                DataId = statusId,
-                Name = string.IsNullOrWhiteSpace(statusName)
-                    ? "Magical Elixir"
-                    : statusName,
-                IsActive = isActive,
-                Properties = new Dictionary<string, string>
-                {
-                    ["state"] = isActive ? "active" : "inactive",
-                    ["statusId"] = statusId.ToString(),
-                },
-            });
-        }
-
-        if (isActive)
-        {
-            ChatGui.Print(configuration.Language == UiLanguage.Japanese
-                ? $"[Crescent Atlas] マジカルエリクサー有効を検知（StatusId: {statusId}）"
-                : $"[Crescent Atlas] Magical Elixir active (StatusId: {statusId})");
-            BootstrapDiagnostics.Write(
-                $"Magical Elixir activated; statusId={statusId}; instance={instanceKey}");
-        }
-        else if (wasMagicalElixirActive)
-        {
-            ChatGui.Print(configuration.Language == UiLanguage.Japanese
-                ? "[Crescent Atlas] マジカルエリクサーの効果終了を検知"
-                : "[Crescent Atlas] Magical Elixir effect ended");
-            BootstrapDiagnostics.Write(
-                $"Magical Elixir ended; previousStatusId={magicalElixirStatusId}; instance={instanceKey}");
-        }
-
-        wasMagicalElixirActive = isActive;
-        magicalElixirStatusId = statusId;
     }
 
     private void PrintTreasureDetected(AtlasMarker marker)
@@ -991,12 +898,10 @@ public sealed class Plugin : IDalamudPlugin
         previousTreasureKeys.Clear();
         previousCarrotKeys.Clear();
         previousPotTargetKeys.Clear();
-        wasMagicalElixirActive = false;
-        magicalElixirStatusId = 0;
         potAdvanceNotificationTracker.ResetAll();
         fateDetector.Reset();
         atlasData.SetPotPrediction(null);
-        atlasData.SetMagicalElixirState(false, 0);
+        atlasData.SetMagicalElixirState(false);
         atlasData.SetContext(
             false,
             0,

@@ -17,9 +17,6 @@ public static class ConfirmedPotTargetObservations
             2014743, // Bronze coffer
         };
 
-    public static bool RequiresActiveElixirStatus(uint dataId)
-        => dataId == 2014742;
-
     public static IReadOnlyList<ConfirmedPotTargetObservation> NorthHorn { get; } =
     [
         new(

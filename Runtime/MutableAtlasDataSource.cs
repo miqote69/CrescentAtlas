@@ -26,8 +26,6 @@ public sealed class MutableAtlasDataSource : IAtlasDataSource
 
     public bool IsMagicalElixirActive { get; private set; }
 
-    public uint MagicalElixirStatusId { get; private set; }
-
     public IReadOnlyList<AtlasMarker> GetMarkers()
     {
         lock (sync)
@@ -54,7 +52,6 @@ public sealed class MutableAtlasDataSource : IAtlasDataSource
                 resetBlockedTreasureKeys.Clear();
                 PotPrediction = null;
                 IsMagicalElixirActive = false;
-                MagicalElixirStatusId = 0;
             }
 
             IsInOccultCrescent = isInOccultCrescent;
@@ -82,13 +79,10 @@ public sealed class MutableAtlasDataSource : IAtlasDataSource
             PotPrediction = prediction;
     }
 
-    public void SetMagicalElixirState(bool isActive, uint statusId)
+    public void SetMagicalElixirState(bool isActive)
     {
         lock (sync)
-        {
             IsMagicalElixirActive = isActive;
-            MagicalElixirStatusId = isActive ? statusId : 0;
-        }
     }
 
     public void MarkAbsentNearbyTreasureCandidatesChecked(

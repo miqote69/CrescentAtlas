@@ -29,8 +29,6 @@ public sealed record ObjectTableCollectionOptions
     /// </summary>
     public IReadOnlySet<uint> PotTargetDataIds { get; init; } = new HashSet<uint>();
 
-    public Func<bool>? IsMagicalElixirActive { get; init; }
-
     /// <summary>
     /// Optional game-version-specific classifier. It runs only for EventObj objects.
     /// </summary>
@@ -128,9 +126,7 @@ public sealed class ObjectTableCollector(
         var dataId = gameObject.BaseId;
         var eventId = TryReadEventId(gameObject);
         var displayName = DisplayName(gameObject, "EventObj candidate");
-        if (options.PotTargetDataIds.Contains(dataId)
-            && (!ConfirmedPotTargetObservations.RequiresActiveElixirStatus(dataId)
-                || options.IsMagicalElixirActive?.Invoke() == true))
+        if (options.PotTargetDataIds.Contains(dataId))
         {
             var potTargetKey = ObservationIdentity.PositionKey(
                 territoryId,

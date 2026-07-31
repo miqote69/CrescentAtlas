@@ -20,8 +20,6 @@ public interface IAtlasDataSource
 
     bool IsMagicalElixirActive { get; }
 
-    uint MagicalElixirStatusId { get; }
-
     IReadOnlyList<AtlasMarker> GetMarkers();
 
     void ResetTreasureChecks();

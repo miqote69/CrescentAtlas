@@ -26,7 +26,6 @@ public sealed class AgentMapPotTargetSource(
         uint territoryId,
         string territoryName,
         uint currentMapId,
-        bool isMagicalElixirActive,
         DateTimeOffset observedAtUtc,
         out IReadOnlyList<ObservationRecord> observations)
     {
@@ -34,20 +33,19 @@ public sealed class AgentMapPotTargetSource(
         var newObservations = new List<ObservationRecord>();
         observations = newObservations;
 
-        if (!isMagicalElixirActive)
-        {
-            previousDiagnosticSignature = string.Empty;
-            return result;
-        }
-
         try
         {
             var agentMap = AgentMap.Instance();
             if (agentMap == null)
+            {
+                LogDiagnostic("agent-unavailable");
                 return result;
+            }
             if (agentMap->CurrentTerritoryId != 0
                 && agentMap->CurrentTerritoryId != territoryId)
             {
+                LogDiagnostic(FormattableString.Invariant(
+                    $"territory-mismatch:{agentMap->CurrentTerritoryId}!={territoryId}"));
                 return result;
             }
 
@@ -91,26 +89,30 @@ public sealed class AgentMapPotTargetSource(
                 }
 
                 var levelObjectId = 0u;
+                var position = native.Position;
                 if (native.LevelId != 0
                     && levelSheet.TryGetRow(native.LevelId, out var level))
                 {
                     levelObjectId = level.Object.RowId;
+                    var levelPosition = new Vector3(level.X, level.Y, level.Z);
+                    if (IsPlausiblePosition(levelPosition))
+                        position = levelPosition;
                 }
 
                 var dataId = MagicalElixirMapMarkerClassifier.ResolveTargetDataId(
                     native.ObjectiveId,
                     levelObjectId);
-                if (dataId == 0 || !IsPlausiblePosition(native.Position))
+                if (dataId == 0 || !IsPlausiblePosition(position))
                     continue;
 
                 var label = MagicalElixirMapMarkerClassifier.ResolveLabel(dataId);
                 var key = FormattableString.Invariant(
-                    $"agent-map-pot-target:{territoryId}:{dataId}:{native.LevelId}:{native.Position.X:F2}:{native.Position.Y:F2}:{native.Position.Z:F2}");
+                    $"agent-map-pot-target:{territoryId}:{dataId}:{native.LevelId}:{position.X:F2}:{position.Y:F2}:{position.Z:F2}");
                 result.Add(new AtlasMarker(
                     key,
                     AtlasMarkerKind.PotTarget,
                     label,
-                    native.Position,
+                    position,
                     observedAtUtc,
                     IsActive: true,
                     territoryId,
@@ -134,9 +136,9 @@ public sealed class AgentMapPotTargetSource(
                     DataId = dataId,
                     EventId = native.DataId,
                     Name = label,
-                    X = native.Position.X,
-                    Y = native.Position.Y,
-                    Z = native.Position.Z,
+                    X = position.X,
+                    Y = position.Y,
+                    Z = position.Z,
                     IsActive = true,
                     Properties = new Dictionary<string, string>
                     {

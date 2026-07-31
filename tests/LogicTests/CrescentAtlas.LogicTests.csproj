@@ -23,7 +23,6 @@
     <Compile Include="..\..\Runtime\MutableAtlasDataSource.cs" Link="MutableAtlasDataSource.cs" />
     <Compile Include="..\..\Runtime\AtlasDetectionRanges.cs" Link="AtlasDetectionRanges.cs" />
     <Compile Include="..\..\Runtime\AtlasMarkerSelector.cs" Link="AtlasMarkerSelector.cs" />
-    <Compile Include="..\..\Runtime\MagicalElixirStatusMatcher.cs" Link="MagicalElixirStatusMatcher.cs" />
     <Compile Include="..\..\Runtime\MagicalElixirMapMarkerClassifier.cs" Link="MagicalElixirMapMarkerClassifier.cs" />
     <Compile Include="..\..\Runtime\TreasureLayerClassifier.cs" Link="TreasureLayerClassifier.cs" />
     <Compile Include="..\..\Events\DynamicEventTimeResolver.cs" Link="DynamicEventTimeResolver.cs" />
