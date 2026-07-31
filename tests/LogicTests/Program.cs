@@ -74,6 +74,15 @@ var northCandidates = MagicalElixirDirectionResolver.Resolve(
 Assert(
     northCandidates.Count == 1 && northCandidates[0].Spot.Name == "North",
     "a direction hint eliminates fixed targets outside its cone");
+Assert(
+    !PotPredictionDisplayPolicy.ShouldShow(true, true, true, hasActivePotFate: true),
+    "the next Magic Pot prediction is hidden while a Pot FATE is active");
+Assert(
+    PotPredictionDisplayPolicy.ShouldShow(true, true, true, hasActivePotFate: false),
+    "the next Magic Pot prediction returns after the active Pot FATE ends");
+Assert(
+    !PotPredictionDisplayPolicy.ShouldShow(false, true, true, hasActivePotFate: false),
+    "the user prediction visibility setting remains authoritative");
 var potTargetHistoryLine =
     """{"observedAtUtc":"2026-07-30T07:08:02Z","kind":"pot-target","territoryId":1346,"dataId":2014742,"name":"Silver target","x":12.5,"y":-4,"z":-88.25}""";
 Assert(

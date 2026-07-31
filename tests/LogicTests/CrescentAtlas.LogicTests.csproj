@@ -26,6 +26,7 @@
     <Compile Include="..\..\Runtime\AtlasMarkerSelector.cs" Link="AtlasMarkerSelector.cs" />
     <Compile Include="..\..\Runtime\MagicalElixirMapMarkerClassifier.cs" Link="MagicalElixirMapMarkerClassifier.cs" />
     <Compile Include="..\..\Runtime\MagicalElixirDirectionResolver.cs" Link="MagicalElixirDirectionResolver.cs" />
+    <Compile Include="..\..\Runtime\PotPredictionDisplayPolicy.cs" Link="PotPredictionDisplayPolicy.cs" />
     <Compile Include="..\..\Runtime\TreasureLayerClassifier.cs" Link="TreasureLayerClassifier.cs" />
     <Compile Include="..\..\Events\DynamicEventTimeResolver.cs" Link="DynamicEventTimeResolver.cs" />
     <Compile Include="..\..\Events\DynamicEventNameMatcher.cs" Link="DynamicEventNameMatcher.cs" />

@@ -282,7 +282,10 @@ public sealed class AtlasWindow : Window, IDisposable
             canvasSize,
             visibleMarkers,
             dataSource.PlayerPosition,
-            dataSource.PlayerRotation);
+            dataSource.PlayerRotation,
+            territoryMarkers.Any(marker =>
+                marker.Kind == AtlasMarkerKind.PotFate
+                && marker.IsActive));
     }
 
     private void DrawOutsideAreaNotice()
@@ -920,7 +923,8 @@ public sealed class AtlasWindow : Window, IDisposable
         Vector2 canvasSize,
         IReadOnlyList<AtlasMarker> markers,
         Vector3? playerPosition,
-        float? playerRotation)
+        float? playerRotation,
+        bool hasActivePotFate)
     {
         var canvasMaximum = canvasMinimum + canvasSize;
         var drawList = ImGui.GetWindowDrawList();
@@ -971,9 +975,12 @@ public sealed class AtlasWindow : Window, IDisposable
                 canvasMinimum,
                 canvasMaximum);
 
-        if (dataSource.MapLayer == OccultCrescentMapLayer.Surface
-            && configuration.ShowPotPrediction
-            && dataSource.PotPrediction is { } potPrediction)
+        if (dataSource.PotPrediction is { } potPrediction
+            && PotPredictionDisplayPolicy.ShouldShow(
+                configuration.ShowPotPrediction,
+                dataSource.MapLayer == OccultCrescentMapLayer.Surface,
+                hasPrediction: true,
+                hasActivePotFate))
             DrawPotPrediction(drawList, project(potPrediction.PredictedPosition), potPrediction);
 
         if (playerPosition is { } position)
@@ -1199,6 +1206,8 @@ public sealed class AtlasWindow : Window, IDisposable
             && marker.IconId != 0
             && TryDrawGameIcon(drawList, point, marker.IconId))
         {
+            if (marker.Kind == AtlasMarkerKind.PotFate && marker.IsActive)
+                DrawActivePotFateHalo(drawList, point);
             if (drawEventStatus)
                 DrawEventStatus(drawList, point, marker, clipMinimum, clipMaximum);
             return;
@@ -1318,6 +1327,18 @@ public sealed class AtlasWindow : Window, IDisposable
     private static bool IsElixirDirectionCandidate(AtlasMarker marker)
         => marker.Kind == AtlasMarkerKind.PotTarget
            && marker.EventState.Equals("direction-candidate", StringComparison.Ordinal);
+
+    private static void DrawActivePotFateHalo(ImDrawListPtr drawList, Vector2 point)
+    {
+        var pulse = 0.72f + (0.28f * MathF.Sin(
+            (float)(DateTimeOffset.UtcNow.TimeOfDay.TotalSeconds * 4.0)));
+        var shadow = ImGui.GetColorU32(new Vector4(0.03f, 0.02f, 0.0f, 0.92f));
+        var live = ImGui.GetColorU32(new Vector4(1.00f, 0.83f, 0.20f, pulse));
+        drawList.AddCircle(point, 17.5f, shadow, 32, 5.0f);
+        drawList.AddCircle(point, 17.5f, live, 32, 2.5f);
+        drawList.AddCircleFilled(point + new Vector2(13.0f, -13.0f), 4.0f, shadow, 16);
+        drawList.AddCircleFilled(point + new Vector2(13.0f, -13.0f), 2.8f, live, 16);
+    }
 
     private void DrawEventStatus(
         ImDrawListPtr drawList,
