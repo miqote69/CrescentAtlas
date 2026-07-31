@@ -58,9 +58,47 @@ public sealed class NearbyTreasureLineOverlay(
                 $"{treasure.Label}  {distance:F0}y");
         }
 
+        if (configuration.ShowPotTarget)
+            DrawMagicalElixirTargets(drawList, markers, player, playerScreen, shadowColor);
         if (configuration.ShowCarrots)
             DrawNearestLiveCarrot(drawList, markers, player, playerScreen, shadowColor);
         DrawNearestKnownSpot(drawList, markers, player, playerScreen, shadowColor);
+    }
+
+    private void DrawMagicalElixirTargets(
+        ImDrawListPtr drawList,
+        IReadOnlyList<AtlasMarker> markers,
+        Vector3 player,
+        Vector2 playerScreen,
+        uint shadowColor)
+    {
+        var maximumDistanceSquared = MaximumDistance * MaximumDistance;
+        var targetColor = ImGui.GetColorU32(new Vector4(0.45f, 1.00f, 0.48f, 0.98f));
+        foreach (var target in markers.Where(marker =>
+                     marker.Kind == AtlasMarkerKind.PotTarget
+                     && marker.IsActive
+                     && Vector3.DistanceSquared(player, marker.Position) <= maximumDistanceSquared))
+        {
+            if (!gameGui.WorldToScreen(target.Position, out var targetScreen))
+                continue;
+
+            if (configuration.ShowTreasureGuideLines)
+            {
+                drawList.AddLine(playerScreen, targetScreen, shadowColor, 7.0f);
+                drawList.AddLine(playerScreen, targetScreen, targetColor, 3.5f);
+            }
+
+            drawList.AddCircle(targetScreen, 14.0f, shadowColor, 0, 5.0f);
+            drawList.AddCircle(targetScreen, 13.0f, targetColor, 0, 3.0f);
+
+            var distance = Vector3.Distance(player, target.Position);
+            drawList.AddText(
+                targetScreen + new Vector2(16.0f, -9.0f),
+                targetColor,
+                configuration.Language == UiLanguage.Japanese
+                    ? $"マジカルエリクサー目標  {distance:F0}y"
+                    : $"Magical Elixir target  {distance:F0}y");
+        }
     }
 
     private void DrawNearestLiveCarrot(

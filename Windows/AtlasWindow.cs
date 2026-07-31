@@ -1048,7 +1048,7 @@ public sealed class AtlasWindow : Window, IDisposable
         return mapMinimum + (normalized * mapSize);
     }
 
-    private static void DrawNearbyTreasureLines(
+    private void DrawNearbyTreasureLines(
         ImDrawListPtr drawList,
         Func<Vector3, Vector2> project,
         IReadOnlyList<AtlasMarker> markers,
@@ -1059,14 +1059,19 @@ public sealed class AtlasWindow : Window, IDisposable
 
         var playerScreen = project(player);
         var maximumDistanceSquared = NearbyTreasureDistance * NearbyTreasureDistance;
-        var lineColor = ImGui.GetColorU32(new Vector4(0.20f, 1.00f, 0.38f, 0.96f));
-
         foreach (var marker in markers.Where(marker =>
-                     marker.Kind == AtlasMarkerKind.ActiveTreasure
+                     (marker.Kind == AtlasMarkerKind.ActiveTreasure
+                      || marker.Kind == AtlasMarkerKind.PotTarget
+                         && configuration.ShowPotTarget)
                      && Vector3.DistanceSquared(player, marker.Position) <= maximumDistanceSquared))
         {
+            var lineColor = ImGui.GetColorU32(
+                marker.Kind == AtlasMarkerKind.PotTarget
+                    ? new Vector4(0.45f, 1.00f, 0.48f, 0.98f)
+                    : new Vector4(0.20f, 1.00f, 0.38f, 0.96f));
             var treasureScreen = project(marker.Position);
-            drawList.AddLine(playerScreen, treasureScreen, lineColor, 3.0f);
+            if (configuration.ShowTreasureGuideLines)
+                drawList.AddLine(playerScreen, treasureScreen, lineColor, 3.0f);
             drawList.AddCircle(treasureScreen, MarkerRadius + 5.0f, lineColor, 0, 2.0f);
         }
     }
