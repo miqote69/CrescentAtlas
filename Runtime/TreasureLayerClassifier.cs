@@ -1,3 +1,5 @@
+using CrescentAtlas.Contracts;
+
 namespace CrescentAtlas.Runtime;
 
 public static class TreasureLayerClassifier
@@ -9,8 +11,20 @@ public static class TreasureLayerClassifier
     public const float MinimumSurfaceElevation = -70.0f;
 
     public static bool IsSurfaceCandidate(Vector3 position)
+        => IsValid(position) && position.Y > MinimumSurfaceElevation;
+
+    public static bool IsSubterraneanCandidate(Vector3 position)
+        => IsValid(position) && position.Y <= MinimumSurfaceElevation;
+
+    public static bool IsCandidateForLayer(
+        OccultCrescentMapLayer layer,
+        Vector3 position)
+        => layer == OccultCrescentMapLayer.Subterranean
+            ? IsSubterraneanCandidate(position)
+            : IsSurfaceCandidate(position);
+
+    private static bool IsValid(Vector3 position)
         => float.IsFinite(position.X)
            && float.IsFinite(position.Y)
-           && float.IsFinite(position.Z)
-           && position.Y > MinimumSurfaceElevation;
+           && float.IsFinite(position.Z);
 }

@@ -18,6 +18,7 @@ public sealed class LayoutTreasureCandidateScanner(IDataManager dataManager, IPl
         string sessionId,
         uint territoryId,
         string territoryName,
+        OccultCrescentMapLayer mapLayer,
         DateTimeOffset observedAtUtc,
         out IReadOnlyList<ObservationRecord> observations)
     {
@@ -50,7 +51,7 @@ public sealed class LayoutTreasureCandidateScanner(IDataManager dataManager, IPl
                     continue;
 
                 var position = transform->Translation;
-                if (!TreasureLayerClassifier.IsSurfaceCandidate(position))
+                if (!TreasureLayerClassifier.IsCandidateForLayer(mapLayer, position))
                     continue;
 
                 var treasureRowId = Unsafe.Read<uint>((byte*)instance + 0x30);

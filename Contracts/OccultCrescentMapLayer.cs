@@ -18,6 +18,7 @@ public static class OccultCrescentMapLayerPolicy
     public static bool IsMarkerVisible(OccultCrescentMapLayer layer, AtlasMarker marker)
         => layer == OccultCrescentMapLayer.Surface
            || marker.Kind is AtlasMarkerKind.ActiveTreasure
+               or AtlasMarkerKind.TreasureCandidate
                or AtlasMarkerKind.PotTarget
                or AtlasMarkerKind.Aetheryte
                or AtlasMarkerKind.Player

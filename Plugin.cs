@@ -421,14 +421,14 @@ public sealed class Plugin : IDalamudPlugin
             scannedAetheryteMapId = mapId;
         }
 
-        if (mapLayer == OccultCrescentMapLayer.Surface
-            && scannedTerritoryId != territoryId
+        if (scannedTerritoryId != territoryId
             && now >= nextLayoutScanUtc)
         {
             var candidates = layoutScanner.Scan(
                 observationStore.SessionId,
                 territoryId,
                 territoryName,
+                mapLayer,
                 now,
                 out var candidateObservations);
             atlasData.ReplaceSource(AtlasMarkerKind.TreasureCandidate, candidates);
@@ -442,10 +442,6 @@ public sealed class Plugin : IDalamudPlugin
                 scannedTerritoryId = territoryId;
             else
                 nextLayoutScanUtc = now + TimeSpan.FromSeconds(5);
-        }
-        else if (mapLayer == OccultCrescentMapLayer.Subterranean)
-        {
-            atlasData.ReplaceSource(AtlasMarkerKind.TreasureCandidate, []);
         }
 
         var objectMarkers = objectCollector.Collect(territoryId, territoryName, now);

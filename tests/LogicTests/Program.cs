@@ -131,6 +131,20 @@ Assert(
         new Vector3(-287.76996f, -92.02722f, 125.65808f)),
     "confirmed subterranean treasure positions stay off the surface map");
 Assert(
+    TreasureLayerClassifier.IsSubterraneanCandidate(
+        new Vector3(-287.76996f, -92.02722f, 125.65808f)),
+    "confirmed subterranean treasure positions appear on the subterranean map");
+Assert(
+    TreasureLayerClassifier.IsCandidateForLayer(
+        OccultCrescentMapLayer.Subterranean,
+        new Vector3(-287.76996f, -92.02722f, 125.65808f)),
+    "subterranean scanning accepts only the underground layer candidate");
+Assert(
+    !TreasureLayerClassifier.IsCandidateForLayer(
+        OccultCrescentMapLayer.Subterranean,
+        new Vector3(-876.0f, -48.85687f, -903.0f)),
+    "surface treasure positions stay off the subterranean map");
+Assert(
     !TreasureLayerClassifier.IsSurfaceCandidate(
         new Vector3(float.NaN, 0.0f, 0.0f)),
     "invalid layout positions are rejected");
