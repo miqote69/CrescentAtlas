@@ -89,6 +89,9 @@ Assert(
     northCandidates.Count == 1 && northCandidates[0].Spot.Name == "North",
     "a direction hint eliminates fixed targets outside its cone");
 var unknownTarget = new Vector3(151.9998f, 61.106945f, -842.0175f);
+Assert(
+    MagicalElixirDirectionResolver.EstimateUnknownLocation([]) is null,
+    "an empty Elixir hint sequence produces no estimate without indexing an element");
 var unknownEstimate = MagicalElixirDirectionResolver.EstimateUnknownLocation(
 [
     new(CompassDirection.North, new Vector3(244.62822f, 7.037754f, -458.32602f), origin, "very far north", MagicalElixirDistanceBand.VeryFar),

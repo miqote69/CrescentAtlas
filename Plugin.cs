@@ -897,6 +897,9 @@ public sealed class Plugin : IDalamudPlugin
         uint territoryId,
         DateTimeOffset now)
     {
+        if (magicalElixirDirectionHints.Count == 0)
+            return [];
+
         var candidates = MagicalElixirDirectionResolver.Resolve(
             territoryId,
             knownPotTargetSpots,
