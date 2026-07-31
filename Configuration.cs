@@ -39,6 +39,8 @@ public sealed class Configuration : IPluginConfiguration
 
     public bool ShowPotPrediction { get; set; } = true;
 
+    public bool ShowTreasureGuideLines { get; set; } = true;
+
     public bool FateNotificationsEnabled { get; set; } = true;
 
     public bool CriticalEncounterNotificationsEnabled { get; set; } = true;

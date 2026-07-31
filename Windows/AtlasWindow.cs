@@ -550,6 +550,7 @@ public sealed class AtlasWindow : Window, IDisposable
         var detailedEventDisplay = configuration.DetailedEventDisplay;
         var showForkedTower = configuration.ShowForkedTower;
         var showPotPrediction = configuration.ShowPotPrediction;
+        var showTreasureGuideLines = configuration.ShowTreasureGuideLines;
         var changed = false;
         var usedWidth = 0.0f;
         var availableWidth = Math.Max(100.0f, ImGui.GetContentRegionAvail().X);
@@ -593,6 +594,11 @@ public sealed class AtlasWindow : Window, IDisposable
             ref showPotPrediction,
             ref usedWidth,
             availableWidth);
+        changed |= DrawFilterCheckbox(
+            T("Treasure guide lines", "宝箱ガイド線"),
+            ref showTreasureGuideLines,
+            ref usedWidth,
+            availableWidth);
 
         if (changed)
         {
@@ -604,6 +610,7 @@ public sealed class AtlasWindow : Window, IDisposable
             configuration.DetailedEventDisplay = detailedEventDisplay;
             configuration.ShowForkedTower = showForkedTower;
             configuration.ShowPotPrediction = showPotPrediction;
+            configuration.ShowTreasureGuideLines = showTreasureGuideLines;
             saveConfiguration();
         }
     }

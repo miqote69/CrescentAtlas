@@ -17,7 +17,8 @@ public sealed class NearbyTreasureLineOverlay(
 
     public void Draw()
     {
-        if (dataSource.PlayerPosition is not { } player
+        if (!configuration.ShowTreasureGuideLines
+            || dataSource.PlayerPosition is not { } player
             || !gameGui.WorldToScreen(player, out var playerScreen))
         {
             return;
