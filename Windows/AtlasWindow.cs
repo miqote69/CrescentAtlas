@@ -1,5 +1,6 @@
 using CrescentAtlas.Contracts;
 using CrescentAtlas.Data;
+using CrescentAtlas.Runtime;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Textures;
@@ -875,6 +876,7 @@ public sealed class AtlasWindow : Window, IDisposable
             project = fallback.Project;
         }
 
+        DrawDebugDetectionRange(drawList, project, playerPosition);
         DrawNearestTreasureSpot(drawList, project, markers, playerPosition);
         DrawNearbyTreasureLines(drawList, project, markers, playerPosition);
 
@@ -985,6 +987,40 @@ public sealed class AtlasWindow : Window, IDisposable
             drawList.AddLine(playerScreen, treasureScreen, lineColor, 3.0f);
             drawList.AddCircle(treasureScreen, MarkerRadius + 5.0f, lineColor, 0, 2.0f);
         }
+    }
+
+    private void DrawDebugDetectionRange(
+        ImDrawListPtr drawList,
+        Func<Vector3, Vector2> project,
+        Vector3? playerPosition)
+    {
+        if (playerPosition is not { } player)
+            return;
+
+        var radius = AtlasDetectionRanges.TreasureCandidateCheckRadius;
+        var left = project(player - new Vector3(radius, 0.0f, 0.0f));
+        var right = project(player + new Vector3(radius, 0.0f, 0.0f));
+        var top = project(player - new Vector3(0.0f, 0.0f, radius));
+        var bottom = project(player + new Vector3(0.0f, 0.0f, radius));
+        var projectedRadius = (
+            Vector2.Distance(left, right)
+            + Vector2.Distance(top, bottom)) * 0.25f;
+        if (!float.IsFinite(projectedRadius) || projectedRadius <= 1.0f)
+            return;
+
+        var center = project(player);
+        var fillColor = ImGui.GetColorU32(new Vector4(0.20f, 0.92f, 1.00f, 0.08f));
+        var ringColor = ImGui.GetColorU32(new Vector4(0.20f, 0.92f, 1.00f, 0.86f));
+        drawList.AddCircleFilled(center, projectedRadius, fillColor, 96);
+        drawList.AddCircle(center, projectedRadius, ringColor, 96, 2.0f);
+
+        var label = configuration.Language == UiLanguage.Japanese
+            ? $"DEBUG 検知・確認範囲 {radius:F0}y"
+            : $"DEBUG detection/check range {radius:F0}y";
+        drawList.AddText(
+            center + new Vector2(-projectedRadius + 5.0f, -projectedRadius + 5.0f),
+            ringColor,
+            label);
     }
 
     private static void DrawNearestTreasureSpot(

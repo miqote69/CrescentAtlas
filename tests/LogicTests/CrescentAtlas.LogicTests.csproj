@@ -20,6 +20,7 @@
     <Compile Include="..\..\Contracts\OccultCrescentMapLayer.cs" Link="OccultCrescentMapLayer.cs" />
     <Compile Include="..\..\Contracts\IAtlasDataSource.cs" Link="IAtlasDataSource.cs" />
     <Compile Include="..\..\Runtime\MutableAtlasDataSource.cs" Link="MutableAtlasDataSource.cs" />
+    <Compile Include="..\..\Runtime\AtlasDetectionRanges.cs" Link="AtlasDetectionRanges.cs" />
     <Compile Include="..\..\Runtime\AtlasMarkerSelector.cs" Link="AtlasMarkerSelector.cs" />
     <Compile Include="..\..\Runtime\TreasureLayerClassifier.cs" Link="TreasureLayerClassifier.cs" />
     <Compile Include="..\..\Events\DynamicEventTimeResolver.cs" Link="DynamicEventTimeResolver.cs" />

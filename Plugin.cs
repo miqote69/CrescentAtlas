@@ -19,7 +19,6 @@ public sealed class Plugin : IDalamudPlugin
 {
     private const string CommandName = "/catlas";
     private const string LegacyNorthHornInstanceKey = "territory-1346";
-    private const float TreasureCandidateCheckRadius = 70.0f;
     private const float TreasureCandidateObjectMatchRadius = 12.0f;
     private const float CarrotSpotMatchRadius = 5.0f;
     private static readonly HashSet<uint> MagicPotEventIds = [2072, 2073];
@@ -452,7 +451,7 @@ public sealed class Plugin : IDalamudPlugin
         {
             atlasData.MarkAbsentNearbyTreasureCandidatesChecked(
                 localPlayer.Position,
-                TreasureCandidateCheckRadius,
+                AtlasDetectionRanges.TreasureCandidateCheckRadius,
                 treasures,
                 TreasureCandidateObjectMatchRadius);
             PersistTreasureChecks();
