@@ -1,4 +1,5 @@
 using CrescentAtlas.Contracts;
+using CrescentAtlas.Runtime;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Plugin.Services;
 
@@ -53,7 +54,40 @@ public sealed class NearbyTreasureLineOverlay(
                 $"{treasure.Label}  {distance:F0}y");
         }
 
+        DrawNearestLiveCarrot(drawList, markers, player, playerScreen, shadowColor);
         DrawNearestKnownSpot(drawList, markers, player, playerScreen, shadowColor);
+    }
+
+    private void DrawNearestLiveCarrot(
+        ImDrawListPtr drawList,
+        IReadOnlyList<AtlasMarker> markers,
+        Vector3 player,
+        Vector2 playerScreen,
+        uint shadowColor)
+    {
+        var carrot = AtlasMarkerSelector.FindNearestActiveCarrot(
+            markers,
+            player,
+            MaximumDistance);
+        if (carrot is null
+            || !gameGui.WorldToScreen(carrot.Position, out var carrotScreen))
+        {
+            return;
+        }
+
+        var carrotColor = ImGui.GetColorU32(new Vector4(1.00f, 0.55f, 0.18f, 0.98f));
+        drawList.AddLine(playerScreen, carrotScreen, shadowColor, 7.0f);
+        drawList.AddLine(playerScreen, carrotScreen, carrotColor, 3.5f);
+        drawList.AddCircle(carrotScreen, 14.0f, shadowColor, 0, 5.0f);
+        drawList.AddCircle(carrotScreen, 13.0f, carrotColor, 0, 3.0f);
+
+        var distance = Vector3.Distance(player, carrot.Position);
+        drawList.AddText(
+            carrotScreen + new Vector2(16.0f, -9.0f),
+            carrotColor,
+            configuration.Language == UiLanguage.Japanese
+                ? $"にんじん  {distance:F0}y"
+                : $"Carrot  {distance:F0}y");
     }
 
     private void DrawNearestKnownSpot(

@@ -32,6 +32,53 @@ Assert(
         ConfirmedCarrotObjects.FortuneCarrotDataId,
         out _),
     "unrelated EventObj candidates never become fixed carrot spots");
+var nearestLiveCarrot = AtlasMarkerSelector.FindNearestActiveCarrot(
+    [
+        new AtlasMarker(
+            "fixed-carrot",
+            AtlasMarkerKind.Carrot,
+            "Carrot spot",
+            new Vector3(1, 0, 0),
+            origin,
+            false,
+            1346),
+        new AtlasMarker(
+            "far-live-carrot",
+            AtlasMarkerKind.Carrot,
+            "Carrot",
+            new Vector3(40, 0, 0),
+            origin,
+            true,
+            1346),
+        new AtlasMarker(
+            "near-live-carrot",
+            AtlasMarkerKind.Carrot,
+            "Carrot",
+            new Vector3(10, 0, 0),
+            origin,
+            true,
+            1346),
+    ],
+    Vector3.Zero,
+    120.0f);
+Assert(
+    nearestLiveCarrot?.Key == "near-live-carrot",
+    "carrot guidance selects the nearest loaded carrot and ignores fixed spots");
+Assert(
+    AtlasMarkerSelector.FindNearestActiveCarrot(
+        [
+            new AtlasMarker(
+                "fixed-only",
+                AtlasMarkerKind.Carrot,
+                "Carrot spot",
+                Vector3.Zero,
+                origin,
+                false,
+                1346),
+        ],
+        Vector3.Zero,
+        120.0f) is null,
+    "carrot guidance is absent until a real carrot is loaded");
 var firstPosition = new Vector3(10, 0, 20);
 var secondPosition = new Vector3(40, 0, 50);
 var tracker = new PotPredictionTracker();
