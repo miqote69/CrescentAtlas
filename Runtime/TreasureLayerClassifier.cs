@@ -9,12 +9,18 @@ public static class TreasureLayerClassifier
     // gap so low surface coffers are retained without leaking underground
     // layout candidates onto the surface map.
     public const float MinimumSurfaceElevation = -70.0f;
+    // Confirmed subterranean coffers occupy Y=-92 through Y=-162. The active
+    // layout also exposes staging/dummy treasures around Y=-672 through -980;
+    // reject those so they are not projected far outside the playable map.
+    public const float MinimumSubterraneanElevation = -250.0f;
 
     public static bool IsSurfaceCandidate(Vector3 position)
         => IsValid(position) && position.Y > MinimumSurfaceElevation;
 
     public static bool IsSubterraneanCandidate(Vector3 position)
-        => IsValid(position) && position.Y <= MinimumSurfaceElevation;
+        => IsValid(position)
+           && position.Y <= MinimumSurfaceElevation
+           && position.Y > MinimumSubterraneanElevation;
 
     public static bool IsCandidateForLayer(
         OccultCrescentMapLayer layer,

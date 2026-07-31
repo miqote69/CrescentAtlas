@@ -145,6 +145,11 @@ Assert(
         new Vector3(-876.0f, -48.85687f, -903.0f)),
     "surface treasure positions stay off the subterranean map");
 Assert(
+    !TreasureLayerClassifier.IsCandidateForLayer(
+        OccultCrescentMapLayer.Subterranean,
+        new Vector3(100.0f, -700.0f, 395.0f)),
+    "deep staging treasures stay off the playable subterranean map");
+Assert(
     !TreasureLayerClassifier.IsSurfaceCandidate(
         new Vector3(float.NaN, 0.0f, 0.0f)),
     "invalid layout positions are rejected");
