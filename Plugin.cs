@@ -625,9 +625,14 @@ public sealed class Plugin : IDalamudPlugin
         if (configuration.TreasureNotificationsEnabled)
         {
             foreach (var marker in treasures.Where(marker => !previousTreasureKeys.Contains(marker.Key)))
+            {
+                var isSilver = marker.TreasureType.Equals(
+                    "silver",
+                    StringComparison.OrdinalIgnoreCase);
                 ChatGui.Print(configuration.Language == UiLanguage.Japanese
-                    ? $"[Crescent Atlas] 宝箱を検知: {marker.Label}"
-                    : $"[Crescent Atlas] Treasure loaded: {marker.Label}");
+                    ? $"[Crescent Atlas] {(isSilver ? "銀箱" : "銅箱")}を検知: {marker.Label}"
+                    : $"[Crescent Atlas] {(isSilver ? "Silver" : "Bronze")} treasure loaded: {marker.Label}");
+            }
         }
 
         if (configuration.CarrotNotificationsEnabled)
