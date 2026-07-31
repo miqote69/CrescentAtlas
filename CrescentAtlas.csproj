@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
-    <Version>0.1.79</Version>
+    <Version>0.1.80</Version>
     <PackageProjectUrl>https://github.com/miqote69/CrescentAtlas</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <IsPackable>false</IsPackable>
@@ -17,6 +17,22 @@
     <Content Include="Assets\Audio\CrescentAtlas.PotAppeared.ja.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <TargetPath>CrescentAtlas.PotAppeared.ja.wav</TargetPath>
+    </Content>
+    <Content Include="Assets\Audio\CrescentAtlas.PotOneMinute.ja.wav">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>CrescentAtlas.PotOneMinute.ja.wav</TargetPath>
+    </Content>
+    <Content Include="Assets\Audio\CrescentAtlas.PotAlert.en.wav">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>CrescentAtlas.PotAlert.en.wav</TargetPath>
+    </Content>
+    <Content Include="Assets\Audio\CrescentAtlas.PotAppeared.en.wav">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>CrescentAtlas.PotAppeared.en.wav</TargetPath>
+    </Content>
+    <Content Include="Assets\Audio\CrescentAtlas.PotOneMinute.en.wav">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>CrescentAtlas.PotOneMinute.en.wav</TargetPath>
     </Content>
   </ItemGroup>
 </Project>

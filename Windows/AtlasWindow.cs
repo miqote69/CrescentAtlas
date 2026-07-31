@@ -69,7 +69,7 @@ public sealed class AtlasWindow : Window, IDisposable
     private readonly System.Action saveConfiguration;
     private readonly System.Action<uint> playChatSoundEffect;
     private readonly System.Action playJapanesePotAdvanceVoice;
-    private readonly System.Action playJapanesePotAppearedVoice;
+    private readonly System.Action playEnglishPotAdvanceVoice;
     private readonly string versionLabel;
     private float mapZoom = MinimumMapZoom;
     private Vector2 mapCenter = new(0.5f, 0.5f);
@@ -88,7 +88,7 @@ public sealed class AtlasWindow : Window, IDisposable
         System.Action saveConfiguration,
         System.Action<uint> playChatSoundEffect,
         System.Action playJapanesePotAdvanceVoice,
-        System.Action playJapanesePotAppearedVoice)
+        System.Action playEnglishPotAdvanceVoice)
         : base("Crescent Atlas###CrescentAtlasMap")
     {
         this.dataSource = dataSource;
@@ -101,7 +101,7 @@ public sealed class AtlasWindow : Window, IDisposable
         this.saveConfiguration = saveConfiguration;
         this.playChatSoundEffect = playChatSoundEffect;
         this.playJapanesePotAdvanceVoice = playJapanesePotAdvanceVoice;
-        this.playJapanesePotAppearedVoice = playJapanesePotAppearedVoice;
+        this.playEnglishPotAdvanceVoice = playEnglishPotAdvanceVoice;
         versionLabel = FormatVersionLabel(typeof(AtlasWindow).Assembly.GetName().Version);
         IsOpen = configuration.MapVisible;
 
@@ -442,6 +442,13 @@ public sealed class AtlasWindow : Window, IDisposable
         }
 
         ImGui.Spacing();
+        ImGui.TextUnformatted(T("Notification voice", "通知ボイス"));
+        ImGui.TextDisabled(T(
+            "The selected voice applies to the 3-minute, 1-minute, and appearance alerts.",
+            "選択したボイスを3分前・1分前・出現通知のセットへ適用します。"));
+        DrawSoundModeSelector();
+
+        ImGui.Spacing();
         ImGui.TextUnformatted(T("3-minute prediction alert", "3分前の予想通知"));
         var advanceEnabled = configuration.PotThreeMinuteNotificationEnabled;
         if (ImGui.Checkbox(T("Enable 3-minute alert", "3分前通知を有効化"), ref advanceEnabled))
@@ -449,21 +456,22 @@ public sealed class AtlasWindow : Window, IDisposable
             configuration.PotThreeMinuteNotificationEnabled = advanceEnabled;
             saveConfiguration();
         }
-        DrawSoundModeSelector(
-            "advance",
-            configuration.PotThreeMinuteSoundMode,
-            mode => configuration.PotThreeMinuteSoundMode = mode,
-            playJapanesePotAdvanceVoice);
+        ImGui.Spacing();
+        ImGui.TextUnformatted(T("1-minute prediction alert", "1分前の予想通知"));
+        var oneMinuteEnabled = configuration.PotOneMinuteNotificationEnabled;
+        if (ImGui.Checkbox(T("Enable 1-minute alert", "1分前通知を有効化"), ref oneMinuteEnabled))
+        {
+            configuration.PotOneMinuteNotificationEnabled = oneMinuteEnabled;
+            saveConfiguration();
+        }
 
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
         ImGui.TextUnformatted(T("Magic Pot appearance alert", "マジックポット出現通知"));
-        DrawSoundModeSelector(
-            "appearance",
-            configuration.PotAppearanceSoundMode,
-            mode => configuration.PotAppearanceSoundMode = mode,
-            playJapanesePotAppearedVoice);
+        ImGui.TextDisabled(T(
+            "Uses the selected notification voice.",
+            "選択した通知ボイスを使用します。"));
 
         ImGui.Spacing();
         ImGui.Separator();
@@ -491,31 +499,34 @@ public sealed class AtlasWindow : Window, IDisposable
             "音声を選択すると一度だけ再生します。"));
     }
 
-    private void DrawSoundModeSelector(
-        string id,
-        PotThreeMinuteSoundMode selectedMode,
-        System.Action<PotThreeMinuteSoundMode> setMode,
-        System.Action playJapaneseVoice)
+    private void DrawSoundModeSelector()
     {
-        ImGui.PushID(id);
         if (ImGui.RadioButton(
                 T("FFXIV sound effect", "FF14効果音"),
-                selectedMode == PotThreeMinuteSoundMode.GameSoundEffect))
+                configuration.PotSoundMode == PotThreeMinuteSoundMode.GameSoundEffect))
         {
-            setMode(PotThreeMinuteSoundMode.GameSoundEffect);
+            configuration.PotSoundMode = PotThreeMinuteSoundMode.GameSoundEffect;
             saveConfiguration();
             playChatSoundEffect(Math.Clamp(configuration.PotSoundEffect, 1u, 16u));
         }
 
         if (ImGui.RadioButton(
-                T("Japanese vocal synth", "日本語ボーカルシンセ"),
-                selectedMode == PotThreeMinuteSoundMode.JapaneseVocalSynth))
+                T("Japanese", "日本語"),
+                configuration.PotSoundMode == PotThreeMinuteSoundMode.JapaneseVocalSynth))
         {
-            setMode(PotThreeMinuteSoundMode.JapaneseVocalSynth);
+            configuration.PotSoundMode = PotThreeMinuteSoundMode.JapaneseVocalSynth;
             saveConfiguration();
-            playJapaneseVoice();
+            playJapanesePotAdvanceVoice();
         }
-        ImGui.PopID();
+
+        if (ImGui.RadioButton(
+                T("English", "英語"),
+                configuration.PotSoundMode == PotThreeMinuteSoundMode.EnglishNaturalFemale))
+        {
+            configuration.PotSoundMode = PotThreeMinuteSoundMode.EnglishNaturalFemale;
+            saveConfiguration();
+            playEnglishPotAdvanceVoice();
+        }
     }
 
     private void DrawIconGuide(IReadOnlyList<AtlasMarker> markers)

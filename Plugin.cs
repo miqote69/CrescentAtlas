@@ -24,7 +24,11 @@ public sealed class Plugin : IDalamudPlugin
     private const string CommandName = "/catlas";
     private const string LegacyNorthHornInstanceKey = "territory-1346";
     private const string JapanesePotAlertFileName = "CrescentAtlas.PotAlert.ja.wav";
+    private const string JapanesePotOneMinuteFileName = "CrescentAtlas.PotOneMinute.ja.wav";
     private const string JapanesePotAppearedFileName = "CrescentAtlas.PotAppeared.ja.wav";
+    private const string EnglishPotAlertFileName = "CrescentAtlas.PotAlert.en.wav";
+    private const string EnglishPotOneMinuteFileName = "CrescentAtlas.PotOneMinute.en.wav";
+    private const string EnglishPotAppearedFileName = "CrescentAtlas.PotAppeared.en.wav";
     private const float TreasureCandidateObjectMatchRadius = 12.0f;
     private const float CarrotSpotMatchRadius = 5.0f;
     private const ushort SilverTreasureChatColor = 37;
@@ -33,6 +37,7 @@ public sealed class Plugin : IDalamudPlugin
     private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(500);
     private static readonly TimeSpan FlushInterval = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan PotAdvanceNotificationLeadTime = TimeSpan.FromMinutes(3);
+    private static readonly TimeSpan PotOneMinuteNotificationLeadTime = TimeSpan.FromMinutes(1);
     private static readonly TimeSpan MagicalElixirHintLifetime = TimeSpan.FromMinutes(30);
     [PluginService] private static IDalamudPluginInterface PluginInterface { get; set; } = null!;
     [PluginService] private static ICommandManager CommandManager { get; set; } = null!;
@@ -70,6 +75,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly PotPredictionTracker potPredictionTracker =
         new(knownEventPositions: ConfirmedMagicPotLocations.NorthHorn);
     private readonly PotAdvanceNotificationTracker potAdvanceNotificationTracker = new();
+    private readonly PotAdvanceNotificationTracker potOneMinuteNotificationTracker = new();
     private readonly WindowSystem windowSystem = new("CrescentAtlas");
     private readonly AtlasWindow atlasWindow;
     private readonly NearbyTreasureLineOverlay treasureLineOverlay;
@@ -109,6 +115,15 @@ public sealed class Plugin : IDalamudPlugin
             if (configuration.Version < 3)
             {
                 configuration.Version = 3;
+                configurationChanged = true;
+            }
+            if (configuration.Version < 4)
+            {
+                configuration.PotSoundMode =
+                    configuration.PotThreeMinuteSoundMode != PotThreeMinuteSoundMode.GameSoundEffect
+                        ? configuration.PotThreeMinuteSoundMode
+                        : configuration.PotAppearanceSoundMode;
+                configuration.Version = 4;
                 configurationChanged = true;
             }
             if (configuration.ConfirmedCarrotDataIds.Add(ConfirmedCarrotObjects.FortuneCarrotDataId))
@@ -166,7 +181,7 @@ public sealed class Plugin : IDalamudPlugin
                 SaveConfiguration,
                 PlayChatSoundEffect,
                 PlayJapanesePotAdvanceVoice,
-                PlayJapanesePotAppearedVoice);
+                PlayEnglishPotAdvanceVoice);
             treasureLineOverlay = new NearbyTreasureLineOverlay(GameGui, atlasData, configuration);
             windowSystem.AddWindow(atlasWindow);
             BootstrapDiagnostics.Write("atlas window and overlay initialized");
@@ -1087,23 +1102,43 @@ public sealed class Plugin : IDalamudPlugin
         DateTimeOffset nextOccurrenceUtc,
         DateTimeOffset now)
     {
-        if (!configuration.PotNotificationsEnabled
-            || !configuration.PotThreeMinuteNotificationEnabled
-            || !potAdvanceNotificationTracker.ShouldNotify(
+        if (!configuration.PotNotificationsEnabled)
+            return;
+
+        var shouldNotifyThreeMinutes = configuration.PotThreeMinuteNotificationEnabled
+            && potAdvanceNotificationTracker.ShouldNotify(
                 instanceKey,
                 nextOccurrenceUtc,
                 now,
-                PotAdvanceNotificationLeadTime))
+                PotAdvanceNotificationLeadTime,
+                PotOneMinuteNotificationLeadTime);
+
+        if (shouldNotifyThreeMinutes)
         {
-            return;
+            ChatGui.Print(configuration.Language == UiLanguage.Japanese
+                ? $"[Crescent Atlas] マジックポット出現予想の3分前です（予想時間 {nextOccurrenceUtc.ToLocalTime():HH:mm:ss}）。"
+                : $"[Crescent Atlas] Magic Pot is predicted in 3 minutes (estimated time {nextOccurrenceUtc.ToLocalTime():HH:mm:ss}).");
+
+            if (configuration.PotSoundEnabled)
+                PlayPotAdvanceAlertSound(oneMinute: false);
         }
 
+        var shouldNotifyOneMinute = configuration.PotOneMinuteNotificationEnabled
+            && potOneMinuteNotificationTracker.ShouldNotify(
+                instanceKey,
+                nextOccurrenceUtc,
+                now,
+                PotOneMinuteNotificationLeadTime);
+
+        if (!shouldNotifyOneMinute)
+            return;
+
         ChatGui.Print(configuration.Language == UiLanguage.Japanese
-            ? $"[Crescent Atlas] マジックポット出現予想の3分前です（予想時間 {nextOccurrenceUtc.ToLocalTime():HH:mm:ss}）。"
-            : $"[Crescent Atlas] Magic Pot is predicted in 3 minutes (estimated time {nextOccurrenceUtc.ToLocalTime():HH:mm:ss}).");
+            ? $"[Crescent Atlas] マジックポット出現予想の1分前です（予想時刻 {nextOccurrenceUtc.ToLocalTime():HH:mm:ss}）。"
+            : $"[Crescent Atlas] Magic Pot is predicted in 1 minute (estimated time {nextOccurrenceUtc.ToLocalTime():HH:mm:ss}).");
 
         if (configuration.PotSoundEnabled)
-            PlayPotAdvanceAlertSound();
+            PlayPotAdvanceAlertSound(oneMinute: true);
     }
 
     private void PrintPotPrediction(PotPrediction prediction)
@@ -1176,6 +1211,7 @@ public sealed class Plugin : IDalamudPlugin
         {
         }
         potAdvanceNotificationTracker.ResetAll();
+        potOneMinuteNotificationTracker.ResetAll();
         fateDetector.Reset();
         atlasData.SetPotPrediction(null);
         atlasData.SetMagicalElixirState(false);
@@ -1215,11 +1251,22 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
-    private void PlayPotAdvanceAlertSound()
+    private void PlayPotAdvanceAlertSound(bool oneMinute)
     {
-        if (configuration.PotThreeMinuteSoundMode == PotThreeMinuteSoundMode.JapaneseVocalSynth)
+        if (configuration.PotSoundMode == PotThreeMinuteSoundMode.JapaneseVocalSynth)
         {
-            PlayJapanesePotAdvanceVoice();
+            if (oneMinute)
+                PlayJapanesePotOneMinuteVoice();
+            else
+                PlayJapanesePotAdvanceVoice();
+            return;
+        }
+        if (configuration.PotSoundMode == PotThreeMinuteSoundMode.EnglishNaturalFemale)
+        {
+            if (oneMinute)
+                PlayEnglishPotOneMinuteVoice();
+            else
+                PlayEnglishPotAdvanceVoice();
             return;
         }
 
@@ -1227,15 +1274,35 @@ public sealed class Plugin : IDalamudPlugin
     }
 
     private void PlayJapanesePotAdvanceVoice()
-        => PlayJapaneseVoiceFile(
+        => PlayVoiceFile(
             JapanesePotAlertFileName,
             "Japanese Magic Pot advance voice");
 
+    private void PlayEnglishPotAdvanceVoice()
+        => PlayVoiceFile(
+            EnglishPotAlertFileName,
+            "English Magic Pot advance voice");
+
+    private void PlayJapanesePotOneMinuteVoice()
+        => PlayVoiceFile(
+            JapanesePotOneMinuteFileName,
+            "Japanese Magic Pot one-minute voice");
+
+    private void PlayEnglishPotOneMinuteVoice()
+        => PlayVoiceFile(
+            EnglishPotOneMinuteFileName,
+            "English Magic Pot one-minute voice");
+
     private void PlayPotAppearanceAlertSound()
     {
-        if (configuration.PotAppearanceSoundMode == PotThreeMinuteSoundMode.JapaneseVocalSynth)
+        if (configuration.PotSoundMode == PotThreeMinuteSoundMode.JapaneseVocalSynth)
         {
             PlayJapanesePotAppearedVoice();
+            return;
+        }
+        if (configuration.PotSoundMode == PotThreeMinuteSoundMode.EnglishNaturalFemale)
+        {
+            PlayEnglishPotAppearedVoice();
             return;
         }
 
@@ -1243,11 +1310,16 @@ public sealed class Plugin : IDalamudPlugin
     }
 
     private void PlayJapanesePotAppearedVoice()
-        => PlayJapaneseVoiceFile(
+        => PlayVoiceFile(
             JapanesePotAppearedFileName,
             "Japanese Magic Pot appearance voice");
 
-    private void PlayJapaneseVoiceFile(string fileName, string description)
+    private void PlayEnglishPotAppearedVoice()
+        => PlayVoiceFile(
+            EnglishPotAppearedFileName,
+            "English Magic Pot appearance voice");
+
+    private void PlayVoiceFile(string fileName, string description)
     {
         try
         {

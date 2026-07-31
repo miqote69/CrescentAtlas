@@ -15,13 +15,21 @@ $assemblyPath = Join-Path $buildDirectory 'CrescentAtlas.dll'
 $dependenciesPath = Join-Path $buildDirectory 'CrescentAtlas.deps.json'
 $japanesePotAlertPath = Join-Path $buildDirectory 'CrescentAtlas.PotAlert.ja.wav'
 $japanesePotAppearedPath = Join-Path $buildDirectory 'CrescentAtlas.PotAppeared.ja.wav'
+$japanesePotOneMinutePath = Join-Path $buildDirectory 'CrescentAtlas.PotOneMinute.ja.wav'
+$englishPotAlertPath = Join-Path $buildDirectory 'CrescentAtlas.PotAlert.en.wav'
+$englishPotAppearedPath = Join-Path $buildDirectory 'CrescentAtlas.PotAppeared.en.wav'
+$englishPotOneMinutePath = Join-Path $buildDirectory 'CrescentAtlas.PotOneMinute.en.wav'
 
 foreach ($requiredPath in @(
     $manifestPath,
     $assemblyPath,
     $dependenciesPath,
     $japanesePotAlertPath,
-    $japanesePotAppearedPath
+    $japanesePotAppearedPath,
+    $japanesePotOneMinutePath,
+    $englishPotAlertPath,
+    $englishPotAppearedPath,
+    $englishPotOneMinutePath
 )) {
     if (-not (Test-Path -LiteralPath $requiredPath -PathType Leaf)) {
         throw "Required build output is missing: $requiredPath"
@@ -54,7 +62,11 @@ Compress-Archive -LiteralPath @(
     $dependenciesPath,
     $manifestPath,
     $japanesePotAlertPath,
-    $japanesePotAppearedPath
+    $japanesePotAppearedPath,
+    $japanesePotOneMinutePath,
+    $englishPotAlertPath,
+    $englishPotAppearedPath,
+    $englishPotOneMinutePath
 ) -DestinationPath $resolvedOutput
 
 $archive = [IO.Compression.ZipFile]::OpenRead($resolvedOutput)
@@ -65,7 +77,11 @@ try {
         'CrescentAtlas.deps.json',
         'CrescentAtlas.json',
         'CrescentAtlas.PotAlert.ja.wav',
-        'CrescentAtlas.PotAppeared.ja.wav'
+        'CrescentAtlas.PotAppeared.ja.wav',
+        'CrescentAtlas.PotOneMinute.ja.wav',
+        'CrescentAtlas.PotAlert.en.wav',
+        'CrescentAtlas.PotAppeared.en.wav',
+        'CrescentAtlas.PotOneMinute.en.wav'
     )
     if (Compare-Object -ReferenceObject $expectedNames -DifferenceObject $entryNames) {
         throw "Release archive contains unexpected entries: $($entryNames -join ', ')"

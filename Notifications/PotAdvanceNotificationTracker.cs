@@ -9,11 +9,13 @@ public sealed class PotAdvanceNotificationTracker
         string instanceKey,
         DateTimeOffset nextOccurrenceUtc,
         DateTimeOffset now,
-        TimeSpan leadTime)
+        TimeSpan leadTime,
+        TimeSpan minimumRemaining = default)
     {
         var remaining = nextOccurrenceUtc - now;
         if (leadTime <= TimeSpan.Zero
             || remaining <= TimeSpan.Zero
+            || remaining <= minimumRemaining
             || remaining > leadTime)
         {
             return false;

@@ -417,6 +417,37 @@ Assert(
         advanceOccurrence,
         TimeSpan.FromMinutes(3)),
     "three-minute notification does not fire after the predicted occurrence");
+Assert(
+    !new PotAdvanceNotificationTracker().ShouldNotify(
+        "instance-a",
+        advanceOccurrence,
+        origin.AddMinutes(29),
+        TimeSpan.FromMinutes(3),
+        TimeSpan.FromMinutes(1)),
+    "three-minute notification does not fire inside the one-minute alert window");
+
+var oneMinuteNotification = new PotAdvanceNotificationTracker();
+Assert(
+    !oneMinuteNotification.ShouldNotify(
+        "instance-a",
+        advanceOccurrence,
+        origin.AddMinutes(28).AddSeconds(59),
+        TimeSpan.FromMinutes(1)),
+    "one-minute notification does not fire early");
+Assert(
+    oneMinuteNotification.ShouldNotify(
+        "instance-a",
+        advanceOccurrence,
+        origin.AddMinutes(29),
+        TimeSpan.FromMinutes(1)),
+    "one-minute notification fires independently after the three-minute alert");
+Assert(
+    !oneMinuteNotification.ShouldNotify(
+        "instance-a",
+        advanceOccurrence,
+        origin.AddMinutes(29).AddSeconds(30),
+        TimeSpan.FromMinutes(1)),
+    "one-minute notification fires only once per occurrence");
 
 var missedTracker = new PotPredictionTracker();
 missedTracker.Observe(new PotObservation("missed", origin, 100, firstPosition));

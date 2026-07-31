@@ -6,7 +6,7 @@ namespace CrescentAtlas;
 [Serializable]
 public sealed class Configuration : IPluginConfiguration
 {
-    public int Version { get; set; } = 3;
+    public int Version { get; set; } = 4;
 
     public UiLanguage Language { get; set; } = UiLanguage.Japanese;
 
@@ -56,13 +56,20 @@ public sealed class Configuration : IPluginConfiguration
 
     public bool PotThreeMinuteNotificationEnabled { get; set; } = true;
 
+    public bool PotOneMinuteNotificationEnabled { get; set; } = true;
+
     public bool PotSoundEnabled { get; set; } = true;
 
     public uint PotSoundEffect { get; set; } = 1;
 
+    public PotThreeMinuteSoundMode PotSoundMode { get; set; } =
+        PotThreeMinuteSoundMode.GameSoundEffect;
+
+    // Retained for migration from configuration version 3.
     public PotThreeMinuteSoundMode PotThreeMinuteSoundMode { get; set; } =
         PotThreeMinuteSoundMode.GameSoundEffect;
 
+    // Retained for migration from configuration version 3.
     public PotThreeMinuteSoundMode PotAppearanceSoundMode { get; set; } =
         PotThreeMinuteSoundMode.GameSoundEffect;
 
@@ -84,4 +91,5 @@ public enum PotThreeMinuteSoundMode
 {
     GameSoundEffect,
     JapaneseVocalSynth,
+    EnglishNaturalFemale,
 }
