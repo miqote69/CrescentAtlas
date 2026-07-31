@@ -29,6 +29,8 @@ public sealed class AtlasWindow : Window, IDisposable
     private const float PlayerLegendIconHalfSize = 13.0f;
     private const float PlayerMapIconHalfSize = 18.0f;
     private const uint PlayerMapIconId = 60443;
+    private const string WindowSettingsPopupId = "CrescentAtlasWindowSettings";
+    private bool windowSettingsRequested;
     private static readonly Vector4 BackgroundColor = new(0.035f, 0.045f, 0.055f, 0.96f);
     private static readonly Vector4 GridColor = new(0.28f, 0.34f, 0.39f, 0.23f);
     private static readonly Vector4 BorderColor = new(0.55f, 0.64f, 0.69f, 0.62f);
@@ -106,10 +108,38 @@ public sealed class AtlasWindow : Window, IDisposable
             MaximumSize = new Vector2(1600.0f, 1200.0f),
         };
 
+        AllowPinning = false;
+        AllowClickthrough = false;
+        AllowBackgroundBlur = false;
+
         TitleBarButtons.Add(new TitleBarButton
         {
             Icon = FontAwesomeIcon.Cog,
             IconOffset = new Vector2(2.0f, 1.0f),
+            Priority = 1,
+            AvailableClickthrough = true,
+            Click = _ =>
+            {
+                if (configuration.MapClickThrough)
+                {
+                    configuration.MapClickThrough = false;
+                    saveConfiguration();
+                }
+
+                windowSettingsRequested = true;
+            },
+            ShowTooltip = () =>
+            {
+                ImGui.BeginTooltip();
+                ImGui.TextUnformatted(T("Window settings", "ウィンドウ設定"));
+                ImGui.EndTooltip();
+            },
+        });
+        TitleBarButtons.Add(new TitleBarButton
+        {
+            Icon = FontAwesomeIcon.Bars,
+            IconOffset = new Vector2(2.0f, 1.0f),
+            Priority = 0,
             Click = _ => ToggleMapControls(),
             ShowTooltip = () =>
             {
@@ -135,6 +165,13 @@ public sealed class AtlasWindow : Window, IDisposable
         else
             Flags &= ~ImGuiWindowFlags.NoInputs;
 
+        if (configuration.MapPinned)
+            Flags |= ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoResize;
+        else
+            Flags &= ~(ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoResize);
+
+        RespectCloseHotkey = !configuration.MapPinned;
+
         if (configuration.MapControlsExpanded)
             Flags |= ImGuiWindowFlags.MenuBar;
         else
@@ -146,6 +183,8 @@ public sealed class AtlasWindow : Window, IDisposable
 
     private void DrawContents()
     {
+        DrawWindowSettingsPopup();
+
         if (configuration.MapControlsExpanded)
             DrawMenuBar();
 
@@ -240,6 +279,34 @@ public sealed class AtlasWindow : Window, IDisposable
             currentPage = AtlasPage.Map;
 
         saveConfiguration();
+    }
+
+    private void DrawWindowSettingsPopup()
+    {
+        if (windowSettingsRequested)
+        {
+            ImGui.OpenPopup(WindowSettingsPopupId);
+            windowSettingsRequested = false;
+        }
+
+        if (!ImGui.BeginPopup(WindowSettingsPopupId))
+            return;
+
+        var pinned = configuration.MapPinned;
+        if (ImGui.Checkbox(T("Pin window", "ウィンドウをピン留め"), ref pinned))
+        {
+            configuration.MapPinned = pinned;
+            saveConfiguration();
+        }
+
+        var clickThrough = configuration.MapClickThrough;
+        if (ImGui.Checkbox(T("Make click-through", "クリック透過"), ref clickThrough))
+        {
+            configuration.MapClickThrough = clickThrough;
+            saveConfiguration();
+        }
+
+        ImGui.EndPopup();
     }
 
     private void DrawMenuBar()
