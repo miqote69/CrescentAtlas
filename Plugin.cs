@@ -53,6 +53,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly OccultCrescentContext crescentContext;
     private readonly AetheryteMarkerProvider aetheryteMarkerProvider;
     private readonly LayoutTreasureCandidateScanner layoutScanner;
+    private readonly OccultCrescentMapMarkerTargetSource mapMarkerTargetSource;
     private readonly ObjectTableCollector objectCollector;
     private readonly DalamudFateSnapshotSource fateSource;
     private readonly DynamicEventSnapshotSource encounterSource = new();
@@ -127,6 +128,7 @@ public sealed class Plugin : IDalamudPlugin
             crescentContext = new OccultCrescentContext(ClientState, DataManager, Log);
             aetheryteMarkerProvider = new AetheryteMarkerProvider(DataManager);
             layoutScanner = new LayoutTreasureCandidateScanner(DataManager, Log);
+            mapMarkerTargetSource = new OccultCrescentMapMarkerTargetSource(DataManager, Log);
             objectCollector = new ObjectTableCollector(
                 ObjectTable,
                 new ConditionalObservationSink(
@@ -447,7 +449,18 @@ public sealed class Plugin : IDalamudPlugin
         var objectMarkers = objectCollector.Collect(territoryId, territoryName, now);
         var treasures = objectMarkers.Where(marker => marker.Kind == AtlasMarkerKind.ActiveTreasure).ToArray();
         var carrotCandidates = objectMarkers.Where(marker => marker.Kind == AtlasMarkerKind.Carrot).ToArray();
-        var potTargets = objectMarkers.Where(marker => marker.Kind == AtlasMarkerKind.PotTarget).ToArray();
+        var loadedPotTargets = objectMarkers.Where(marker => marker.Kind == AtlasMarkerKind.PotTarget).ToArray();
+        var mappedPotTargets = mapMarkerTargetSource.Scan(
+            observationStore.SessionId,
+            territoryId,
+            territoryName,
+            mapId,
+            mapLayer,
+            now,
+            out var mappedPotTargetObservations);
+        if (configuration.CollectionEnabled)
+            RecordAll(mappedPotTargetObservations);
+        var potTargets = MergePotTargets(loadedPotTargets, mappedPotTargets);
         var liveCarrots = carrotCandidates
             .Where(marker => !marker.Key.Contains("carrot-candidate", StringComparison.Ordinal))
             .ToArray();
@@ -482,6 +495,17 @@ public sealed class Plugin : IDalamudPlugin
             nextFlushUtc = now + FlushInterval;
         }
     }
+
+    private static AtlasMarker[] MergePotTargets(
+        IReadOnlyList<AtlasMarker> loadedTargets,
+        IReadOnlyList<AtlasMarker> mappedTargets)
+        => loadedTargets
+            .Concat(mappedTargets)
+            .GroupBy(marker => FormattableString.Invariant(
+                $"{marker.DataId}:{marker.Position.X:F1}:{marker.Position.Y:F1}:{marker.Position.Z:F1}"),
+                StringComparer.Ordinal)
+            .Select(group => group.First())
+            .ToArray();
 
     private void PollFates(
         uint territoryId,

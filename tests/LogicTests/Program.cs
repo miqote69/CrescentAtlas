@@ -23,6 +23,30 @@ Assert(
     ConfirmedPotTargetObservations.RequiresActiveElixirStatus(2014742),
     "silver EventObj classification is gated by the active Elixir status");
 Assert(
+    MagicalElixirMapMarkerClassifier.ResolveTargetDataId(
+        objectiveId: 0,
+        levelObjectId: 2014743,
+        tooltip: string.Empty) == 2014743,
+    "native map markers resolve a bronze Elixir target through the Level object");
+Assert(
+    MagicalElixirMapMarkerClassifier.ResolveTargetDataId(
+        objectiveId: 2014742,
+        levelObjectId: 0,
+        tooltip: string.Empty) == 2014742,
+    "native map markers resolve a silver Elixir target through the objective");
+Assert(
+    MagicalElixirMapMarkerClassifier.ResolveTargetDataId(
+        objectiveId: 0,
+        levelObjectId: 0,
+        tooltip: "黄金の財宝箱") == 2014741,
+    "native map markers fall back to the localized treasure tooltip");
+Assert(
+    MagicalElixirMapMarkerClassifier.ResolveTargetDataId(
+        objectiveId: 0,
+        levelObjectId: 0,
+        tooltip: "Critical Encounter") == 0,
+    "unrelated native map markers are ignored");
+Assert(
     MagicalElixirStatusMatcher.IsMatch("マジカルエリクサー"),
     "the Japanese Magical Elixir status name is recognized");
 Assert(
@@ -354,17 +378,17 @@ Assert(
     OccultCrescentMapLayerPolicy.Resolve(1136, 1135) == OccultCrescentMapLayer.Subterranean,
     "a different map row in the same territory is the subterranean layer");
 Assert(
-    !OccultCrescentMapLayerPolicy.IsMarkerVisible(
+    OccultCrescentMapLayerPolicy.IsMarkerVisible(
         OccultCrescentMapLayer.Subterranean,
         new AtlasMarker(
-            "surface-treasure",
+            "layer-filtered-treasure",
             AtlasMarkerKind.TreasureCandidate,
             "Treasure",
             Vector3.Zero,
             origin,
             false,
             1346)),
-    "surface treasure candidates are hidden underground");
+    "treasure candidates already selected by the active layout layer remain visible");
 Assert(
     !OccultCrescentMapLayerPolicy.IsMarkerVisible(
         OccultCrescentMapLayer.Subterranean,

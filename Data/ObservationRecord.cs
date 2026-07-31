@@ -3,6 +3,7 @@ namespace CrescentAtlas.Data;
 public enum ObservationSource
 {
     Layout,
+    NativeMap,
     ObjectTable,
     FateTable,
     DynamicEvent,
