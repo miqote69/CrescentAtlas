@@ -45,6 +45,44 @@ Assert(
     firstNewIslandObservation.Confidence == PotPredictionConfidence.Provisional,
     "a new island unlocks a provisional prediction after one live observation");
 
+var advanceNotification = new PotAdvanceNotificationTracker();
+var advanceOccurrence = origin.AddMinutes(30);
+Assert(
+    !advanceNotification.ShouldNotify(
+        "instance-a",
+        advanceOccurrence,
+        origin.AddMinutes(26).AddSeconds(59),
+        TimeSpan.FromMinutes(3)),
+    "three-minute notification does not fire early");
+Assert(
+    advanceNotification.ShouldNotify(
+        "instance-a",
+        advanceOccurrence,
+        origin.AddMinutes(27),
+        TimeSpan.FromMinutes(3)),
+    "three-minute notification fires when the lead window begins");
+Assert(
+    !advanceNotification.ShouldNotify(
+        "instance-a",
+        advanceOccurrence,
+        origin.AddMinutes(28),
+        TimeSpan.FromMinutes(3)),
+    "three-minute notification fires only once per occurrence");
+Assert(
+    advanceNotification.ShouldNotify(
+        "instance-b",
+        advanceOccurrence,
+        origin.AddMinutes(28),
+        TimeSpan.FromMinutes(3)),
+    "three-minute notification state is isolated per island instance");
+Assert(
+    !advanceNotification.ShouldNotify(
+        "instance-a",
+        advanceOccurrence,
+        advanceOccurrence,
+        TimeSpan.FromMinutes(3)),
+    "three-minute notification does not fire after the predicted occurrence");
+
 var missedTracker = new PotPredictionTracker();
 missedTracker.Observe(new PotObservation("missed", origin, 100, firstPosition));
 missedTracker.Observe(new PotObservation("missed", origin.AddMinutes(30), 200, secondPosition));

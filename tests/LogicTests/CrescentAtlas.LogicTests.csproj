@@ -9,6 +9,7 @@
     <Compile Include="..\..\Notifications\PotPrediction.cs" Link="PotPrediction.cs" />
     <Compile Include="..\..\Notifications\PotPredictionCalculator.cs" Link="PotPredictionCalculator.cs" />
     <Compile Include="..\..\Notifications\PotPredictionTracker.cs" Link="PotPredictionTracker.cs" />
+    <Compile Include="..\..\Notifications\PotAdvanceNotificationTracker.cs" Link="PotAdvanceNotificationTracker.cs" />
     <Compile Include="..\..\Notifications\PotObservationHistoryReader.cs" Link="PotObservationHistoryReader.cs" />
     <Compile Include="..\..\Contracts\AtlasMarker.cs" Link="AtlasMarker.cs" />
     <Compile Include="..\..\Contracts\AtlasPotPrediction.cs" Link="AtlasPotPrediction.cs" />

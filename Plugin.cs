@@ -24,6 +24,7 @@ public sealed class Plugin : IDalamudPlugin
     private static readonly HashSet<uint> MagicPotEventIds = [2072, 2073];
     private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(500);
     private static readonly TimeSpan FlushInterval = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan PotAdvanceNotificationLeadTime = TimeSpan.FromMinutes(3);
     [PluginService] private static IDalamudPluginInterface PluginInterface { get; set; } = null!;
     [PluginService] private static ICommandManager CommandManager { get; set; } = null!;
     [PluginService] private static IFramework Framework { get; set; } = null!;
@@ -51,6 +52,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly FateEventDetector fateDetector;
     private readonly CriticalEncounterDetector encounterDetector;
     private readonly PotPredictionTracker potPredictionTracker = new();
+    private readonly PotAdvanceNotificationTracker potAdvanceNotificationTracker = new();
     private readonly WindowSystem windowSystem = new("CrescentAtlas");
     private readonly AtlasWindow atlasWindow;
     private readonly NearbyTreasureLineOverlay treasureLineOverlay;
@@ -619,6 +621,32 @@ public sealed class Plugin : IDalamudPlugin
             ResolveFateMapIcon((ushort)eventId),
             prediction.ObservationCount,
             prediction.Confidence == PotPredictionConfidence.Confirmed));
+
+        NotifyUpcomingPot(instanceKey, next, now);
+    }
+
+    private void NotifyUpcomingPot(
+        string instanceKey,
+        DateTimeOffset nextOccurrenceUtc,
+        DateTimeOffset now)
+    {
+        if (!configuration.PotNotificationsEnabled
+            || !configuration.PotThreeMinuteNotificationEnabled
+            || !potAdvanceNotificationTracker.ShouldNotify(
+                instanceKey,
+                nextOccurrenceUtc,
+                now,
+                PotAdvanceNotificationLeadTime))
+        {
+            return;
+        }
+
+        ChatGui.Print(configuration.Language == UiLanguage.Japanese
+            ? $"[Crescent Atlas] マジックポット出現予想の3分前です（予想時間 {nextOccurrenceUtc.ToLocalTime():HH:mm:ss}）。"
+            : $"[Crescent Atlas] Magic Pot is predicted in 3 minutes (estimated time {nextOccurrenceUtc.ToLocalTime():HH:mm:ss}).");
+
+        if (configuration.PotSoundEnabled)
+            PlayChatSoundEffect(configuration.PotSoundEffect);
     }
 
     private void PrintPotPrediction(PotPrediction prediction)
@@ -655,6 +683,7 @@ public sealed class Plugin : IDalamudPlugin
         previousTreasureKeys.Clear();
         previousCarrotKeys.Clear();
         previousPotTargetKeys.Clear();
+        potAdvanceNotificationTracker.ResetAll();
         fateDetector.Reset();
         atlasData.SetPotPrediction(null);
         atlasData.SetContext(false, 0, string.Empty, null, null);

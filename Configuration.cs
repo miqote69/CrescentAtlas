@@ -45,6 +45,8 @@ public sealed class Configuration : IPluginConfiguration
 
     public bool PotNotificationsEnabled { get; set; } = true;
 
+    public bool PotThreeMinuteNotificationEnabled { get; set; } = true;
+
     public bool PotSoundEnabled { get; set; } = true;
 
     public uint PotSoundEffect { get; set; } = 1;

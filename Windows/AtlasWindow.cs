@@ -355,6 +355,16 @@ public sealed class AtlasWindow : Window, IDisposable
         if (ImGui.BeginMenu($"{T("Sound", "サウンド")}###menu-sound"))
         {
             if (ImGui.MenuItem(
+                    $"{T("3-minute Magic Pot alert", "マジックポット3分前通知")}###pot-three-minute-notification",
+                    string.Empty,
+                    configuration.PotThreeMinuteNotificationEnabled))
+            {
+                configuration.PotThreeMinuteNotificationEnabled =
+                    !configuration.PotThreeMinuteNotificationEnabled;
+                saveConfiguration();
+            }
+
+            if (ImGui.MenuItem(
                     $"{T("Magic Pot alert", "マジックポット通知音")}###pot-sound-enabled",
                     string.Empty,
                     configuration.PotSoundEnabled))
