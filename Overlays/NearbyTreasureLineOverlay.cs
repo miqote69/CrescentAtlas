@@ -33,6 +33,10 @@ public sealed class NearbyTreasureLineOverlay(
         foreach (var treasure in markers.Where(marker =>
                      marker.Kind == AtlasMarkerKind.ActiveTreasure
                      && marker.IsActive
+                     && AtlasMarkerSelector.IsTreasureVisible(
+                         marker,
+                         configuration.ShowBronzeTreasure,
+                         configuration.ShowSilverTreasure)
                      && Vector3.DistanceSquared(player, marker.Position) <= maximumDistanceSquared))
         {
             if (!gameGui.WorldToScreen(treasure.Position, out var treasureScreen))
@@ -54,7 +58,8 @@ public sealed class NearbyTreasureLineOverlay(
                 $"{treasure.Label}  {distance:F0}y");
         }
 
-        DrawNearestLiveCarrot(drawList, markers, player, playerScreen, shadowColor);
+        if (configuration.ShowCarrots)
+            DrawNearestLiveCarrot(drawList, markers, player, playerScreen, shadowColor);
         DrawNearestKnownSpot(drawList, markers, player, playerScreen, shadowColor);
     }
 
@@ -100,7 +105,11 @@ public sealed class NearbyTreasureLineOverlay(
         var nearest = markers
             .Where(marker =>
                 marker.Kind == AtlasMarkerKind.TreasureCandidate
-                && !marker.IsChecked)
+                && !marker.IsChecked
+                && AtlasMarkerSelector.IsTreasureVisible(
+                    marker,
+                    configuration.ShowBronzeTreasure,
+                    configuration.ShowSilverTreasure))
             .MinBy(marker => HorizontalDistanceSquared(player, marker.Position));
         if (nearest is null
             || !gameGui.WorldToScreen(nearest.Position, out var spotScreen))

@@ -79,6 +79,30 @@ Assert(
         Vector3.Zero,
         120.0f) is null,
     "carrot guidance is absent until a real carrot is loaded");
+var bronzeTreasure = new AtlasMarker(
+    "bronze",
+    AtlasMarkerKind.TreasureCandidate,
+    "Bronze treasure",
+    Vector3.Zero,
+    origin,
+    false,
+    1346,
+    TreasureType: "bronze");
+var silverTreasure = bronzeTreasure with
+{
+    Key = "silver",
+    Label = "Silver treasure",
+    TreasureType = "silver",
+};
+Assert(
+    !AtlasMarkerSelector.IsTreasureVisible(bronzeTreasure, false, true),
+    "bronze treasure guides are hidden with bronze map markers");
+Assert(
+    AtlasMarkerSelector.IsTreasureVisible(silverTreasure, false, true),
+    "silver treasure guides remain visible when only bronze markers are hidden");
+Assert(
+    !AtlasMarkerSelector.IsTreasureVisible(silverTreasure, true, false),
+    "silver treasure guides are hidden with silver map markers");
 Assert(
     TreasureLayerClassifier.IsSurfaceCandidate(
         new Vector3(-928.6488f, -11.245972f, -744.9607f)),
