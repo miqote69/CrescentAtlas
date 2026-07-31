@@ -1,0 +1,75 @@
+name: Update custom repository feed
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing GitHub release tag to publish in the feed
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: crescent-atlas-custom-repository-feed
+  cancel-in-progress: false
+
+jobs:
+  update-feed:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Resolve and validate release
+        id: release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.tag }}
+        run: |
+          $tag = $env:RELEASE_TAG
+          if ($tag -notmatch '^v(?<version>\d+\.\d+\.\d+)$') {
+            throw "Release tag must use vMAJOR.MINOR.PATCH: $tag"
+          }
+
+          $assetUrl = gh release view $tag --repo "${{ github.repository }}" --json assets --jq '.assets[] | select(.name == "CrescentAtlas.zip") | .url'
+          if (-not $assetUrl) {
+            throw "CrescentAtlas.zip is missing from release $tag."
+          }
+
+          "tag=$tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "version=$($Matches.version)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Generate custom repository feed
+        shell: pwsh
+        run: |
+          ./scripts/make-repo-json.ps1 `
+            -Owner "${{ github.repository_owner }}" `
+            -Repository "${{ github.event.repository.name }}" `
+            -Version "${{ steps.release.outputs.version }}" `
+            -Tag "${{ steps.release.outputs.tag }}" `
+            -OutputPath ".dalamud/28697c261336424a9d35de1061b38ff5cd17988128874284af1af644/repo.json"
+
+      - name: Commit custom repository feed
+        shell: pwsh
+        run: |
+          $feedPath = '.dalamud/28697c261336424a9d35de1061b38ff5cd17988128874284af1af644/repo.json'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- $feedPath
+          git diff --cached --quiet
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host 'Custom repository feed is unchanged.'
+            exit 0
+          }
+
+          git commit -m "Update custom repository feed for ${{ steps.release.outputs.tag }}"
+          git push origin HEAD:main

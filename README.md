@@ -9,11 +9,7 @@ Crescent Atlas does not automate movement, interaction, combat, or item use. It 
 
 ## Install
 
-Add this URL to Dalamud's custom plugin repositories:
-
-```text
-https://raw.githubusercontent.com/miqote69/CrescentAtlas/main/repo.json
-```
+The Dalamud custom repository URL is distributed separately. Repository URLs may change; always use the latest URL provided through the official distribution channel.
 
 Open the plugin with:
 
