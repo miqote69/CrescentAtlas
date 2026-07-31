@@ -108,7 +108,7 @@ public sealed class AtlasWindow : Window, IDisposable
 
         TitleBarButtons.Add(new TitleBarButton
         {
-            Icon = FontAwesomeIcon.Bars,
+            Icon = FontAwesomeIcon.Cog,
             IconOffset = new Vector2(2.0f, 1.0f),
             Click = _ => ToggleMapControls(),
             ShowTooltip = () =>
