@@ -55,6 +55,8 @@ public sealed class Plugin : IDalamudPlugin
     private readonly List<ConfirmedPotTargetObservation> knownPotTargetSpots = [];
     private readonly List<MagicalElixirDirectionHint> magicalElixirDirectionHints = [];
     private readonly ConcurrentQueue<MagicalElixirDirectionHint> pendingMagicalElixirDirectionHints = new();
+    private MagicalElixirLocationEstimate? cachedUnknownElixirEstimate;
+    private DateTimeOffset cachedUnknownElixirEstimateHintUtc = DateTimeOffset.MinValue;
     private readonly MutableAtlasDataSource atlasData = new();
     private readonly OccultCrescentContext crescentContext;
     private readonly AetheryteMarkerProvider aetheryteMarkerProvider;
@@ -267,14 +269,18 @@ public sealed class Plugin : IDalamudPlugin
             }
 
             var text = message.OriginalMessage.ToString();
-            if (!MagicalElixirDirectionResolver.TryParse(text, out var direction))
+            if (!MagicalElixirDirectionResolver.TryParse(
+                    text,
+                    out var direction,
+                    out var distanceBand))
                 return;
 
             pendingMagicalElixirDirectionHints.Enqueue(new MagicalElixirDirectionHint(
                 direction,
                 localPlayer.Position,
                 DateTimeOffset.UtcNow,
-                text));
+                text,
+                distanceBand));
         }
         catch (Exception ex)
         {
@@ -878,6 +884,7 @@ public sealed class Plugin : IDalamudPlugin
                 {
                     ["instanceKey"] = instanceKey,
                     ["direction"] = hint.Direction.ToString(),
+                    ["distanceBand"] = hint.DistanceBand.ToString(),
                     ["playerX"] = hint.PlayerPosition.X.ToString("R", System.Globalization.CultureInfo.InvariantCulture),
                     ["playerY"] = hint.PlayerPosition.Y.ToString("R", System.Globalization.CultureInfo.InvariantCulture),
                     ["playerZ"] = hint.PlayerPosition.Z.ToString("R", System.Globalization.CultureInfo.InvariantCulture),
@@ -895,7 +902,45 @@ public sealed class Plugin : IDalamudPlugin
             knownPotTargetSpots,
             magicalElixirDirectionHints);
         if (candidates.Count == 0)
-            return [];
+        {
+            var latestHintUtc = magicalElixirDirectionHints[^1].ObservedAtUtc;
+            var estimateUpdated = false;
+            if (cachedUnknownElixirEstimate is null
+                || cachedUnknownElixirEstimateHintUtc != latestHintUtc)
+            {
+                cachedUnknownElixirEstimate = MagicalElixirDirectionResolver.EstimateUnknownLocation(
+                    magicalElixirDirectionHints);
+                cachedUnknownElixirEstimateHintUtc = latestHintUtc;
+                estimateUpdated = true;
+            }
+
+            var estimate = cachedUnknownElixirEstimate;
+            if (estimate is null)
+                return [];
+
+            var estimatedLabel = configuration.Language == UiLanguage.Japanese
+                ? $"未登録エリクサー推定（{DirectionLabel(magicalElixirDirectionHints[^1].Direction, true)}）"
+                : $"Unregistered Elixir estimate ({DirectionLabel(magicalElixirDirectionHints[^1].Direction, false)})";
+            if (estimateUpdated)
+            {
+                BootstrapDiagnostics.Write(FormattableString.Invariant(
+                    $"Magical Elixir unknown target estimated; position={estimate.Position.X:F1},{estimate.Position.Y:F1},{estimate.Position.Z:F1}; meanError={estimate.MeanAngularErrorDegrees:F1}; maxError={estimate.MaximumAngularErrorDegrees:F1}; hints={magicalElixirDirectionHints.Count}"));
+            }
+            return
+            [
+                new AtlasMarker(
+                    $"elixir-direction-estimate:{territoryId}",
+                    AtlasMarkerKind.PotTarget,
+                    estimatedLabel,
+                    estimate.Position,
+                    now,
+                    IsActive: true,
+                    territoryId,
+                    DataId: 0,
+                    TreasureType: "unknown",
+                    EventState: "direction-candidate"),
+            ];
+        }
 
         var latestDirection = magicalElixirDirectionHints[^1].Direction;
         return candidates.Select((candidate, index) =>

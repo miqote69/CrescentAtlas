@@ -56,6 +56,20 @@ Assert(
     !MagicalElixirDirectionResolver.TryParse("Travel north to continue.", out _),
     "ordinary directional chat is not treated as an Elixir hint");
 Assert(
+    MagicalElixirDirectionResolver.TryParse(
+        "財宝の気配を、北方向のとても遠くから感じているようだ",
+        out _,
+        out var veryFarBand)
+    && veryFarBand == MagicalElixirDistanceBand.VeryFar,
+    "Japanese very-far Magical Elixir messages retain their distance band");
+Assert(
+    MagicalElixirDirectionResolver.TryParse(
+        "財宝の気配を、東方向の近くから感じているようだ。",
+        out _,
+        out var nearBand)
+    && nearBand == MagicalElixirDistanceBand.Near,
+    "Japanese nearby Magical Elixir messages retain their distance band");
+Assert(
     MagicalElixirDirectionResolver.BearingDegrees(Vector3.Zero, new Vector3(0, 0, -10)) == 0.0f,
     "negative world Z is map north");
 Assert(
@@ -74,6 +88,28 @@ var northCandidates = MagicalElixirDirectionResolver.Resolve(
 Assert(
     northCandidates.Count == 1 && northCandidates[0].Spot.Name == "North",
     "a direction hint eliminates fixed targets outside its cone");
+var unknownTarget = new Vector3(151.9998f, 61.106945f, -842.0175f);
+var unknownEstimate = MagicalElixirDirectionResolver.EstimateUnknownLocation(
+[
+    new(CompassDirection.North, new Vector3(244.62822f, 7.037754f, -458.32602f), origin, "very far north", MagicalElixirDistanceBand.VeryFar),
+    new(CompassDirection.North, new Vector3(257.5812f, 18.660856f, -510.5899f), origin.AddSeconds(6), "very far north", MagicalElixirDistanceBand.VeryFar),
+    new(CompassDirection.NorthWest, new Vector3(280.42145f, 37.77446f, -599.05554f), origin.AddSeconds(13), "very far northwest", MagicalElixirDistanceBand.VeryFar),
+    new(CompassDirection.NorthWest, new Vector3(347.96204f, 60.0f, -728.62823f), origin.AddSeconds(23), "very far northwest", MagicalElixirDistanceBand.VeryFar),
+    new(CompassDirection.West, new Vector3(336.87128f, 60.460533f, -787.6997f), origin.AddSeconds(33), "far west", MagicalElixirDistanceBand.Far),
+    new(CompassDirection.NorthWest, new Vector3(227.80069f, 34.798172f, -733.4489f), origin.AddSeconds(42), "far northwest", MagicalElixirDistanceBand.Far),
+    new(CompassDirection.North, new Vector3(154.15448f, 37.563305f, -737.44556f), origin.AddSeconds(47), "far north", MagicalElixirDistanceBand.Far),
+    new(CompassDirection.NorthEast, new Vector3(32.487816f, 46.657104f, -724.7657f), origin.AddSeconds(56), "far northeast", MagicalElixirDistanceBand.Far),
+    new(CompassDirection.NorthEast, new Vector3(32.39474f, 58.756954f, -788.25323f), origin.AddSeconds(61), "far northeast", MagicalElixirDistanceBand.Far),
+    new(CompassDirection.East, new Vector3(63.746452f, 61.39292f, -844.623f), origin.AddSeconds(67), "near east", MagicalElixirDistanceBand.Near),
+    new(CompassDirection.South, new Vector3(142.7786f, 61.0f, -870.2388f), origin.AddSeconds(76), "near south", MagicalElixirDistanceBand.Near),
+]);
+Assert(
+    unknownEstimate is not null
+    && Vector2.Distance(
+        new Vector2(unknownEstimate.Position.X, unknownEstimate.Position.Z),
+        new Vector2(unknownTarget.X, unknownTarget.Z)) <= 35.0f
+    && unknownEstimate.MaximumAngularErrorDegrees <= MagicalElixirDirectionResolver.DefaultHalfWidthDegrees,
+    "an unregistered Elixir target remains visible and converges near the observed destination");
 Assert(
     !PotPredictionDisplayPolicy.ShouldShow(true, true, true, hasActivePotFate: true),
     "the next Magic Pot prediction is hidden while a Pot FATE is active");

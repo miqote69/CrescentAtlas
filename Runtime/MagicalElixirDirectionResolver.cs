@@ -14,23 +14,44 @@ public enum CompassDirection
     NorthWest,
 }
 
+public enum MagicalElixirDistanceBand
+{
+    Unknown,
+    Near,
+    Far,
+    VeryFar,
+}
+
 public sealed record MagicalElixirDirectionHint(
     CompassDirection Direction,
     Vector3 PlayerPosition,
     DateTimeOffset ObservedAtUtc,
-    string Message);
+    string Message,
+    MagicalElixirDistanceBand DistanceBand = MagicalElixirDistanceBand.Unknown);
 
 public sealed record MagicalElixirDirectionCandidate(
     ConfirmedPotTargetObservation Spot,
     float MeanAngularErrorDegrees);
+
+public sealed record MagicalElixirLocationEstimate(
+    Vector3 Position,
+    float MeanAngularErrorDegrees,
+    float MaximumAngularErrorDegrees);
 
 public static class MagicalElixirDirectionResolver
 {
     public const float DefaultHalfWidthDegrees = 35.0f;
 
     public static bool TryParse(string? message, out CompassDirection direction)
+        => TryParse(message, out direction, out _);
+
+    public static bool TryParse(
+        string? message,
+        out CompassDirection direction,
+        out MagicalElixirDistanceBand distanceBand)
     {
         direction = default;
+        distanceBand = MagicalElixirDistanceBand.Unknown;
         if (string.IsNullOrWhiteSpace(message))
             return false;
 
@@ -65,6 +86,8 @@ public static class MagicalElixirDirectionResolver
                                      || normalized.StartsWith("immediately ", StringComparison.Ordinal);
         if (!looksLikeDirectionHint)
             return false;
+
+        distanceBand = ParseDistanceBand(text, normalized);
 
         if (text.Contains("\u5317\u6771", StringComparison.Ordinal)
             || normalized.Contains("northeast", StringComparison.Ordinal))
@@ -119,6 +142,65 @@ public static class MagicalElixirDirectionResolver
         }
 
         return false;
+    }
+
+    public static MagicalElixirLocationEstimate? EstimateUnknownLocation(
+        IReadOnlyCollection<MagicalElixirDirectionHint> hints)
+    {
+        if (hints.Count == 0)
+            return null;
+
+        var ordered = hints.OrderBy(hint => hint.ObservedAtUtc).ToArray();
+        if (ordered.Length == 1)
+        {
+            var hint = ordered[0];
+            var radians = DirectionDegrees(hint.Direction) * MathF.PI / 180.0f;
+            var distance = NominalDistance(hint.DistanceBand);
+            var initialPosition = hint.PlayerPosition + new Vector3(
+                MathF.Sin(radians) * distance,
+                0.0f,
+                -MathF.Cos(radians) * distance);
+            return new MagicalElixirLocationEstimate(initialPosition, 0.0f, 0.0f);
+        }
+
+        const float searchMargin = 500.0f;
+        var minimumX = ordered.Min(hint => hint.PlayerPosition.X) - searchMargin;
+        var maximumX = ordered.Max(hint => hint.PlayerPosition.X) + searchMargin;
+        var minimumZ = ordered.Min(hint => hint.PlayerPosition.Z) - searchMargin;
+        var maximumZ = ordered.Max(hint => hint.PlayerPosition.Z) + searchMargin;
+
+        var best = FindBestGridPoint(
+            ordered,
+            minimumX,
+            maximumX,
+            minimumZ,
+            maximumZ,
+            20.0f);
+        best = FindBestGridPoint(
+            ordered,
+            best.X - 30.0f,
+            best.X + 30.0f,
+            best.Y - 30.0f,
+            best.Y + 30.0f,
+            5.0f);
+        best = FindBestGridPoint(
+            ordered,
+            best.X - 6.0f,
+            best.X + 6.0f,
+            best.Y - 6.0f,
+            best.Y + 6.0f,
+            1.0f);
+
+        var position = new Vector3(best.X, ordered[^1].PlayerPosition.Y, best.Y);
+        var errors = ordered
+            .Select(hint => AngularErrorDegrees(
+                DirectionDegrees(hint.Direction),
+                BearingDegrees(hint.PlayerPosition, position)))
+            .ToArray();
+        return new MagicalElixirLocationEstimate(
+            position,
+            errors.Average(),
+            errors.Max());
     }
 
     public static IReadOnlyList<MagicalElixirDirectionCandidate> Resolve(
@@ -205,6 +287,96 @@ public static class MagicalElixirDirectionResolver
 
         return false;
     }
+
+    private static MagicalElixirDistanceBand ParseDistanceBand(string text, string normalized)
+    {
+        if (text.Contains("\u3068\u3066\u3082\u9060\u304f", StringComparison.Ordinal)
+            || normalized.Contains("far, far", StringComparison.Ordinal)
+            || normalized.Contains("very far", StringComparison.Ordinal))
+        {
+            return MagicalElixirDistanceBand.VeryFar;
+        }
+
+        if (text.Contains("\u8fd1\u304f", StringComparison.Ordinal)
+            || normalized.Contains("near", StringComparison.Ordinal)
+            || normalized.Contains("close", StringComparison.Ordinal))
+        {
+            return MagicalElixirDistanceBand.Near;
+        }
+
+        if (text.Contains("\u9060\u304f", StringComparison.Ordinal)
+            || ContainsWord(normalized, "far"))
+        {
+            return MagicalElixirDistanceBand.Far;
+        }
+
+        return MagicalElixirDistanceBand.Unknown;
+    }
+
+    private static Vector2 FindBestGridPoint(
+        IReadOnlyCollection<MagicalElixirDirectionHint> hints,
+        float minimumX,
+        float maximumX,
+        float minimumZ,
+        float maximumZ,
+        float step)
+    {
+        var best = new Vector2(minimumX, minimumZ);
+        var bestScore = float.PositiveInfinity;
+        for (var x = minimumX; x <= maximumX + step * 0.5f; x += step)
+        {
+            for (var z = minimumZ; z <= maximumZ + step * 0.5f; z += step)
+            {
+                var candidate = new Vector3(x, 0.0f, z);
+                var score = hints.Sum(hint => EstimateScore(hint, candidate));
+                if (score >= bestScore)
+                    continue;
+
+                bestScore = score;
+                best = new Vector2(x, z);
+            }
+        }
+
+        return best;
+    }
+
+    private static float EstimateScore(
+        MagicalElixirDirectionHint hint,
+        Vector3 candidate)
+    {
+        var angularError = AngularErrorDegrees(
+            DirectionDegrees(hint.Direction),
+            BearingDegrees(hint.PlayerPosition, candidate));
+        var angularScore = MathF.Pow(angularError / 22.5f, 2.0f);
+        if (angularError > DefaultHalfWidthDegrees)
+            angularScore += MathF.Pow((angularError - DefaultHalfWidthDegrees) / 8.0f, 2.0f) * 4.0f;
+
+        var distance = Vector2.Distance(
+            new Vector2(hint.PlayerPosition.X, hint.PlayerPosition.Z),
+            new Vector2(candidate.X, candidate.Z));
+        var distanceScore = hint.DistanceBand switch
+        {
+            MagicalElixirDistanceBand.Near when distance > 100.0f
+                => MathF.Pow((distance - 100.0f) / 40.0f, 2.0f),
+            MagicalElixirDistanceBand.Far when distance < 100.0f
+                => MathF.Pow((100.0f - distance) / 40.0f, 2.0f),
+            MagicalElixirDistanceBand.Far when distance > 220.0f
+                => MathF.Pow((distance - 220.0f) / 60.0f, 2.0f),
+            MagicalElixirDistanceBand.VeryFar when distance < 200.0f
+                => MathF.Pow((200.0f - distance) / 50.0f, 2.0f),
+            _ => 0.0f,
+        };
+        return angularScore + distanceScore;
+    }
+
+    private static float NominalDistance(MagicalElixirDistanceBand distanceBand)
+        => distanceBand switch
+        {
+            MagicalElixirDistanceBand.Near => 60.0f,
+            MagicalElixirDistanceBand.Far => 150.0f,
+            MagicalElixirDistanceBand.VeryFar => 300.0f,
+            _ => 150.0f,
+        };
 
     private static string SpotLocationKey(ConfirmedPotTargetObservation spot)
         => FormattableString.Invariant(
