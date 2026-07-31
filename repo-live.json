@@ -2,16 +2,16 @@
   {
     "Author": "miqote69",
     "Name": "Crescent Atlas",
-    "Description": "DEVELOPMENT PROTOTYPE. DO NOT USE outside active testing. May crash FFXIV or Dalamud. Display-only Occult Crescent atlas and local collector.",
+    "Description": "Display-only Occult Crescent atlas with treasure spot checks and field markers, FATE/CE timers and progress, Magic Pot prediction and alerts, carrot and Forked Tower markers, aetherytes, visit history, and local observation collection. It does not automate movement or interaction.",
     "InternalName": "CrescentAtlas",
-    "AssemblyVersion": "0.1.52.0",
-    "TestingAssemblyVersion": "0.1.52.0",
+    "AssemblyVersion": "0.1.53.0",
+    "TestingAssemblyVersion": "0.1.53.0",
     "RepoUrl": "https://github.com/miqote69/CrescentAtlas",
     "IconUrl": "https://raw.githubusercontent.com/miqote69/CrescentAtlas/main/images/icon-v44.png",
     "ApplicableVersion": "any",
     "DalamudApiLevel": 15,
     "TestingDalamudApiLevel": 15,
-    "Punchline": "UNSTABLE TEST BUILD - may crash; do not use outside development testing.",
+    "Punchline": "Occult Crescent map with treasure guides, event tracking and Magic Pot predictions.",
     "Tags": [
       "occult crescent",
       "map",
@@ -20,9 +20,9 @@
     "MinimumDalamudVersion": "15.0.0.0",
     "IsHide": false,
     "IsTestingExclusive": false,
-    "DownloadLinkInstall": "https://github.com/miqote69/CrescentAtlas/releases/download/v0.1.52/CrescentAtlas.zip",
-    "DownloadLinkTesting": "https://github.com/miqote69/CrescentAtlas/releases/download/v0.1.52/CrescentAtlas.zip",
-    "DownloadLinkUpdate": "https://github.com/miqote69/CrescentAtlas/releases/download/v0.1.52/CrescentAtlas.zip",
-    "LastUpdate": 1785460525
+    "DownloadLinkInstall": "https://github.com/miqote69/CrescentAtlas/releases/download/v0.1.53/CrescentAtlas.zip",
+    "DownloadLinkTesting": "https://github.com/miqote69/CrescentAtlas/releases/download/v0.1.53/CrescentAtlas.zip",
+    "DownloadLinkUpdate": "https://github.com/miqote69/CrescentAtlas/releases/download/v0.1.53/CrescentAtlas.zip",
+    "LastUpdate": 1785461140
   }
 ]

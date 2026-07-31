@@ -1,8 +1,8 @@
 {
   "Author": "miqote69",
   "Name": "Crescent Atlas",
-  "Punchline": "UNSTABLE TEST BUILD - may crash; do not use outside development testing.",
-  "Description": "DEVELOPMENT PROTOTYPE. May crash FFXIV or Dalamud. Collects local field observations and displays map markers and event notifications without automating movement or interaction.",
+  "Punchline": "Occult Crescent map with treasure guides, event tracking and Magic Pot predictions.",
+  "Description": "Display-only Occult Crescent atlas with treasure spot checks and field markers, FATE/CE timers and progress, Magic Pot prediction and alerts, carrot and Forked Tower markers, aetherytes, visit history, and local observation collection. It does not automate movement or interaction.",
   "ApplicableVersion": "any",
   "RepoUrl": "https://github.com/miqote69/CrescentAtlas",
   "IconUrl": "https://raw.githubusercontent.com/miqote69/CrescentAtlas/main/images/icon-v44.png",
