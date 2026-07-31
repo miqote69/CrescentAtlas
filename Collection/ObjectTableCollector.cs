@@ -170,7 +170,8 @@ public sealed class ObjectTableCollector(
                 eventId);
         }
 
-        var confirmed = options.CarrotDataIds.Contains(dataId)
+        var confirmed = ConfirmedCarrotObjects.IsKnownDataId(dataId)
+                        || options.CarrotDataIds.Contains(dataId)
                         || options.CarrotEventIds.Contains(eventId)
                         || options.CarrotPredicate?.Invoke(gameObject) == true;
 

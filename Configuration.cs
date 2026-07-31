@@ -1,4 +1,5 @@
 using Dalamud.Configuration;
+using CrescentAtlas.Data;
 
 namespace CrescentAtlas;
 
@@ -57,7 +58,8 @@ public sealed class Configuration : IPluginConfiguration
 
     public uint PotSoundEffect { get; set; } = 1;
 
-    public HashSet<uint> ConfirmedCarrotDataIds { get; set; } = [];
+    public HashSet<uint> ConfirmedCarrotDataIds { get; set; } =
+        [ConfirmedCarrotObjects.FortuneCarrotDataId];
 
     public HashSet<uint> ConfirmedCarrotEventIds { get; set; } = [];
 

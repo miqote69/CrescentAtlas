@@ -12,6 +12,7 @@
     <Compile Include="..\..\Notifications\PotAdvanceNotificationTracker.cs" Link="PotAdvanceNotificationTracker.cs" />
     <Compile Include="..\..\Notifications\PotObservationHistoryReader.cs" Link="PotObservationHistoryReader.cs" />
     <Compile Include="..\..\Data\ConfirmedMagicPotLocations.cs" Link="ConfirmedMagicPotLocations.cs" />
+    <Compile Include="..\..\Data\ConfirmedCarrotObjects.cs" Link="ConfirmedCarrotObjects.cs" />
     <Compile Include="..\..\Contracts\AtlasMarker.cs" Link="AtlasMarker.cs" />
     <Compile Include="..\..\Contracts\AtlasPotPrediction.cs" Link="AtlasPotPrediction.cs" />
     <Compile Include="..\..\Contracts\IAtlasDataSource.cs" Link="IAtlasDataSource.cs" />

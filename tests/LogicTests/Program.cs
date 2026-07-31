@@ -1,11 +1,18 @@
 using System.Numerics;
 using CrescentAtlas.Contracts;
 using CrescentAtlas.Collection;
+using CrescentAtlas.Data;
 using CrescentAtlas.Events;
 using CrescentAtlas.Notifications;
 using CrescentAtlas.Runtime;
 
 var origin = new DateTimeOffset(2026, 7, 30, 0, 0, 0, TimeSpan.Zero);
+Assert(
+    ConfirmedCarrotObjects.IsKnownDataId(2010139),
+    "the Fortune Carrot EventObj is recognized without user configuration");
+Assert(
+    !ConfirmedCarrotObjects.IsKnownDataId(2007457),
+    "the Knowledge Crystal EventObj is not misclassified as a carrot");
 var firstPosition = new Vector3(10, 0, 20);
 var secondPosition = new Vector3(40, 0, 50);
 var tracker = new PotPredictionTracker();

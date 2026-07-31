@@ -78,15 +78,27 @@ public sealed class Plugin : IDalamudPlugin
         {
             configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
             configuration.CheckedTreasureKeys ??= [];
+            configuration.ConfirmedCarrotDataIds ??= [];
+            configuration.ConfirmedCarrotEventIds ??= [];
             BootstrapDiagnostics.Write($"configuration loaded; version={configuration.Version}");
+            var configurationChanged = false;
             if (configuration.Version < 2)
             {
                 // Existing builds defaulted to click-through, which also prevented
                 // ImGui's window border from receiving resize drags.
                 configuration.MapClickThrough = false;
                 configuration.Version = 2;
-                SaveConfiguration();
+                configurationChanged = true;
             }
+            if (configuration.Version < 3)
+            {
+                configuration.Version = 3;
+                configurationChanged = true;
+            }
+            if (configuration.ConfirmedCarrotDataIds.Add(ConfirmedCarrotObjects.FortuneCarrotDataId))
+                configurationChanged = true;
+            if (configurationChanged)
+                SaveConfiguration();
 
             silverTreasureDataIds.UnionWith(
                 ConfirmedSilverTreasureSpots.NorthHorn.Select(spot => spot.DataId));
