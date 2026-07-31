@@ -343,6 +343,8 @@ public sealed class Plugin : IDalamudPlugin
             atlasData.SetContext(
                 false,
                 ClientState.TerritoryType,
+                ClientState.MapId,
+                OccultCrescentMapLayer.Surface,
                 crescentContext.TerritoryName,
                 localPlayer?.Position,
                 localPlayer?.Rotation);
@@ -375,14 +377,28 @@ public sealed class Plugin : IDalamudPlugin
             : $"territory-{territoryId}:unidentified";
         if (islandVisitStore.ActiveVisit is { } treasureCheckVisit)
             SynchronizeTreasureCheckVisit(treasureCheckVisit.VisitId);
+        var mapId = ClientState.MapId;
+        var surfaceMapId = ResolveSurfaceMapId(territoryId);
+        var mapLayer = OccultCrescentMapLayerPolicy.Resolve(mapId, surfaceMapId);
+        var mapChanged = atlasData.MapId != mapId || atlasData.MapLayer != mapLayer;
         atlasData.SetContext(
             true,
             territoryId,
+            mapId,
+            mapLayer,
             territoryName,
             localPlayer?.Position,
             localPlayer?.Rotation);
+        if (mapChanged)
+        {
+            scannedTerritoryId = 0;
+            scannedAetheryteMapId = 0;
+            nextLayoutScanUtc = DateTimeOffset.MinValue;
+            BootstrapDiagnostics.Write(
+                $"Map layer changed; territory={territoryId}; map={mapId}; " +
+                $"surfaceMap={surfaceMapId}; layer={mapLayer}");
+        }
 
-        var mapId = ClientState.MapId;
         if (scannedAetheryteMapId != mapId
             && aetheryteMarkerProvider.TryRead(territoryId, mapId, now, out var aetherytes))
         {
@@ -390,7 +406,9 @@ public sealed class Plugin : IDalamudPlugin
             scannedAetheryteMapId = mapId;
         }
 
-        if (scannedTerritoryId != territoryId && now >= nextLayoutScanUtc)
+        if (mapLayer == OccultCrescentMapLayer.Surface
+            && scannedTerritoryId != territoryId
+            && now >= nextLayoutScanUtc)
         {
             var candidates = layoutScanner.Scan(
                 observationStore.SessionId,
@@ -409,6 +427,10 @@ public sealed class Plugin : IDalamudPlugin
                 scannedTerritoryId = territoryId;
             else
                 nextLayoutScanUtc = now + TimeSpan.FromSeconds(5);
+        }
+        else if (mapLayer == OccultCrescentMapLayer.Subterranean)
+        {
+            atlasData.ReplaceSource(AtlasMarkerKind.TreasureCandidate, []);
         }
 
         var objectMarkers = objectCollector.Collect(territoryId, territoryName, now);
@@ -433,7 +455,10 @@ public sealed class Plugin : IDalamudPlugin
         NotifyNewObjects(treasures, carrots, potTargets);
 
         PollFates(territoryId, territoryName, instanceKey, now, entering);
-        UpdatePotPrediction(instanceKey, now);
+        if (mapLayer == OccultCrescentMapLayer.Surface)
+            UpdatePotPrediction(instanceKey, now);
+        else
+            atlasData.SetPotPrediction(null);
         PollCriticalEncounters(territoryId, territoryName, instanceKey, now, entering);
 
         if (now >= nextFlushUtc)
@@ -560,6 +585,24 @@ public sealed class Plugin : IDalamudPlugin
         {
             return 0;
         }
+    }
+
+    private static uint ResolveSurfaceMapId(uint territoryId)
+    {
+        try
+        {
+            if (DataManager.GetExcelSheet<Lumina.Excel.Sheets.TerritoryType>()
+                .TryGetRow(territoryId, out var territory))
+            {
+                return territory.Map.RowId;
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Debug(ex, "Failed to resolve the surface map for territory {TerritoryId}.", territoryId);
+        }
+
+        return 0;
     }
 
     private void NotifyNewObjects(
@@ -738,7 +781,14 @@ public sealed class Plugin : IDalamudPlugin
         potAdvanceNotificationTracker.ResetAll();
         fateDetector.Reset();
         atlasData.SetPotPrediction(null);
-        atlasData.SetContext(false, 0, string.Empty, null, null);
+        atlasData.SetContext(
+            false,
+            0,
+            0,
+            OccultCrescentMapLayer.Surface,
+            string.Empty,
+            null,
+            null);
     }
 
     private static bool ParseToggle(string? value, bool current)

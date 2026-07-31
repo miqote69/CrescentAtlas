@@ -6,6 +6,10 @@ public interface IAtlasDataSource
 
     uint TerritoryId { get; }
 
+    uint MapId { get; }
+
+    OccultCrescentMapLayer MapLayer { get; }
+
     string TerritoryName { get; }
 
     Vector3? PlayerPosition { get; }

@@ -212,7 +212,9 @@ public sealed class AtlasWindow : Window, IDisposable
         }
 
         var visibleMarkers = territoryMarkers
-            .Where(IsMarkerVisible)
+            .Where(marker =>
+                OccultCrescentMapLayerPolicy.IsMarkerVisible(dataSource.MapLayer, marker.Kind)
+                && IsMarkerVisible(marker))
             .ToArray();
 
         if (configuration.MapControlsExpanded)
@@ -885,7 +887,8 @@ public sealed class AtlasWindow : Window, IDisposable
                 canvasMinimum,
                 canvasMaximum);
 
-        if (configuration.ShowPotPrediction
+        if (dataSource.MapLayer == OccultCrescentMapLayer.Surface
+            && configuration.ShowPotPrediction
             && dataSource.PotPrediction is { } potPrediction)
             DrawPotPrediction(drawList, project(potPrediction.PredictedPosition), potPrediction);
 

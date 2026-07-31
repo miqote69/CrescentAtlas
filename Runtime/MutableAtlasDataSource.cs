@@ -12,6 +12,10 @@ public sealed class MutableAtlasDataSource : IAtlasDataSource
 
     public uint TerritoryId { get; private set; }
 
+    public uint MapId { get; private set; }
+
+    public OccultCrescentMapLayer MapLayer { get; private set; }
+
     public string TerritoryName { get; private set; } = string.Empty;
 
     public Vector3? PlayerPosition { get; private set; }
@@ -29,20 +33,28 @@ public sealed class MutableAtlasDataSource : IAtlasDataSource
     public void SetContext(
         bool isInOccultCrescent,
         uint territoryId,
+        uint mapId,
+        OccultCrescentMapLayer mapLayer,
         string territoryName,
         Vector3? playerPosition,
         float? playerRotation)
     {
         lock (sync)
         {
-            if (IsInOccultCrescent != isInOccultCrescent || TerritoryId != territoryId)
+            if (IsInOccultCrescent != isInOccultCrescent
+                || TerritoryId != territoryId
+                || MapId != mapId
+                || MapLayer != mapLayer)
             {
                 markers.Clear();
                 resetBlockedTreasureKeys.Clear();
+                PotPrediction = null;
             }
 
             IsInOccultCrescent = isInOccultCrescent;
             TerritoryId = territoryId;
+            MapId = mapId;
+            MapLayer = mapLayer;
             TerritoryName = territoryName;
             PlayerPosition = playerPosition;
             PlayerRotation = playerRotation;

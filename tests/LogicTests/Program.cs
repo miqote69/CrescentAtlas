@@ -150,7 +150,14 @@ Assert(restoredPot.EventId == 2072, "history restores event id");
 Assert(restoredPot.Position == new Vector3(233, 7.729229f, -470), "history restores position");
 
 var atlas = new MutableAtlasDataSource();
-atlas.SetContext(true, 1346, "North Horn", Vector3.Zero, 0.0f);
+atlas.SetContext(
+    true,
+    1346,
+    1135,
+    OccultCrescentMapLayer.Surface,
+    "North Horn",
+    Vector3.Zero,
+    0.0f);
 atlas.ReplaceSource(
     AtlasMarkerKind.TreasureCandidate,
     [
@@ -167,7 +174,14 @@ atlas.MarkAbsentNearbyTreasureCandidatesChecked(Vector3.Zero, 10.0f, [], 2.0f);
 Assert(atlas.GetMarkers().Single().IsChecked, "nearby absent treasure is checked");
 
 var restoredAtlas = new MutableAtlasDataSource();
-restoredAtlas.SetContext(true, 1346, "North Horn", Vector3.Zero, 0.0f);
+restoredAtlas.SetContext(
+    true,
+    1346,
+    1135,
+    OccultCrescentMapLayer.Surface,
+    "North Horn",
+    Vector3.Zero,
+    0.0f);
 restoredAtlas.ReplaceSource(
     AtlasMarkerKind.TreasureCandidate,
     [
@@ -193,7 +207,50 @@ atlas.MarkAbsentNearbyTreasureCandidatesChecked(new Vector3(20, 0, 0), 10.0f, []
 atlas.MarkAbsentNearbyTreasureCandidatesChecked(Vector3.Zero, 10.0f, [], 2.0f);
 Assert(atlas.GetMarkers().Single().IsChecked, "spot can be checked again after revisiting");
 Assert(atlas.IsInOccultCrescent, "active Crescent context is exposed to the map");
-atlas.SetContext(false, 999, "Outside", Vector3.Zero, 0.0f);
+Assert(
+    OccultCrescentMapLayerPolicy.Resolve(1135, 1135) == OccultCrescentMapLayer.Surface,
+    "the territory default map is the surface layer");
+Assert(
+    OccultCrescentMapLayerPolicy.Resolve(1136, 1135) == OccultCrescentMapLayer.Subterranean,
+    "a different map row in the same territory is the subterranean layer");
+Assert(
+    !OccultCrescentMapLayerPolicy.IsMarkerVisible(
+        OccultCrescentMapLayer.Subterranean,
+        AtlasMarkerKind.TreasureCandidate),
+    "surface treasure candidates are hidden underground");
+Assert(
+    !OccultCrescentMapLayerPolicy.IsMarkerVisible(
+        OccultCrescentMapLayer.Subterranean,
+        AtlasMarkerKind.Fate),
+    "surface FATE markers are hidden underground");
+Assert(
+    !OccultCrescentMapLayerPolicy.IsMarkerVisible(
+        OccultCrescentMapLayer.Subterranean,
+        AtlasMarkerKind.CriticalEncounter),
+    "surface CE markers are hidden underground");
+Assert(
+    OccultCrescentMapLayerPolicy.IsMarkerVisible(
+        OccultCrescentMapLayer.Subterranean,
+        AtlasMarkerKind.ActiveTreasure),
+    "loaded underground treasure remains visible");
+atlas.SetContext(
+    true,
+    1346,
+    1136,
+    OccultCrescentMapLayer.Subterranean,
+    "North Horn",
+    Vector3.Zero,
+    0.0f);
+Assert(atlas.GetMarkers().Count == 0, "changing map layers clears stale surface markers");
+Assert(atlas.MapLayer == OccultCrescentMapLayer.Subterranean, "subterranean layer is exposed to the map");
+atlas.SetContext(
+    false,
+    999,
+    0,
+    OccultCrescentMapLayer.Surface,
+    "Outside",
+    Vector3.Zero,
+    0.0f);
 Assert(!atlas.IsInOccultCrescent, "outside-area context is exposed to the map");
 Assert(atlas.GetMarkers().Count == 0, "leaving Crescent clears stale map markers");
 
