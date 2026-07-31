@@ -17,8 +17,7 @@ public sealed class NearbyTreasureLineOverlay(
 
     public void Draw()
     {
-        if (!configuration.ShowTreasureGuideLines
-            || dataSource.PlayerPosition is not { } player
+        if (dataSource.PlayerPosition is not { } player
             || !gameGui.WorldToScreen(player, out var playerScreen))
         {
             return;
@@ -38,8 +37,12 @@ public sealed class NearbyTreasureLineOverlay(
             if (!gameGui.WorldToScreen(treasure.Position, out var treasureScreen))
                 continue;
 
-            drawList.AddLine(playerScreen, treasureScreen, shadowColor, 6.0f);
-            drawList.AddLine(playerScreen, treasureScreen, lineColor, 3.0f);
+            if (configuration.ShowTreasureGuideLines)
+            {
+                drawList.AddLine(playerScreen, treasureScreen, shadowColor, 6.0f);
+                drawList.AddLine(playerScreen, treasureScreen, lineColor, 3.0f);
+            }
+
             drawList.AddCircle(treasureScreen, 11.0f, shadowColor, 0, 5.0f);
             drawList.AddCircle(treasureScreen, 10.0f, lineColor, 0, 2.5f);
 
@@ -72,8 +75,12 @@ public sealed class NearbyTreasureLineOverlay(
         }
 
         var spotColor = ImGui.GetColorU32(new Vector4(1.00f, 0.67f, 0.18f, 0.94f));
-        drawList.AddLine(playerScreen, spotScreen, shadowColor, 6.0f);
-        drawList.AddLine(playerScreen, spotScreen, spotColor, 3.0f);
+        if (configuration.ShowTreasureGuideLines)
+        {
+            drawList.AddLine(playerScreen, spotScreen, shadowColor, 6.0f);
+            drawList.AddLine(playerScreen, spotScreen, spotColor, 3.0f);
+        }
+
         drawList.AddCircle(spotScreen, 13.0f, shadowColor, 0, 5.0f);
         drawList.AddCircle(spotScreen, 12.0f, spotColor, 0, 2.5f);
 
