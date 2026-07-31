@@ -16,6 +16,18 @@ Assert(
 Assert(
     !ConfirmedCarrotObjects.IsKnownDataId(2007457),
     "the Knowledge Crystal EventObj is not misclassified as a carrot");
+Assert(
+    ConfirmedPotTargetObservations.EventObjectDataIds.SetEquals([2014741u, 2014742u, 2014743u]),
+    "gold, silver, and bronze Magical Elixir coffers are recognized");
+Assert(
+    ConfirmedPotTargetObservations.RequiresActiveElixirStatus(2014742),
+    "silver EventObj classification is gated by the active Elixir status");
+Assert(
+    MagicalElixirStatusMatcher.IsMatch("マジカルエリクサー"),
+    "the Japanese Magical Elixir status name is recognized");
+Assert(
+    MagicalElixirStatusMatcher.IsMatch("Magical Elixir"),
+    "the English Magical Elixir status name is recognized");
 Assert(ConfirmedCarrotSpots.NorthHorn.Count == 8, "eight confirmed fixed carrot spots are bundled");
 var carrotHistoryLine =
     """{"observedAtUtc":"2026-07-30T06:45:43.1067071+00:00","kind":"carrot-candidate","territoryId":1346,"dataId":2010139,"x":-560.9,"y":50.74249,"z":-447}""";

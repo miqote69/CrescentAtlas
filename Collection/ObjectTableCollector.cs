@@ -29,6 +29,8 @@ public sealed record ObjectTableCollectionOptions
     /// </summary>
     public IReadOnlySet<uint> PotTargetDataIds { get; init; } = new HashSet<uint>();
 
+    public Func<bool>? IsMagicalElixirActive { get; init; }
+
     /// <summary>
     /// Optional game-version-specific classifier. It runs only for EventObj objects.
     /// </summary>
@@ -126,6 +128,28 @@ public sealed class ObjectTableCollector(
         var dataId = gameObject.BaseId;
         var eventId = TryReadEventId(gameObject);
         var displayName = DisplayName(gameObject, "EventObj candidate");
+        if (options.PotTargetDataIds.Contains(dataId)
+            && (!ConfirmedPotTargetObservations.RequiresActiveElixirStatus(dataId)
+                || options.IsMagicalElixirActive?.Invoke() == true))
+        {
+            var potTargetKey = ObservationIdentity.PositionKey(
+                territoryId,
+                "pot-target",
+                dataId,
+                eventId,
+                gameObject.Position);
+            return new AtlasMarker(
+                potTargetKey,
+                AtlasMarkerKind.PotTarget,
+                displayName,
+                gameObject.Position,
+                observedAt,
+                IsActive: true,
+                territoryId,
+                dataId,
+                eventId);
+        }
+
         if (IsSilverCoffer(dataId, displayName))
         {
             if (!gameObject.IsTargetable)
@@ -148,26 +172,6 @@ public sealed class ObjectTableCollector(
                 dataId,
                 eventId,
                 TreasureType: "silver");
-        }
-
-        if (options.PotTargetDataIds.Contains(dataId))
-        {
-            var potTargetKey = ObservationIdentity.PositionKey(
-                territoryId,
-                "pot-target",
-                dataId,
-                eventId,
-                gameObject.Position);
-            return new AtlasMarker(
-                potTargetKey,
-                AtlasMarkerKind.PotTarget,
-                DisplayName(gameObject, "Magic Pot target"),
-                gameObject.Position,
-                observedAt,
-                IsActive: true,
-                territoryId,
-                dataId,
-                eventId);
         }
 
         var confirmed = ConfirmedCarrotObjects.IsKnownDataId(dataId)

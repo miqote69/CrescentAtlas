@@ -6,6 +6,7 @@ public enum ObservationSource
     ObjectTable,
     FateTable,
     DynamicEvent,
+    Status,
     Manual,
 }
 

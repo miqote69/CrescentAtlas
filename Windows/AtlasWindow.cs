@@ -250,6 +250,22 @@ public sealed class AtlasWindow : Window, IDisposable
                     resetTreasureChecks();
             }
 
+            var loadedPotTargets = territoryMarkers.Count(marker =>
+                marker.Kind == AtlasMarkerKind.PotTarget);
+            if (dataSource.IsMagicalElixirActive || loadedPotTargets > 0)
+            {
+                ImGui.SameLine();
+                ImGui.TextColored(
+                    new Vector4(0.45f, 1.00f, 0.48f, 1.0f),
+                    loadedPotTargets > 0
+                        ? T(
+                            $"Magical Elixir: target loaded ({loadedPotTargets})",
+                            $"マジカルエリクサー: 目的地を検知 ({loadedPotTargets})")
+                        : T(
+                            "Magical Elixir: active / searching",
+                            "マジカルエリクサー: 有効 / 目的地を探索中"));
+            }
+
             DrawMapFilters();
         }
 

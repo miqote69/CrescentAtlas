@@ -9,6 +9,17 @@ public sealed record ConfirmedPotTargetObservation(
 
 public static class ConfirmedPotTargetObservations
 {
+    public static IReadOnlySet<uint> EventObjectDataIds { get; } =
+        new HashSet<uint>
+        {
+            2014741, // Gold coffer
+            2014742, // Silver coffer
+            2014743, // Bronze coffer
+        };
+
+    public static bool RequiresActiveElixirStatus(uint dataId)
+        => dataId == 2014742;
+
     public static IReadOnlyList<ConfirmedPotTargetObservation> NorthHorn { get; } =
     [
         new(
