@@ -4,6 +4,7 @@ public enum ObservationSource
 {
     Layout,
     ObjectTable,
+    AgentMap,
     FateTable,
     DynamicEvent,
     Status,

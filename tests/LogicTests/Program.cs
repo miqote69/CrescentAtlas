@@ -23,6 +23,21 @@ Assert(
     ConfirmedPotTargetObservations.RequiresActiveElixirStatus(2014742),
     "silver EventObj classification is gated by the active Elixir status");
 Assert(
+    MagicalElixirMapMarkerClassifier.ResolveTargetDataId(
+        objectiveId: 0,
+        levelObjectId: 2014743) == 2014743,
+    "borrowed AgentMap markers resolve a bronze Elixir target through the Level object");
+Assert(
+    MagicalElixirMapMarkerClassifier.ResolveTargetDataId(
+        objectiveId: 2014742,
+        levelObjectId: 0) == 2014742,
+    "borrowed AgentMap markers resolve a silver Elixir target through the objective");
+Assert(
+    MagicalElixirMapMarkerClassifier.ResolveTargetDataId(
+        objectiveId: 123,
+        levelObjectId: 456) == 0,
+    "unrelated AgentMap markers are ignored");
+Assert(
     MagicalElixirStatusMatcher.IsMatch("マジカルエリクサー"),
     "the Japanese Magical Elixir status name is recognized");
 Assert(
