@@ -60,6 +60,8 @@ public sealed class Plugin : IDalamudPlugin
     private readonly List<ConfirmedPotTargetObservation> knownPotTargetSpots = [];
     private readonly List<MagicalElixirDirectionHint> magicalElixirDirectionHints = [];
     private readonly ConcurrentQueue<MagicalElixirDirectionHint> pendingMagicalElixirDirectionHints = new();
+    private readonly Dictionary<string, DateTimeOffset> potTargetFirstSeenUtc =
+        new(StringComparer.Ordinal);
     private MagicalElixirLocationEstimate? cachedUnknownElixirEstimate;
     private DateTimeOffset cachedUnknownElixirEstimateHintUtc = DateTimeOffset.MinValue;
     private readonly MutableAtlasDataSource atlasData = new();
@@ -514,23 +516,28 @@ public sealed class Plugin : IDalamudPlugin
         if (configuration.CollectionEnabled)
             RecordAll(mappedPotTargetObservations);
         var confirmedPotTargets = MergePotTargets(loadedPotTargets, mappedPotTargets);
-        RememberPotTargetSpots(confirmedPotTargets);
+        TrackVisiblePotTargets(confirmedPotTargets, now);
         ProcessMagicalElixirDirectionHints(
             territoryId,
             territoryName,
             instanceKey,
             now);
         AtlasMarker[] directionalPotTargets;
-        var matchedConfirmedTarget = confirmedPotTargets.Any(target =>
-            MagicalElixirDirectionResolver.IsConsistentWithHints(
+        var matchedConfirmedTargets = confirmedPotTargets.Where(target =>
+            potTargetFirstSeenUtc.TryGetValue(target.Key, out var firstSeenUtc)
+            && MagicalElixirDirectionResolver.IsCompletionTarget(
                 target.Position,
-                magicalElixirDirectionHints));
-        if (matchedConfirmedTarget)
+                firstSeenUtc,
+                magicalElixirDirectionHints,
+                PollInterval)).ToArray();
+        if (matchedConfirmedTargets.Length > 0)
         {
+            RememberPotTargetSpots(matchedConfirmedTargets);
+            RecordConfirmedPotTargetGoals(
+                matchedConfirmedTargets,
+                territoryName,
+                instanceKey);
             magicalElixirDirectionHints.Clear();
-            while (pendingMagicalElixirDirectionHints.TryDequeue(out _))
-            {
-            }
             directionalPotTargets = [];
         }
         else
@@ -587,6 +594,24 @@ public sealed class Plugin : IDalamudPlugin
                 StringComparer.Ordinal)
             .Select(group => group.First())
             .ToArray();
+
+    private void TrackVisiblePotTargets(
+        IReadOnlyCollection<AtlasMarker> targets,
+        DateTimeOffset now)
+    {
+        var visibleKeys = targets
+            .Select(target => target.Key)
+            .ToHashSet(StringComparer.Ordinal);
+        foreach (var staleKey in potTargetFirstSeenUtc.Keys
+                     .Where(key => !visibleKeys.Contains(key))
+                     .ToArray())
+        {
+            potTargetFirstSeenUtc.Remove(staleKey);
+        }
+
+        foreach (var target in targets)
+            potTargetFirstSeenUtc.TryAdd(target.Key, now);
+    }
 
     private void PollFates(
         uint territoryId,
@@ -843,6 +868,40 @@ public sealed class Plugin : IDalamudPlugin
                 target.Label,
                 target.Position,
                 target.ObservedAtUtc));
+        }
+    }
+
+    private void RecordConfirmedPotTargetGoals(
+        IEnumerable<AtlasMarker> targets,
+        string territoryName,
+        string instanceKey)
+    {
+        if (!configuration.CollectionEnabled)
+            return;
+
+        foreach (var target in targets)
+        {
+            observationStore.Record(new ObservationRecord
+            {
+                SessionId = observationStore.SessionId,
+                ObservedAtUtc = target.ObservedAtUtc,
+                Source = ObservationSource.ObjectTable,
+                Kind = "pot-target-goal",
+                Key = $"{instanceKey}:pot-target-goal:{target.Key}",
+                TerritoryId = target.TerritoryId,
+                TerritoryName = territoryName,
+                DataId = target.DataId,
+                Name = target.Label,
+                X = target.Position.X,
+                Y = target.Position.Y,
+                Z = target.Position.Z,
+                IsActive = true,
+                Properties = new Dictionary<string, string>
+                {
+                    ["instanceKey"] = instanceKey,
+                    ["verifiedBy"] = "magical-elixir-direction",
+                },
+            });
         }
     }
 
@@ -1218,6 +1277,7 @@ public sealed class Plugin : IDalamudPlugin
         previousTreasureKeys.Clear();
         previousCarrotKeys.Clear();
         previousPotTargetKeys.Clear();
+        potTargetFirstSeenUtc.Clear();
         magicalElixirDirectionHints.Clear();
         while (pendingMagicalElixirDirectionHints.TryDequeue(out _))
         {

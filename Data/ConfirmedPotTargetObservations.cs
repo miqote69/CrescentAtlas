@@ -33,6 +33,7 @@ public static class ConfirmedPotTargetObservations
         Goal(-536.1014f, 87.01824f, 149.8447f),
         Goal(-498.7f, 11.051006f, 128.9f),
         Goal(-487.8f, 48.000015f, -953.2f),
+        Goal(-449.6f, 45.6567f, -967.0001f),
         Goal(-251.781f, 65.949005f, -864.3828f),
         Goal(-223.8233f, 10.891144f, -353.9438f),
         Goal(-190.0f, 61.75258f, -763.0f),
@@ -56,6 +57,7 @@ public static class ConfirmedPotTargetObservations
         Goal(909.0f, 97.05797f, -961.8f),
         Goal(928.8978f, 74.0003f, -332.8099f),
         Goal(939.2178f, 80.269966f, -273.1175f),
+        Goal(948.5978f, 63.594563f, -567.0099f),
     ];
 
     private static ConfirmedPotTargetObservation Goal(float x, float y, float z) =>

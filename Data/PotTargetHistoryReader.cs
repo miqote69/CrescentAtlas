@@ -58,7 +58,7 @@ public static class PotTargetHistoryReader
             using var document = JsonDocument.Parse(line);
             var root = document.RootElement;
             if (!root.TryGetProperty("kind", out var kindElement)
-                || kindElement.GetString() != "pot-target"
+                || kindElement.GetString() != "pot-target-goal"
                 || !root.TryGetProperty("dataId", out var dataIdElement)
                 || !dataIdElement.TryGetUInt32(out var dataId)
                 || !acceptedDataIds.Contains(dataId)

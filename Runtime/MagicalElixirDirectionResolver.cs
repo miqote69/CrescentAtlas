@@ -45,6 +45,33 @@ public static class MagicalElixirDirectionResolver
 {
     public const float DefaultHalfWidthDegrees = 35.0f;
 
+    public static bool IsTargetFromCurrentSearch(
+        DateTimeOffset targetFirstSeenUtc,
+        IReadOnlyCollection<MagicalElixirDirectionHint> hints,
+        TimeSpan discoveryTolerance = default)
+    {
+        if (hints.Count == 0)
+            return false;
+
+        var searchStartedUtc = hints.Min(hint => hint.ObservedAtUtc);
+        return targetFirstSeenUtc + discoveryTolerance >= searchStartedUtc;
+    }
+
+    public static bool IsCompletionTarget(
+        Vector3 position,
+        DateTimeOffset targetFirstSeenUtc,
+        IReadOnlyList<MagicalElixirDirectionHint> hints,
+        TimeSpan discoveryTolerance = default)
+    {
+        if (!IsTargetFromCurrentSearch(targetFirstSeenUtc, hints, discoveryTolerance))
+            return false;
+
+        // A chained Elixir route starts immediately after the previous coffer.
+        // Completion therefore follows the latest direction/distance reading;
+        // older readings may belong to the preceding leg.
+        return IsConsistentWithHints(position, [hints[^1]]);
+    }
+
     public static bool TryParse(string? message, out CompassDirection direction)
         => TryParse(message, out direction, out _);
 

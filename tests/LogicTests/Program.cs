@@ -107,6 +107,70 @@ var lateTrackingHints = new MagicalElixirDirectionHint[]
     new(CompassDirection.NorthWest, new(-152.3785f, 59.89325f, -733.92346f), origin.AddSeconds(38), "near northwest", MagicalElixirDistanceBand.Near),
     new(CompassDirection.NorthEast, new(-209.12477f, 57.767963f, -741.13544f), origin.AddSeconds(44), "near northeast", MagicalElixirDistanceBand.Near),
 };
+Assert(
+    !MagicalElixirDirectionResolver.IsTargetFromCurrentSearch(
+        origin.AddSeconds(62),
+        [new MagicalElixirDirectionHint(
+            CompassDirection.West,
+            new Vector3(948.15063f, 63.372074f, -568.507f),
+            origin.AddSeconds(79),
+            "second search",
+            MagicalElixirDistanceBand.VeryFar)],
+        TimeSpan.FromMilliseconds(500)),
+    "the first coffer cannot finish a later chained Elixir search while it remains loaded");
+Assert(
+    MagicalElixirDirectionResolver.IsTargetFromCurrentSearch(
+        origin.AddSeconds(82),
+        [new MagicalElixirDirectionHint(
+            CompassDirection.West,
+            new Vector3(948.15063f, 63.372074f, -568.507f),
+            origin.AddSeconds(79),
+            "second search",
+            MagicalElixirDistanceBand.VeryFar)],
+        TimeSpan.FromMilliseconds(500)),
+    "a coffer discovered after the second search begins can complete that leg");
+var firstChainedGoal = new Vector3(948.5978f, 63.594563f, -567.0099f);
+var firstChainedFinalHint = new MagicalElixirDirectionHint(
+    CompassDirection.North,
+    new Vector3(945.9019f, 62.54354f, -548.00775f),
+    origin.AddSeconds(57),
+    "first chained goal",
+    MagicalElixirDistanceBand.VeryNear);
+Assert(
+    MagicalElixirDirectionResolver.IsCompletionTarget(
+        firstChainedGoal,
+        origin.AddSeconds(62),
+        [firstChainedFinalHint],
+        TimeSpan.FromMilliseconds(500)),
+    "the first coffer completes its leg without ending the chained Elixir session");
+var incidentalSecondLegCoffer = new Vector3(32.4f, 56.835186f, -777.3f);
+var incidentalSecondLegHint = new MagicalElixirDirectionHint(
+    CompassDirection.West,
+    new Vector3(60.44817f, 53.80692f, -787.5975f),
+    origin.AddSeconds(206),
+    "incidental coffer",
+    MagicalElixirDistanceBand.VeryFar);
+Assert(
+    !MagicalElixirDirectionResolver.IsCompletionTarget(
+        incidentalSecondLegCoffer,
+        origin.AddSeconds(211),
+        [incidentalSecondLegHint],
+        TimeSpan.FromMilliseconds(500)),
+    "an unrelated coffer encountered during the second leg does not end the search");
+var secondChainedGoal = new Vector3(-449.6f, 45.6567f, -967.0001f);
+var secondChainedFinalHint = new MagicalElixirDirectionHint(
+    CompassDirection.NorthWest,
+    new Vector3(-426.973f, 45.93657f, -951.5103f),
+    origin.AddSeconds(244),
+    "second chained goal",
+    MagicalElixirDistanceBand.Near);
+Assert(
+    MagicalElixirDirectionResolver.IsCompletionTarget(
+        secondChainedGoal,
+        origin.AddSeconds(250),
+        [secondChainedFinalHint],
+        TimeSpan.FromMilliseconds(500)),
+    "the second coffer independently completes the chained Elixir search");
 var unrelatedVisibleTargets = new[]
 {
     new ConfirmedPotTargetObservation(1346, 2014742, "Unrelated silver", new Vector3(-86.0f, 60.596237f, -737.0f), origin),
@@ -206,7 +270,7 @@ Assert(
     !PotPredictionDisplayPolicy.ShouldShow(false, true, true, hasActivePotFate: false),
     "the user prediction visibility setting remains authoritative");
 var potTargetHistoryLine =
-    """{"observedAtUtc":"2026-07-30T07:08:02Z","kind":"pot-target","territoryId":1346,"dataId":2014742,"name":"Silver target","x":12.5,"y":-4,"z":-88.25}""";
+    """{"observedAtUtc":"2026-07-30T07:08:02Z","kind":"pot-target-goal","territoryId":1346,"dataId":2014742,"name":"Silver target","x":12.5,"y":-4,"z":-88.25}""";
 Assert(
     PotTargetHistoryReader.TryParseLine(
         potTargetHistoryLine,
@@ -214,16 +278,16 @@ Assert(
         out var restoredPotTarget)
     && restoredPotTarget.DataId == 2014742
     && restoredPotTarget.Position == new Vector3(12.5f, -4.0f, -88.25f),
-    "historical Magical Elixir target coordinates are restored");
+    "verified historical Magical Elixir goal coordinates are restored");
 Assert(
     !PotTargetHistoryReader.TryParseLine(
-        potTargetHistoryLine.Replace("pot-target", "active-treasure", StringComparison.Ordinal),
+        potTargetHistoryLine.Replace("pot-target-goal", "pot-target", StringComparison.Ordinal),
         ConfirmedPotTargetObservations.EventObjectDataIds,
         out _),
-    "ordinary treasure records are not restored as Elixir targets");
+    "unverified visible coffers are not restored as Elixir goals");
 Assert(
-    ConfirmedPotTargetObservations.NorthHorn.Count == 35,
-    "all 35 confirmed physical Magical Elixir goal locations are bundled");
+    ConfirmedPotTargetObservations.NorthHorn.Count == 37,
+    "all 37 confirmed physical Magical Elixir goal locations are bundled");
 Assert(
     ConfirmedPotTargetObservations.NorthHorn.All(spot =>
         spot.TerritoryId == 1346
