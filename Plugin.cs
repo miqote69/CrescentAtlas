@@ -559,10 +559,13 @@ public sealed class Plugin : IDalamudPlugin
         NotifyNewObjects(treasures, liveCarrots, confirmedPotTargets);
 
         PollFates(territoryId, territoryName, instanceKey, now, entering);
-        if (mapLayer == OccultCrescentMapLayer.Surface)
-            UpdatePotPrediction(instanceKey, now);
-        else
-            atlasData.SetPotPrediction(null);
+        // Prediction timing and advance notifications belong to the island
+        // instance, not its current map layer. Only the visual prediction
+        // marker remains surface-only.
+        UpdatePotPrediction(
+            instanceKey,
+            now,
+            showOnMap: mapLayer == OccultCrescentMapLayer.Surface);
         PollCriticalEncounters(territoryId, territoryName, instanceKey, now, entering);
 
         if (now >= nextFlushUtc)
@@ -1077,7 +1080,10 @@ public sealed class Plugin : IDalamudPlugin
             .ToArray();
     }
 
-    private void UpdatePotPrediction(string instanceKey, DateTimeOffset now)
+    private void UpdatePotPrediction(
+        string instanceKey,
+        DateTimeOffset now,
+        bool showOnMap)
     {
         var prediction = potPredictionTracker.GetUpcomingPrediction(instanceKey, now);
         if (prediction.NextOccurrenceUtc is not { } next
@@ -1089,14 +1095,16 @@ public sealed class Plugin : IDalamudPlugin
             return;
         }
 
-        atlasData.SetPotPrediction(new AtlasPotPrediction(
-            next,
-            interval,
-            eventId,
-            position,
-            ResolveFateMapIcon((ushort)eventId),
-            prediction.ObservationCount,
-            prediction.Confidence == PotPredictionConfidence.Confirmed));
+        atlasData.SetPotPrediction(showOnMap
+            ? new AtlasPotPrediction(
+                next,
+                interval,
+                eventId,
+                position,
+                ResolveFateMapIcon((ushort)eventId),
+                prediction.ObservationCount,
+                prediction.Confidence == PotPredictionConfidence.Confirmed)
+            : null);
 
         NotifyUpcomingPot(instanceKey, next, now);
     }
