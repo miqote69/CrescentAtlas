@@ -404,6 +404,34 @@ Assert(
     fixedLocationAfterMiss.PredictedPosition == firstPosition,
     "a missed provisional occurrence returns to the observed fixed location");
 
+var restoredFixedLocationTracker = new PotPredictionTracker(
+    knownEventPositions: ConfirmedMagicPotLocations.NorthHorn);
+restoredFixedLocationTracker.Observe(new PotObservation(
+    "restored-fixed-location",
+    origin,
+    2072,
+    ConfirmedMagicPotLocations.NorthHorn[2072]));
+restoredFixedLocationTracker.Observe(new PotObservation(
+    "restored-fixed-location",
+    origin.AddMinutes(30),
+    2073,
+    Vector3.Zero));
+var restoredFixedLocationPrediction = restoredFixedLocationTracker.Observe(new PotObservation(
+    "restored-fixed-location",
+    origin.AddMinutes(60),
+    2072,
+    ConfirmedMagicPotLocations.NorthHorn[2072]));
+Assert(
+    restoredFixedLocationPrediction.PredictedEventId == 2073,
+    "restored alternating observations still predict the opposite Magic Pot event");
+Assert(
+    restoredFixedLocationPrediction.PredictedPosition == ConfirmedMagicPotLocations.NorthHorn[2073],
+    "a zero position restored from history is replaced with the fixed Magic Pot location");
+Assert(
+    restoredFixedLocationTracker.GetObservations("restored-fixed-location")[1].Position ==
+        ConfirmedMagicPotLocations.NorthHorn[2073],
+    "the corrected fixed position is retained in tracker state");
+
 var advanceNotification = new PotAdvanceNotificationTracker();
 var advanceOccurrence = origin.AddMinutes(30);
 Assert(

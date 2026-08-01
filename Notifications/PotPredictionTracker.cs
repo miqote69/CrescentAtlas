@@ -27,21 +27,22 @@ public sealed class PotPredictionTracker
 
     public PotPrediction Observe(PotObservation observation)
     {
-        if (!observations.TryGetValue(observation.InstanceKey, out var instanceObservations))
+        var normalizedObservation = NormalizeKnownEventPosition(observation);
+        if (!observations.TryGetValue(normalizedObservation.InstanceKey, out var instanceObservations))
         {
             instanceObservations = [];
-            observations.Add(observation.InstanceKey, instanceObservations);
+            observations.Add(normalizedObservation.InstanceKey, instanceObservations);
         }
 
         var duplicate = instanceObservations.Any(existing =>
-            existing.EventId == observation.EventId &&
-            Vector3.DistanceSquared(existing.Position, observation.Position) < 0.01f &&
-            (existing.ObservedAtUtc - observation.ObservedAtUtc).Duration() <= duplicateWindow);
+            existing.EventId == normalizedObservation.EventId &&
+            Vector3.DistanceSquared(existing.Position, normalizedObservation.Position) < 0.01f &&
+            (existing.ObservedAtUtc - normalizedObservation.ObservedAtUtc).Duration() <= duplicateWindow);
 
         if (!duplicate)
-            instanceObservations.Add(observation);
+            instanceObservations.Add(normalizedObservation);
 
-        return CalculateForInstance(observation.InstanceKey, instanceObservations);
+        return CalculateForInstance(normalizedObservation.InstanceKey, instanceObservations);
     }
 
     public PotPrediction GetPrediction(string instanceKey) =>
@@ -138,6 +139,11 @@ public sealed class PotPredictionTracker
 
         return null;
     }
+
+    private PotObservation NormalizeKnownEventPosition(PotObservation observation) =>
+        knownEventPositions.TryGetValue(observation.EventId, out var knownPosition)
+            ? observation with { Position = knownPosition }
+            : observation;
 
     public void Reset(string instanceKey) => observations.Remove(instanceKey);
 
