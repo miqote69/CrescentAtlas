@@ -27,7 +27,7 @@ else {
     throw "Version must contain three or four numeric components: $Version"
 }
 
-$downloadUrl = "https://github.com/$Owner/$Repository/releases/download/$Tag/CrescentAtlas.zip"
+$downloadBaseUrl = "https://miqote69-minion-downloads.miqote.workers.dev/crescent-atlas/$Tag"
 $repoUrl = "https://github.com/$Owner/$Repository"
 $lastUpdate = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
 
@@ -52,9 +52,9 @@ $entry = [ordered]@{
     MinimumDalamudVersion = '15.0.0.0'
     IsHide = $false
     IsTestingExclusive = $false
-    DownloadLinkInstall = $downloadUrl
-    DownloadLinkTesting = $downloadUrl
-    DownloadLinkUpdate = $downloadUrl
+    DownloadLinkInstall = "$downloadBaseUrl/install"
+    DownloadLinkTesting = "$downloadBaseUrl/testing"
+    DownloadLinkUpdate = "$downloadBaseUrl/update"
     LastUpdate = $lastUpdate
 }
 
