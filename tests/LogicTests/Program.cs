@@ -8,6 +8,94 @@ using CrescentAtlas.Runtime;
 
 var origin = new DateTimeOffset(2026, 7, 30, 0, 0, 0, TimeSpan.Zero);
 Assert(
+    AfkVoiceNotificationTracker.TryClassify(
+        " 操作がない状態になってから、５分が経過しました。 ",
+        out var fiveMinuteAfkStage)
+    && fiveMinuteAfkStage == AfkVoiceStage.FiveMinutes,
+    "Japanese five-minute AFK logs tolerate punctuation, whitespace, and full-width digits");
+Assert(
+    AfkVoiceNotificationTracker.TryClassify(
+        "You have been inactive for seven minutes.",
+        out var sevenMinuteAfkStage)
+    && sevenMinuteAfkStage == AfkVoiceStage.SevenMinutes,
+    "English seven-minute AFK logs are recognized");
+var afkTracker = new AfkVoiceNotificationTracker();
+Assert(
+    !afkTracker.TryAccept(
+        "操作がない状態になってから5分が経過しました。",
+        isOccultCrescentActive: false,
+        notificationsEnabled: true,
+        out _),
+    "AFK logs outside the Occult Crescent never play or consume a warning");
+Assert(
+    !afkTracker.TryAccept(
+        "操作がない状態になってから5分が経過しました。",
+        isOccultCrescentActive: true,
+        notificationsEnabled: false,
+        out _),
+    "disabled AFK voice notifications remain silent");
+Assert(
+    afkTracker.TryAccept(
+        "操作がない状態になってから5分が経過しました。",
+        isOccultCrescentActive: true,
+        notificationsEnabled: true,
+        out var acceptedFiveMinuteStage)
+    && acceptedFiveMinuteStage == AfkVoiceStage.FiveMinutes,
+    "an actual in-content five-minute warning plays once");
+Assert(
+    !afkTracker.TryAccept(
+        "操作がない状態になってから、5分が経過しました。",
+        isOccultCrescentActive: true,
+        notificationsEnabled: true,
+        out _),
+    "duplicate five-minute logs do not replay");
+Assert(
+    afkTracker.TryAccept(
+        "操作がない状態になってから7分が経過しました。",
+        isOccultCrescentActive: true,
+        notificationsEnabled: true,
+        out var acceptedSevenMinuteStage)
+    && acceptedSevenMinuteStage == AfkVoiceStage.SevenMinutes,
+    "the seven-minute voice requires its actual game log");
+Assert(
+    afkTracker.TryAccept(
+        "操作がない状態になってから9分が経過しました。",
+        isOccultCrescentActive: true,
+        notificationsEnabled: true,
+        out var acceptedNineMinuteStage)
+    && acceptedNineMinuteStage == AfkVoiceStage.NineMinutes,
+    "the nine-minute voice requires its actual game log");
+Assert(
+    !afkTracker.TryAccept(
+        "操作がない状態になってから7分が経過しました。",
+        isOccultCrescentActive: true,
+        notificationsEnabled: true,
+        out _),
+    "an out-of-order duplicate warning does not replay within the same AFK cycle");
+Assert(
+    afkTracker.TryAccept(
+        "操作がない状態になってから5分が経過しました。",
+        isOccultCrescentActive: true,
+        notificationsEnabled: true,
+        out _),
+    "a later five-minute warning starts a fresh AFK cycle");
+afkTracker.Reset();
+Assert(
+    afkTracker.TryAccept(
+        "操作がない状態になってから5分が経過しました。",
+        isOccultCrescentActive: true,
+        notificationsEnabled: true,
+        out _),
+    "leaving the Occult Crescent clears AFK duplicate suppression");
+Assert(
+    AfkVoiceNotificationTracker.GetFileName(
+        AfkVoiceLanguage.Japanese,
+        AfkVoiceStage.NineMinutes) == "CrescentAtlas.AfkNineMinute.ja.wav"
+    && AfkVoiceNotificationTracker.GetFileName(
+        AfkVoiceLanguage.English,
+        AfkVoiceStage.FiveMinutes) == "CrescentAtlas.AfkFiveMinute.en.wav",
+    "AFK language and stage select the expected bundled voice files");
+Assert(
     AtlasDetectionRanges.TreasureCandidateCheckRadius == 70.0f,
     "the live treasure candidate check radius remains 70 yalms");
 Assert(

@@ -1,12 +1,13 @@
 using Dalamud.Configuration;
 using CrescentAtlas.Data;
+using CrescentAtlas.Notifications;
 
 namespace CrescentAtlas;
 
 [Serializable]
 public sealed class Configuration : IPluginConfiguration
 {
-    public int Version { get; set; } = 4;
+    public int Version { get; set; } = 5;
 
     public UiLanguage Language { get; set; } = UiLanguage.Japanese;
 
@@ -72,6 +73,10 @@ public sealed class Configuration : IPluginConfiguration
     // Retained for migration from configuration version 3.
     public PotThreeMinuteSoundMode PotAppearanceSoundMode { get; set; } =
         PotThreeMinuteSoundMode.GameSoundEffect;
+
+    public bool AfkVoiceNotificationsEnabled { get; set; }
+
+    public AfkVoiceLanguage AfkVoiceLanguage { get; set; } = AfkVoiceLanguage.Japanese;
 
     public HashSet<uint> ConfirmedCarrotDataIds { get; set; } =
         [ConfirmedCarrotObjects.FortuneCarrotDataId];

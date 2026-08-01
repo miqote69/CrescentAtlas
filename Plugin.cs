@@ -78,6 +78,7 @@ public sealed class Plugin : IDalamudPlugin
         new(knownEventPositions: ConfirmedMagicPotLocations.NorthHorn);
     private readonly PotAdvanceNotificationTracker potAdvanceNotificationTracker = new();
     private readonly PotAdvanceNotificationTracker potOneMinuteNotificationTracker = new();
+    private readonly AfkVoiceNotificationTracker afkVoiceNotificationTracker = new();
     private readonly WindowSystem windowSystem = new("CrescentAtlas");
     private readonly AtlasWindow atlasWindow;
     private readonly NearbyTreasureLineOverlay treasureLineOverlay;
@@ -126,6 +127,15 @@ public sealed class Plugin : IDalamudPlugin
                         ? configuration.PotThreeMinuteSoundMode
                         : configuration.PotAppearanceSoundMode;
                 configuration.Version = 4;
+                configurationChanged = true;
+            }
+            if (configuration.Version < 5)
+            {
+                configuration.AfkVoiceNotificationsEnabled = false;
+                configuration.AfkVoiceLanguage = configuration.Language == UiLanguage.Japanese
+                    ? AfkVoiceLanguage.Japanese
+                    : AfkVoiceLanguage.English;
+                configuration.Version = 5;
                 configurationChanged = true;
             }
             if (configuration.ConfirmedCarrotDataIds.Add(ConfirmedCarrotObjects.FortuneCarrotDataId))
@@ -183,7 +193,8 @@ public sealed class Plugin : IDalamudPlugin
                 SaveConfiguration,
                 PlayChatSoundEffect,
                 PlayJapanesePotAdvanceVoice,
-                PlayEnglishPotAdvanceVoice);
+                PlayEnglishPotAdvanceVoice,
+                PlayAfkVoice);
             treasureLineOverlay = new NearbyTreasureLineOverlay(GameGui, atlasData, configuration);
             windowSystem.AddWindow(atlasWindow);
             BootstrapDiagnostics.Write("atlas window and overlay initialized");
@@ -278,14 +289,25 @@ public sealed class Plugin : IDalamudPlugin
     {
         try
         {
+            if (!string.IsNullOrWhiteSpace(message.OriginalSender.ToString()))
+                return;
+
+            var text = message.OriginalMessage.ToString();
+            if (afkVoiceNotificationTracker.TryAccept(
+                    text,
+                    OccultCrescentContext.IsActive(),
+                    configuration.AfkVoiceNotificationsEnabled,
+                    out var afkStage))
+            {
+                PlayAfkVoice(configuration.AfkVoiceLanguage, afkStage);
+            }
+
             if (ClientState.TerritoryType != 1346
-                || ObjectTable.LocalPlayer is not { } localPlayer
-                || !string.IsNullOrWhiteSpace(message.OriginalSender.ToString()))
+                || ObjectTable.LocalPlayer is not { } localPlayer)
             {
                 return;
             }
 
-            var text = message.OriginalMessage.ToString();
             if (!MagicalElixirDirectionResolver.TryParse(
                     text,
                     out var direction,
@@ -1278,6 +1300,7 @@ public sealed class Plugin : IDalamudPlugin
         previousCarrotKeys.Clear();
         previousPotTargetKeys.Clear();
         potTargetFirstSeenUtc.Clear();
+        afkVoiceNotificationTracker.Reset();
         magicalElixirDirectionHints.Clear();
         while (pendingMagicalElixirDirectionHints.TryDequeue(out _))
         {
@@ -1390,6 +1413,11 @@ public sealed class Plugin : IDalamudPlugin
         => PlayVoiceFile(
             EnglishPotAppearedFileName,
             "English Magic Pot appearance voice");
+
+    private void PlayAfkVoice(AfkVoiceLanguage language, AfkVoiceStage stage)
+        => PlayVoiceFile(
+            AfkVoiceNotificationTracker.GetFileName(language, stage),
+            $"{language} AFK {stage} voice");
 
     private void PlayVoiceFile(string fileName, string description)
     {

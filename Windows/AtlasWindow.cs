@@ -1,5 +1,6 @@
 using CrescentAtlas.Contracts;
 using CrescentAtlas.Data;
+using CrescentAtlas.Notifications;
 using CrescentAtlas.Runtime;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -70,6 +71,7 @@ public sealed class AtlasWindow : Window, IDisposable
     private readonly System.Action<uint> playChatSoundEffect;
     private readonly System.Action playJapanesePotAdvanceVoice;
     private readonly System.Action playEnglishPotAdvanceVoice;
+    private readonly System.Action<AfkVoiceLanguage, AfkVoiceStage> playAfkVoice;
     private readonly string versionLabel;
     private float mapZoom = MinimumMapZoom;
     private Vector2 mapCenter = new(0.5f, 0.5f);
@@ -88,7 +90,8 @@ public sealed class AtlasWindow : Window, IDisposable
         System.Action saveConfiguration,
         System.Action<uint> playChatSoundEffect,
         System.Action playJapanesePotAdvanceVoice,
-        System.Action playEnglishPotAdvanceVoice)
+        System.Action playEnglishPotAdvanceVoice,
+        System.Action<AfkVoiceLanguage, AfkVoiceStage> playAfkVoice)
         : base("Crescent Atlas###CrescentAtlasMap")
     {
         this.dataSource = dataSource;
@@ -102,6 +105,7 @@ public sealed class AtlasWindow : Window, IDisposable
         this.playChatSoundEffect = playChatSoundEffect;
         this.playJapanesePotAdvanceVoice = playJapanesePotAdvanceVoice;
         this.playEnglishPotAdvanceVoice = playEnglishPotAdvanceVoice;
+        this.playAfkVoice = playAfkVoice;
         versionLabel = FormatVersionLabel(typeof(AtlasWindow).Assembly.GetName().Version);
         IsOpen = configuration.MapVisible;
 
@@ -428,6 +432,16 @@ public sealed class AtlasWindow : Window, IDisposable
 
     private void DrawSoundSettings()
     {
+        if (!ImGui.BeginChild(
+                "CrescentAtlasSoundSettingsScroll",
+                Vector2.Zero,
+                false,
+                ImGuiWindowFlags.AlwaysVerticalScrollbar))
+        {
+            ImGui.EndChild();
+            return;
+        }
+
         ImGui.TextUnformatted(T("Sound settings", "サウンド設定"));
         ImGui.TextDisabled(T(
             "Configure Magic Pot prediction and appearance alerts.",
@@ -497,6 +511,52 @@ public sealed class AtlasWindow : Window, IDisposable
         ImGui.TextDisabled(T(
             "Selecting a sound plays it once.",
             "音声を選択すると一度だけ再生します。"));
+
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+        ImGui.TextUnformatted(T("AFK voice notifications", "AFKボイス通知"));
+        ImGui.TextDisabled(T(
+            "Plays only from actual 5/7/9-minute game warnings while inside the Occult Crescent. It never performs input or prevents removal.",
+            "クレセントアイル内で、ゲームの5分・7分・9分警告ログを受信した時だけ再生します。入力操作や退出阻止は行いません。"));
+
+        var afkEnabled = configuration.AfkVoiceNotificationsEnabled;
+        if (ImGui.Checkbox(
+                T("Enable AFK voice notifications", "AFKボイス通知を有効化"),
+                ref afkEnabled))
+        {
+            configuration.AfkVoiceNotificationsEnabled = afkEnabled;
+            saveConfiguration();
+        }
+
+        ImGui.TextUnformatted(T("AFK voice language", "AFKボイス言語"));
+        if (ImGui.RadioButton(
+                T("Japanese##afk-language", "日本語##afk-language"),
+                configuration.AfkVoiceLanguage == AfkVoiceLanguage.Japanese))
+        {
+            configuration.AfkVoiceLanguage = AfkVoiceLanguage.Japanese;
+            saveConfiguration();
+        }
+        ImGui.SameLine();
+        if (ImGui.RadioButton(
+                T("English##afk-language", "英語##afk-language"),
+                configuration.AfkVoiceLanguage == AfkVoiceLanguage.English))
+        {
+            configuration.AfkVoiceLanguage = AfkVoiceLanguage.English;
+            saveConfiguration();
+        }
+
+        ImGui.TextUnformatted(T("Preview", "プレビュー"));
+        if (ImGui.Button(T("5 minutes##afk-preview", "5分##afk-preview")))
+            playAfkVoice(configuration.AfkVoiceLanguage, AfkVoiceStage.FiveMinutes);
+        ImGui.SameLine();
+        if (ImGui.Button(T("7 minutes##afk-preview", "7分##afk-preview")))
+            playAfkVoice(configuration.AfkVoiceLanguage, AfkVoiceStage.SevenMinutes);
+        ImGui.SameLine();
+        if (ImGui.Button(T("9 minutes##afk-preview", "9分##afk-preview")))
+            playAfkVoice(configuration.AfkVoiceLanguage, AfkVoiceStage.NineMinutes);
+
+        ImGui.EndChild();
     }
 
     private void DrawSoundModeSelector()

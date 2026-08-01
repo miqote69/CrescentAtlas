@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
-    <Version>0.1.88</Version>
+    <Version>0.1.89</Version>
     <PackageProjectUrl>https://github.com/miqote69/CrescentAtlas</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <IsPackable>false</IsPackable>
@@ -33,6 +33,30 @@
     <Content Include="Assets\Audio\CrescentAtlas.PotOneMinute.en.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <TargetPath>CrescentAtlas.PotOneMinute.en.wav</TargetPath>
+    </Content>
+    <Content Include="Assets\Audio\CrescentAtlas.AfkFiveMinute.ja.wav">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>CrescentAtlas.AfkFiveMinute.ja.wav</TargetPath>
+    </Content>
+    <Content Include="Assets\Audio\CrescentAtlas.AfkSevenMinute.ja.wav">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>CrescentAtlas.AfkSevenMinute.ja.wav</TargetPath>
+    </Content>
+    <Content Include="Assets\Audio\CrescentAtlas.AfkNineMinute.ja.wav">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>CrescentAtlas.AfkNineMinute.ja.wav</TargetPath>
+    </Content>
+    <Content Include="Assets\Audio\CrescentAtlas.AfkFiveMinute.en.wav">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>CrescentAtlas.AfkFiveMinute.en.wav</TargetPath>
+    </Content>
+    <Content Include="Assets\Audio\CrescentAtlas.AfkSevenMinute.en.wav">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>CrescentAtlas.AfkSevenMinute.en.wav</TargetPath>
+    </Content>
+    <Content Include="Assets\Audio\CrescentAtlas.AfkNineMinute.en.wav">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>CrescentAtlas.AfkNineMinute.en.wav</TargetPath>
     </Content>
   </ItemGroup>
 </Project>

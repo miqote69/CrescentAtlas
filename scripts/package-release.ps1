@@ -19,6 +19,12 @@ $japanesePotOneMinutePath = Join-Path $buildDirectory 'CrescentAtlas.PotOneMinut
 $englishPotAlertPath = Join-Path $buildDirectory 'CrescentAtlas.PotAlert.en.wav'
 $englishPotAppearedPath = Join-Path $buildDirectory 'CrescentAtlas.PotAppeared.en.wav'
 $englishPotOneMinutePath = Join-Path $buildDirectory 'CrescentAtlas.PotOneMinute.en.wav'
+$japaneseAfkFiveMinutePath = Join-Path $buildDirectory 'CrescentAtlas.AfkFiveMinute.ja.wav'
+$japaneseAfkSevenMinutePath = Join-Path $buildDirectory 'CrescentAtlas.AfkSevenMinute.ja.wav'
+$japaneseAfkNineMinutePath = Join-Path $buildDirectory 'CrescentAtlas.AfkNineMinute.ja.wav'
+$englishAfkFiveMinutePath = Join-Path $buildDirectory 'CrescentAtlas.AfkFiveMinute.en.wav'
+$englishAfkSevenMinutePath = Join-Path $buildDirectory 'CrescentAtlas.AfkSevenMinute.en.wav'
+$englishAfkNineMinutePath = Join-Path $buildDirectory 'CrescentAtlas.AfkNineMinute.en.wav'
 
 foreach ($requiredPath in @(
     $manifestPath,
@@ -29,7 +35,13 @@ foreach ($requiredPath in @(
     $japanesePotOneMinutePath,
     $englishPotAlertPath,
     $englishPotAppearedPath,
-    $englishPotOneMinutePath
+    $englishPotOneMinutePath,
+    $japaneseAfkFiveMinutePath,
+    $japaneseAfkSevenMinutePath,
+    $japaneseAfkNineMinutePath,
+    $englishAfkFiveMinutePath,
+    $englishAfkSevenMinutePath,
+    $englishAfkNineMinutePath
 )) {
     if (-not (Test-Path -LiteralPath $requiredPath -PathType Leaf)) {
         throw "Required build output is missing: $requiredPath"
@@ -66,7 +78,13 @@ Compress-Archive -LiteralPath @(
     $japanesePotOneMinutePath,
     $englishPotAlertPath,
     $englishPotAppearedPath,
-    $englishPotOneMinutePath
+    $englishPotOneMinutePath,
+    $japaneseAfkFiveMinutePath,
+    $japaneseAfkSevenMinutePath,
+    $japaneseAfkNineMinutePath,
+    $englishAfkFiveMinutePath,
+    $englishAfkSevenMinutePath,
+    $englishAfkNineMinutePath
 ) -DestinationPath $resolvedOutput
 
 $archive = [IO.Compression.ZipFile]::OpenRead($resolvedOutput)
@@ -81,7 +99,13 @@ try {
         'CrescentAtlas.PotOneMinute.ja.wav',
         'CrescentAtlas.PotAlert.en.wav',
         'CrescentAtlas.PotAppeared.en.wav',
-        'CrescentAtlas.PotOneMinute.en.wav'
+        'CrescentAtlas.PotOneMinute.en.wav',
+        'CrescentAtlas.AfkFiveMinute.ja.wav',
+        'CrescentAtlas.AfkSevenMinute.ja.wav',
+        'CrescentAtlas.AfkNineMinute.ja.wav',
+        'CrescentAtlas.AfkFiveMinute.en.wav',
+        'CrescentAtlas.AfkSevenMinute.en.wav',
+        'CrescentAtlas.AfkNineMinute.en.wav'
     )
     if (Compare-Object -ReferenceObject $expectedNames -DifferenceObject $entryNames) {
         throw "Release archive contains unexpected entries: $($entryNames -join ', ')"

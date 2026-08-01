@@ -11,6 +11,7 @@
     <Compile Include="..\..\Notifications\PotPredictionTracker.cs" Link="PotPredictionTracker.cs" />
     <Compile Include="..\..\Notifications\PotAdvanceNotificationTracker.cs" Link="PotAdvanceNotificationTracker.cs" />
     <Compile Include="..\..\Notifications\PotObservationHistoryReader.cs" Link="PotObservationHistoryReader.cs" />
+    <Compile Include="..\..\Notifications\AfkVoiceNotificationTracker.cs" Link="AfkVoiceNotificationTracker.cs" />
     <Compile Include="..\..\Data\ConfirmedMagicPotLocations.cs" Link="ConfirmedMagicPotLocations.cs" />
     <Compile Include="..\..\Data\ConfirmedCarrotObjects.cs" Link="ConfirmedCarrotObjects.cs" />
     <Compile Include="..\..\Data\ConfirmedCarrotSpots.cs" Link="ConfirmedCarrotSpots.cs" />
