@@ -119,6 +119,14 @@ var actualLateTarget = new Vector3(-190.0f, 61.75258f, -763.0f);
 Assert(
     MagicalElixirDirectionResolver.IsConsistentWithHints(actualLateTarget, lateTrackingHints),
     "the actual late-search coffer matches the complete direction and distance history");
+var bundledLateCandidates = MagicalElixirDirectionResolver.Resolve(
+    1346,
+    ConfirmedPotTargetObservations.NorthHorn,
+    lateTrackingHints);
+Assert(
+    bundledLateCandidates.Any(candidate =>
+        Vector3.DistanceSquared(candidate.Spot.Position, actualLateTarget) < 0.01f),
+    "the bundled goal database resolves a previously observed Elixir route to its fixed destination");
 var unknownTarget = new Vector3(151.9998f, 61.106945f, -842.0175f);
 Assert(
     MagicalElixirDirectionResolver.EstimateUnknownLocation([]) is null,
@@ -213,6 +221,21 @@ Assert(
         ConfirmedPotTargetObservations.EventObjectDataIds,
         out _),
     "ordinary treasure records are not restored as Elixir targets");
+Assert(
+    ConfirmedPotTargetObservations.NorthHorn.Count == 35,
+    "all 35 confirmed physical Magical Elixir goal locations are bundled");
+Assert(
+    ConfirmedPotTargetObservations.NorthHorn.All(spot =>
+        spot.TerritoryId == 1346
+        && spot.DataId == 0
+        && float.IsFinite(spot.Position.X)
+        && float.IsFinite(spot.Position.Y)
+        && float.IsFinite(spot.Position.Z)),
+    "bundled Elixir goals are generic finite North Horn destinations");
+Assert(
+    ConfirmedPotTargetObservations.NorthHorn.Any(spot =>
+        Vector3.DistanceSquared(spot.Position, new Vector3(-190.0f, 61.75258f, -763.0f)) < 0.01f),
+    "the latest confirmed Elixir goal is included in the bundled set");
 Assert(ConfirmedCarrotSpots.NorthHorn.Count == 8, "eight confirmed fixed carrot spots are bundled");
 var carrotHistoryLine =
     """{"observedAtUtc":"2026-07-30T06:45:43.1067071+00:00","kind":"carrot-candidate","territoryId":1346,"dataId":2010139,"x":-560.9,"y":50.74249,"z":-447}""";
