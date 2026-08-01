@@ -34,5 +34,8 @@ public static class ConfirmedCarrotSpots
         new(1346, ConfirmedCarrotObjects.FortuneCarrotDataId,
             new Vector3(882.1526f, 53.999996f, 115.9092f),
             new DateTimeOffset(2026, 7, 31, 0, 3, 59, TimeSpan.Zero)),
+        new(1346, ConfirmedCarrotObjects.FortuneCarrotDataId,
+            new Vector3(-847.9f, 114.0f, 196.6f),
+            new DateTimeOffset(2026, 8, 1, 6, 26, 51, TimeSpan.Zero)),
     ];
 }

@@ -236,7 +236,11 @@ Assert(
     ConfirmedPotTargetObservations.NorthHorn.Any(spot =>
         Vector3.DistanceSquared(spot.Position, new Vector3(-190.0f, 61.75258f, -763.0f)) < 0.01f),
     "the latest confirmed Elixir goal is included in the bundled set");
-Assert(ConfirmedCarrotSpots.NorthHorn.Count == 8, "eight confirmed fixed carrot spots are bundled");
+Assert(ConfirmedCarrotSpots.NorthHorn.Count == 9, "nine confirmed fixed carrot spots are bundled");
+Assert(
+    ConfirmedCarrotSpots.NorthHorn.Any(spot =>
+        Vector3.DistanceSquared(spot.Position, new Vector3(-847.9f, 114.0f, 196.6f)) < 0.01f),
+    "the latest confirmed carrot location is bundled");
 var carrotHistoryLine =
     """{"observedAtUtc":"2026-07-30T06:45:43.1067071+00:00","kind":"carrot-candidate","territoryId":1346,"dataId":2010139,"x":-560.9,"y":50.74249,"z":-447}""";
 Assert(
