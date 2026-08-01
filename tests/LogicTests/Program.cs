@@ -9,7 +9,7 @@ using CrescentAtlas.Runtime;
 var origin = new DateTimeOffset(2026, 7, 30, 0, 0, 0, TimeSpan.Zero);
 Assert(
     AtlasDetectionRanges.TreasureCandidateCheckRadius == 70.0f,
-    "the debug range matches the live treasure candidate check radius");
+    "the live treasure candidate check radius remains 70 yalms");
 Assert(
     ConfirmedCarrotObjects.IsKnownDataId(2010139),
     "the Fortune Carrot EventObj is recognized without user configuration");
