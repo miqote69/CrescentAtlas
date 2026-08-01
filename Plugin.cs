@@ -515,8 +515,17 @@ public sealed class Plugin : IDalamudPlugin
             RecordAll(mappedPotTargetObservations);
         var confirmedPotTargets = MergePotTargets(loadedPotTargets, mappedPotTargets);
         RememberPotTargetSpots(confirmedPotTargets);
+        ProcessMagicalElixirDirectionHints(
+            territoryId,
+            territoryName,
+            instanceKey,
+            now);
         AtlasMarker[] directionalPotTargets;
-        if (confirmedPotTargets.Length > 0)
+        var matchedConfirmedTarget = confirmedPotTargets.Any(target =>
+            MagicalElixirDirectionResolver.IsConsistentWithHints(
+                target.Position,
+                magicalElixirDirectionHints));
+        if (matchedConfirmedTarget)
         {
             magicalElixirDirectionHints.Clear();
             while (pendingMagicalElixirDirectionHints.TryDequeue(out _))
@@ -526,11 +535,6 @@ public sealed class Plugin : IDalamudPlugin
         }
         else
         {
-            ProcessMagicalElixirDirectionHints(
-                territoryId,
-                territoryName,
-                instanceKey,
-                now);
             directionalPotTargets = BuildMagicalElixirDirectionCandidates(territoryId, now);
         }
         var potTargets = MergePotTargets(confirmedPotTargets, directionalPotTargets);

@@ -95,6 +95,30 @@ var northCandidates = MagicalElixirDirectionResolver.Resolve(
 Assert(
     northCandidates.Count == 1 && northCandidates[0].Spot.Name == "North",
     "a direction hint eliminates fixed targets outside its cone");
+var lateTrackingHints = new MagicalElixirDirectionHint[]
+{
+    new(CompassDirection.NorthWest, new(226.58598f, 8.557167f, -477.65237f), origin, "very far northwest", MagicalElixirDistanceBand.VeryFar),
+    new(CompassDirection.NorthWest, new(198.52986f, 19.448032f, -527.9485f), origin.AddSeconds(6), "very far northwest", MagicalElixirDistanceBand.VeryFar),
+    new(CompassDirection.NorthWest, new(178.68251f, 31.544199f, -603.8502f), origin.AddSeconds(11), "very far northwest", MagicalElixirDistanceBand.VeryFar),
+    new(CompassDirection.West, new(119.52219f, 29.592543f, -654.2998f), origin.AddSeconds(17), "very far west", MagicalElixirDistanceBand.VeryFar),
+    new(CompassDirection.West, new(51.803513f, 38.486988f, -686.2103f), origin.AddSeconds(22), "very far west", MagicalElixirDistanceBand.VeryFar),
+    new(CompassDirection.West, new(-35.207733f, 50.338135f, -702.7713f), origin.AddSeconds(28), "far west", MagicalElixirDistanceBand.Far),
+    new(CompassDirection.West, new(-89.26941f, 61.491196f, -741.0671f), origin.AddSeconds(33), "far west", MagicalElixirDistanceBand.Far),
+    new(CompassDirection.NorthWest, new(-152.3785f, 59.89325f, -733.92346f), origin.AddSeconds(38), "near northwest", MagicalElixirDistanceBand.Near),
+    new(CompassDirection.NorthEast, new(-209.12477f, 57.767963f, -741.13544f), origin.AddSeconds(44), "near northeast", MagicalElixirDistanceBand.Near),
+};
+var unrelatedVisibleTargets = new[]
+{
+    new ConfirmedPotTargetObservation(1346, 2014742, "Unrelated silver", new Vector3(-86.0f, 60.596237f, -737.0f), origin),
+    new ConfirmedPotTargetObservation(1346, 2014743, "Unrelated bronze", new Vector3(-251.781f, 65.949005f, -864.3828f), origin),
+};
+Assert(
+    MagicalElixirDirectionResolver.Resolve(1346, unrelatedVisibleTargets, lateTrackingHints).Count == 0,
+    "unrelated visible Elixir coffers do not terminate a direction search");
+var actualLateTarget = new Vector3(-190.0f, 61.75258f, -763.0f);
+Assert(
+    MagicalElixirDirectionResolver.IsConsistentWithHints(actualLateTarget, lateTrackingHints),
+    "the actual late-search coffer matches the complete direction and distance history");
 var unknownTarget = new Vector3(151.9998f, 61.106945f, -842.0175f);
 Assert(
     MagicalElixirDirectionResolver.EstimateUnknownLocation([]) is null,

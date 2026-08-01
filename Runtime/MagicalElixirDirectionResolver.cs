@@ -227,6 +227,7 @@ public static class MagicalElixirDirectionResolver
             .Where(spot => spot.TerritoryId == territoryId)
             .GroupBy(SpotLocationKey, StringComparer.Ordinal)
             .Select(group => group.OrderByDescending(spot => spot.ObservedAtUtc).First())
+            .Where(spot => IsConsistentWithHints(spot.Position, hints, halfWidthDegrees))
             .Select(spot => new
             {
                 Spot = spot,
@@ -236,7 +237,6 @@ public static class MagicalElixirDirectionResolver
                         BearingDegrees(hint.PlayerPosition, spot.Position)))
                     .ToArray(),
             })
-            .Where(candidate => candidate.Errors.All(error => error <= halfWidthDegrees))
             .Select(candidate => new MagicalElixirDirectionCandidate(
                 candidate.Spot,
                 candidate.Errors.Average()))
@@ -246,6 +246,36 @@ public static class MagicalElixirDirectionResolver
                 candidate.Spot.Position))
             .Take(maximumCandidates)
             .ToArray();
+    }
+
+    public static bool IsConsistentWithHints(
+        Vector3 position,
+        IReadOnlyCollection<MagicalElixirDirectionHint> hints,
+        float halfWidthDegrees = DefaultHalfWidthDegrees)
+    {
+        if (hints.Count == 0)
+            return false;
+
+        return hints.All(hint =>
+        {
+            var angularError = AngularErrorDegrees(
+                DirectionDegrees(hint.Direction),
+                BearingDegrees(hint.PlayerPosition, position));
+            if (angularError > halfWidthDegrees)
+                return false;
+
+            var distance = Vector2.Distance(
+                new Vector2(hint.PlayerPosition.X, hint.PlayerPosition.Z),
+                new Vector2(position.X, position.Z));
+            return hint.DistanceBand switch
+            {
+                MagicalElixirDistanceBand.VeryNear => distance <= 25.0f,
+                MagicalElixirDistanceBand.Near => distance is >= 20.0f and <= 100.0f,
+                MagicalElixirDistanceBand.Far => distance is >= 100.0f and <= 220.0f,
+                MagicalElixirDistanceBand.VeryFar => distance >= 200.0f,
+                _ => true,
+            };
+        });
     }
 
     public static float BearingDegrees(Vector3 from, Vector3 to)
