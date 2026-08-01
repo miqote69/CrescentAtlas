@@ -27,7 +27,7 @@ else {
     throw "Version must contain three or four numeric components: $Version"
 }
 
-$downloadBaseUrl = "https://miqote69-minion-downloads.miqote.workers.dev/crescent-atlas/$Tag"
+$downloadBaseUrl = "https://downloads.miqote69.com/crescent-atlas/$Tag"
 $repoUrl = "https://github.com/$Owner/$Repository"
 $lastUpdate = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
 
