@@ -30,7 +30,10 @@ public sealed class AtlasWindow : Window, IDisposable
     private const float MapZoomStep = 0.25f;
     private const float PlayerLegendIconHalfSize = 13.0f;
     private const float PlayerMapIconHalfSize = 18.0f;
+    private const float StandardGameIconHalfSize = 13.0f;
+    private const float EventGameIconHalfSize = 19.0f;
     private const uint PlayerMapIconId = 60443;
+    private const uint ActiveTreasureMapIconId = 60436;
     private const string WindowSettingsPopupId = "CrescentAtlasWindowSettings";
     private bool windowSettingsRequested;
     private static readonly Vector4 BackgroundColor = new(0.035f, 0.045f, 0.055f, 0.96f);
@@ -1153,7 +1156,12 @@ public sealed class AtlasWindow : Window, IDisposable
             var treasureScreen = project(marker.Position);
             if (configuration.ShowTreasureGuideLines)
                 drawList.AddLine(playerScreen, treasureScreen, lineColor, 3.0f);
-            drawList.AddCircle(treasureScreen, MarkerRadius + 5.0f, lineColor, 0, 2.0f);
+            drawList.AddCircle(
+                treasureScreen,
+                marker.Kind == AtlasMarkerKind.ActiveTreasure ? 17.0f : MarkerRadius + 5.0f,
+                lineColor,
+                0,
+                marker.Kind == AtlasMarkerKind.ActiveTreasure ? 3.0f : 2.0f);
         }
     }
 
@@ -1266,12 +1274,24 @@ public sealed class AtlasWindow : Window, IDisposable
             return;
         }
 
+        if (marker.Kind == AtlasMarkerKind.ActiveTreasure)
+        {
+            DrawActiveTreasureIcon(drawList, point);
+            return;
+        }
+
         if (marker.Kind is AtlasMarkerKind.Fate
                 or AtlasMarkerKind.CriticalEncounter
                 or AtlasMarkerKind.PotFate
                 or AtlasMarkerKind.Aetheryte
             && marker.IconId != 0
-            && TryDrawGameIcon(drawList, point, marker.IconId))
+            && TryDrawGameIcon(
+                drawList,
+                point,
+                marker.IconId,
+                marker.Kind is AtlasMarkerKind.Fate or AtlasMarkerKind.CriticalEncounter
+                    ? EventGameIconHalfSize
+                    : StandardGameIconHalfSize))
         {
             if (marker.Kind == AtlasMarkerKind.PotFate && marker.IsActive)
                 DrawActivePotFateHalo(drawList, point);
@@ -1309,7 +1329,7 @@ public sealed class AtlasWindow : Window, IDisposable
                 drawList.AddLine(point + new Vector2(-0.5f, 3.0f), point + new Vector2(4.0f, -3.0f), checkColor, 2.0f);
             }
         }
-        else if (marker.Kind is AtlasMarkerKind.ActiveTreasure or AtlasMarkerKind.PotTarget)
+        else if (marker.Kind == AtlasMarkerKind.PotTarget)
         {
             DrawDiamond(drawList, point, radius + 1.0f, packedColor);
         }
@@ -1357,6 +1377,25 @@ public sealed class AtlasWindow : Window, IDisposable
             drawList.AddLine(leafBase, leafTip, shadow, 4.5f);
             drawList.AddLine(leafBase, leafTip, leaves, 2.6f);
         }
+    }
+
+    private void DrawActiveTreasureIcon(ImDrawListPtr drawList, Vector2 point)
+    {
+        var pulse = 0.72f + (0.28f * MathF.Sin(
+            (float)(DateTimeOffset.UtcNow.TimeOfDay.TotalSeconds * 4.5)));
+        var shadow = ImGui.GetColorU32(new Vector4(0.01f, 0.035f, 0.05f, 0.96f));
+        var halo = ImGui.GetColorU32(new Vector4(0.22f, 0.95f, 1.00f, pulse));
+
+        drawList.AddCircleFilled(point, 18.0f, shadow, 32);
+        drawList.AddCircle(point, 20.0f, halo, 32, 3.0f);
+        if (TryDrawGameIcon(drawList, point, ActiveTreasureMapIconId, 17.0f))
+            return;
+
+        // Keep a visible fallback if the game texture cannot be resolved.
+        var body = ImGui.GetColorU32(new Vector4(0.18f, 0.88f, 1.00f, 1.0f));
+        var center = ImGui.GetColorU32(new Vector4(0.94f, 1.00f, 1.00f, 1.0f));
+        DrawDiamond(drawList, point, 8.5f, body);
+        DrawDiamond(drawList, point, 4.5f, center);
     }
 
     private static void DrawElixirDirectionCandidateIcon(ImDrawListPtr drawList, Vector2 point)
@@ -1431,6 +1470,9 @@ public sealed class AtlasWindow : Window, IDisposable
         var minutes = remainingSeconds / 60;
         var seconds = remainingSeconds % 60;
         var progress = Math.Clamp(marker.Progress, (byte)0, (byte)100);
+        var statusOffset = (marker.Kind is AtlasMarkerKind.Fate or AtlasMarkerKind.CriticalEncounter
+            ? EventGameIconHalfSize
+            : StandardGameIconHalfSize) + 2.0f;
         var background = marker.Kind == AtlasMarkerKind.CriticalEncounter
                          && marker.EventState is "Register" or "Warmup"
             ? new Vector4(0.20f, 0.13f, 0.02f, 0.88f)
@@ -1449,11 +1491,11 @@ public sealed class AtlasWindow : Window, IDisposable
                 compactTimeSize.X + compactGap + compactProgressSize.X,
                 Math.Max(compactTimeSize.Y, compactProgressSize.Y));
             var compactPadding = new Vector2(4.0f, 3.0f);
-            var compactPosition = point + new Vector2(-(compactSize.X * 0.5f), 15.0f);
+            var compactPosition = point + new Vector2(-(compactSize.X * 0.5f), statusOffset);
             if (clipMinimum is { } compactMinimum && clipMaximum is { } compactMaximum)
             {
                 if (compactPosition.Y + compactSize.Y + compactPadding.Y > compactMaximum.Y - 2.0f)
-                    compactPosition.Y = point.Y - 15.0f - compactSize.Y;
+                    compactPosition.Y = point.Y - statusOffset - compactSize.Y;
 
                 compactPosition.X = Math.Clamp(
                     compactPosition.X,
@@ -1505,12 +1547,12 @@ public sealed class AtlasWindow : Window, IDisposable
             Math.Max(nameLineSize.X, Math.Max(timeLineSize.X, progressLineSize.X)),
             lineHeight * 3.0f);
         var padding = new Vector2(4.0f, 3.0f);
-        var textPosition = point + new Vector2(-(textSize.X * 0.5f), 15.0f);
+        var textPosition = point + new Vector2(-(textSize.X * 0.5f), statusOffset);
         if (clipMinimum is { } minimum && clipMaximum is { } maximum)
         {
             var lowerEdge = textPosition.Y + textSize.Y + padding.Y;
             if (lowerEdge > maximum.Y - 2.0f)
-                textPosition.Y = point.Y - 15.0f - textSize.Y;
+                textPosition.Y = point.Y - statusOffset - textSize.Y;
 
             textPosition.X = Math.Clamp(
                 textPosition.X,
@@ -1555,7 +1597,11 @@ public sealed class AtlasWindow : Window, IDisposable
             : $"{trimmed[..Math.Max(1, maximumCharacters - 1)]}…";
     }
 
-    private bool TryDrawGameIcon(ImDrawListPtr drawList, Vector2 point, uint iconId)
+    private bool TryDrawGameIcon(
+        ImDrawListPtr drawList,
+        Vector2 point,
+        uint iconId,
+        float halfSize = StandardGameIconHalfSize)
     {
         try
         {
@@ -1563,7 +1609,6 @@ public sealed class AtlasWindow : Window, IDisposable
             if (texture.Width <= 1 || texture.Height <= 1)
                 return false;
 
-            const float halfSize = 13.0f;
             var minimum = point - new Vector2(halfSize);
             var maximum = point + new Vector2(halfSize);
             drawList.AddImage(texture.Handle, minimum, maximum);
