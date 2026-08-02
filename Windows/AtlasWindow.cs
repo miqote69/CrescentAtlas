@@ -31,9 +31,8 @@ public sealed class AtlasWindow : Window, IDisposable
     private const float PlayerLegendIconHalfSize = 13.0f;
     private const float PlayerMapIconHalfSize = 18.0f;
     private const float StandardGameIconHalfSize = 13.0f;
-    private const float EventGameIconHalfSize = 19.0f;
+    private const float EventGameIconHalfSize = 17.0f;
     private const uint PlayerMapIconId = 60443;
-    private const uint ActiveTreasureMapIconId = 60436;
     private const string WindowSettingsPopupId = "CrescentAtlasWindowSettings";
     private bool windowSettingsRequested;
     private static readonly Vector4 BackgroundColor = new(0.035f, 0.045f, 0.055f, 0.96f);
@@ -1289,7 +1288,9 @@ public sealed class AtlasWindow : Window, IDisposable
                 drawList,
                 point,
                 marker.IconId,
-                marker.Kind is AtlasMarkerKind.Fate or AtlasMarkerKind.CriticalEncounter
+                marker.Kind is AtlasMarkerKind.Fate
+                    or AtlasMarkerKind.CriticalEncounter
+                    or AtlasMarkerKind.PotFate
                     ? EventGameIconHalfSize
                     : StandardGameIconHalfSize))
         {
@@ -1302,14 +1303,12 @@ public sealed class AtlasWindow : Window, IDisposable
 
         if (marker.Kind == AtlasMarkerKind.TreasureCandidate)
         {
-            var shadowColor = ImGui.GetColorU32(new Vector4(0.01f, 0.04f, 0.06f, 0.92f));
             var ring = isBronzeTreasure
                 ? marker.IsChecked
                     ? CheckedTreasureColor
                     : BronzeTreasureRingColor
                 : new Vector4(color.X, color.Y, color.Z, color.W * 0.72f);
             var ringColor = ImGui.GetColorU32(ring);
-            drawList.AddCircleFilled(point, radius + 2.5f, shadowColor);
             drawList.AddCircleFilled(point, radius, packedColor);
             drawList.AddCircle(point, radius + 3.5f, ringColor, 0, isBronzeTreasure ? 2.5f : 2.0f);
             if (isBronzeTreasure)
@@ -1379,23 +1378,79 @@ public sealed class AtlasWindow : Window, IDisposable
         }
     }
 
-    private void DrawActiveTreasureIcon(ImDrawListPtr drawList, Vector2 point)
+    private static void DrawActiveTreasureIcon(ImDrawListPtr drawList, Vector2 point)
     {
         var pulse = 0.72f + (0.28f * MathF.Sin(
             (float)(DateTimeOffset.UtcNow.TimeOfDay.TotalSeconds * 4.5)));
-        var shadow = ImGui.GetColorU32(new Vector4(0.01f, 0.035f, 0.05f, 0.96f));
         var halo = ImGui.GetColorU32(new Vector4(0.22f, 0.95f, 1.00f, pulse));
+        var outline = ImGui.GetColorU32(new Vector4(0.10f, 0.055f, 0.015f, 1.0f));
+        var lid = ImGui.GetColorU32(new Vector4(0.76f, 0.34f, 0.08f, 1.0f));
+        var lidHighlight = ImGui.GetColorU32(new Vector4(1.00f, 0.62f, 0.18f, 1.0f));
+        var body = ImGui.GetColorU32(new Vector4(0.57f, 0.23f, 0.055f, 1.0f));
+        var bodyHighlight = ImGui.GetColorU32(new Vector4(0.90f, 0.43f, 0.10f, 1.0f));
+        var metal = ImGui.GetColorU32(new Vector4(1.00f, 0.78f, 0.26f, 1.0f));
+        var keyhole = ImGui.GetColorU32(new Vector4(0.18f, 0.09f, 0.02f, 1.0f));
 
-        drawList.AddCircleFilled(point, 18.0f, shadow, 32);
         drawList.AddCircle(point, 20.0f, halo, 32, 3.0f);
-        if (TryDrawGameIcon(drawList, point, ActiveTreasureMapIconId, 17.0f))
-            return;
 
-        // Keep a visible fallback if the game texture cannot be resolved.
-        var body = ImGui.GetColorU32(new Vector4(0.18f, 0.88f, 1.00f, 1.0f));
-        var center = ImGui.GetColorU32(new Vector4(0.94f, 1.00f, 1.00f, 1.0f));
-        DrawDiamond(drawList, point, 8.5f, body);
-        DrawDiamond(drawList, point, 4.5f, center);
+        // Lid: a broad trapezoid remains recognizable as a chest at low map zoom.
+        drawList.AddQuadFilled(
+            point + new Vector2(-11.5f, -10.5f),
+            point + new Vector2(11.5f, -10.5f),
+            point + new Vector2(14.0f, -1.5f),
+            point + new Vector2(-14.0f, -1.5f),
+            outline);
+        drawList.AddQuadFilled(
+            point + new Vector2(-9.8f, -8.8f),
+            point + new Vector2(9.8f, -8.8f),
+            point + new Vector2(11.8f, -2.8f),
+            point + new Vector2(-11.8f, -2.8f),
+            lid);
+        drawList.AddLine(
+            point + new Vector2(-9.0f, -7.2f),
+            point + new Vector2(9.0f, -7.2f),
+            lidHighlight,
+            2.0f);
+
+        // Body and gold banding.
+        drawList.AddRectFilled(
+            point + new Vector2(-13.5f, -2.0f),
+            point + new Vector2(13.5f, 11.5f),
+            outline,
+            2.5f);
+        drawList.AddRectFilled(
+            point + new Vector2(-11.5f, -0.2f),
+            point + new Vector2(11.5f, 9.5f),
+            body,
+            1.5f);
+        drawList.AddLine(
+            point + new Vector2(-10.0f, 2.0f),
+            point + new Vector2(10.0f, 2.0f),
+            bodyHighlight,
+            1.8f);
+        drawList.AddLine(
+            point + new Vector2(-11.0f, 8.0f),
+            point + new Vector2(11.0f, 8.0f),
+            metal,
+            2.0f);
+
+        // Oversized clasp makes the symbol legible when the map is zoomed out.
+        drawList.AddRectFilled(
+            point + new Vector2(-3.7f, -2.8f),
+            point + new Vector2(3.7f, 6.2f),
+            outline,
+            1.5f);
+        drawList.AddRectFilled(
+            point + new Vector2(-2.5f, -1.5f),
+            point + new Vector2(2.5f, 5.0f),
+            metal,
+            1.0f);
+        drawList.AddCircleFilled(point + new Vector2(0.0f, 1.8f), 1.2f, keyhole, 12);
+        drawList.AddLine(
+            point + new Vector2(0.0f, 2.5f),
+            point + new Vector2(0.0f, 4.0f),
+            keyhole,
+            1.2f);
     }
 
     private static void DrawElixirDirectionCandidateIcon(ImDrawListPtr drawList, Vector2 point)
@@ -1470,7 +1525,9 @@ public sealed class AtlasWindow : Window, IDisposable
         var minutes = remainingSeconds / 60;
         var seconds = remainingSeconds % 60;
         var progress = Math.Clamp(marker.Progress, (byte)0, (byte)100);
-        var statusOffset = (marker.Kind is AtlasMarkerKind.Fate or AtlasMarkerKind.CriticalEncounter
+        var statusOffset = (marker.Kind is AtlasMarkerKind.Fate
+                or AtlasMarkerKind.CriticalEncounter
+                or AtlasMarkerKind.PotFate
             ? EventGameIconHalfSize
             : StandardGameIconHalfSize) + 2.0f;
         var background = marker.Kind == AtlasMarkerKind.CriticalEncounter
