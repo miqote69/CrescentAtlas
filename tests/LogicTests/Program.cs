@@ -99,6 +99,47 @@ Assert(
     AtlasDetectionRanges.TreasureCandidateCheckRadius == 70.0f,
     "the live treasure candidate check radius remains 70 yalms");
 Assert(
+    AtlasDetectionRanges.MaximumTreasureCandidateCheckRadius == 120.0f
+    && AtlasDetectionRanges.TreasureVisibilitySafetyMargin == 15.0f,
+    "dynamic treasure checks retain a conservative cap and safety margin");
+var treasureVisibilityTracker = new TreasureVisibilityRangeTracker();
+Assert(
+    treasureVisibilityTracker.GetCheckRadius(OccultCrescentMapLayer.Surface) == 70.0f,
+    "treasure absence checks default to the established 70-yalm radius without evidence");
+var distantSurfaceTreasure = new AtlasMarker(
+    "treasure:visibility-evidence",
+    AtlasMarkerKind.ActiveTreasure,
+    "Treasure",
+    new Vector3(110.0f, 500.0f, 0.0f),
+    origin,
+    true,
+    1346);
+Assert(
+    treasureVisibilityTracker.Observe(
+        OccultCrescentMapLayer.Surface,
+        Vector3.Zero,
+        [distantSurfaceTreasure]) == 95.0f,
+    "a treasure visible at 110 yalms safely expands checks to 95 yalms");
+Assert(
+    treasureVisibilityTracker.Observe(
+        OccultCrescentMapLayer.Surface,
+        Vector3.Zero,
+        [distantSurfaceTreasure with { Position = new Vector3(40.0f, 0.0f, 0.0f) }]) == 95.0f,
+    "nearer observations do not discard stronger visibility evidence");
+Assert(
+    treasureVisibilityTracker.GetCheckRadius(OccultCrescentMapLayer.Subterranean) == 70.0f,
+    "surface visibility evidence is never reused underground");
+Assert(
+    treasureVisibilityTracker.Observe(
+        OccultCrescentMapLayer.Subterranean,
+        Vector3.Zero,
+        [distantSurfaceTreasure with { Position = new Vector3(200.0f, 0.0f, 0.0f) }]) == 120.0f,
+    "dynamic treasure checks never exceed the 120-yalm safety cap");
+treasureVisibilityTracker.Reset();
+Assert(
+    treasureVisibilityTracker.GetCheckRadius(OccultCrescentMapLayer.Surface) == 70.0f,
+    "visibility evidence resets when leaving the island");
+Assert(
     ConfirmedCarrotObjects.IsKnownDataId(2010139),
     "the Fortune Carrot EventObj is recognized without user configuration");
 Assert(

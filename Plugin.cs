@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Globalization;
 using CrescentAtlas.Collection;
 using CrescentAtlas.Contracts;
 using CrescentAtlas.Data;
@@ -79,6 +80,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly PotAdvanceNotificationTracker potAdvanceNotificationTracker = new();
     private readonly PotAdvanceNotificationTracker potOneMinuteNotificationTracker = new();
     private readonly AfkVoiceNotificationTracker afkVoiceNotificationTracker = new();
+    private readonly TreasureVisibilityRangeTracker treasureVisibilityRangeTracker = new();
     private readonly WindowSystem windowSystem = new("CrescentAtlas");
     private readonly AtlasWindow atlasWindow;
     private readonly NearbyTreasureLineOverlay treasureLineOverlay;
@@ -578,12 +580,24 @@ public sealed class Plugin : IDalamudPlugin
         atlasData.ReplaceSource(AtlasMarkerKind.PotTarget, potTargets);
         if (localPlayer is not null)
         {
+            var treasureCheckRadius = treasureVisibilityRangeTracker.Observe(
+                mapLayer,
+                localPlayer.Position,
+                treasures);
             atlasData.MarkAbsentNearbyTreasureCandidatesChecked(
                 localPlayer.Position,
-                AtlasDetectionRanges.TreasureCandidateCheckRadius,
+                treasureCheckRadius,
                 treasures,
                 TreasureCandidateObjectMatchRadius);
             PersistTreasureChecks();
+            RecordTreasureFirstSeenDistances(
+                treasures,
+                localPlayer.Position,
+                mapLayer,
+                territoryName,
+                instanceKey,
+                treasureCheckRadius,
+                now);
         }
         NotifyNewObjects(treasures, liveCarrots, confirmedPotTargets);
 
@@ -804,6 +818,53 @@ public sealed class Plugin : IDalamudPlugin
         previousTreasureKeys = treasureKeys;
         previousCarrotKeys = carrotKeys;
         previousPotTargetKeys = potTargetKeys;
+    }
+
+    private void RecordTreasureFirstSeenDistances(
+        IReadOnlyCollection<AtlasMarker> treasures,
+        Vector3 playerPosition,
+        OccultCrescentMapLayer mapLayer,
+        string territoryName,
+        string instanceKey,
+        float checkRadius,
+        DateTimeOffset observedAtUtc)
+    {
+        if (!configuration.CollectionEnabled)
+            return;
+
+        foreach (var marker in treasures.Where(marker => !previousTreasureKeys.Contains(marker.Key)))
+        {
+            var horizontalDistance = TreasureVisibilityRangeTracker.HorizontalDistance(
+                playerPosition,
+                marker.Position);
+            observationStore.Record(new ObservationRecord
+            {
+                SessionId = observationStore.SessionId,
+                ObservedAtUtc = observedAtUtc,
+                Source = ObservationSource.ObjectTable,
+                Kind = "active-treasure-first-seen",
+                Key = marker.Key,
+                TerritoryId = marker.TerritoryId,
+                TerritoryName = territoryName,
+                DataId = marker.DataId,
+                EventId = marker.EventId,
+                Name = marker.Label,
+                X = marker.Position.X,
+                Y = marker.Position.Y,
+                Z = marker.Position.Z,
+                IsActive = true,
+                Properties = new Dictionary<string, string>
+                {
+                    ["instanceKey"] = instanceKey,
+                    ["mapLayer"] = mapLayer.ToString(),
+                    ["playerX"] = playerPosition.X.ToString("F3", CultureInfo.InvariantCulture),
+                    ["playerY"] = playerPosition.Y.ToString("F3", CultureInfo.InvariantCulture),
+                    ["playerZ"] = playerPosition.Z.ToString("F3", CultureInfo.InvariantCulture),
+                    ["horizontalDistance"] = horizontalDistance.ToString("F3", CultureInfo.InvariantCulture),
+                    ["effectiveCheckRadius"] = checkRadius.ToString("F3", CultureInfo.InvariantCulture),
+                },
+            });
+        }
     }
 
     private void PrintTreasureDetected(AtlasMarker marker)
@@ -1301,6 +1362,7 @@ public sealed class Plugin : IDalamudPlugin
         previousPotTargetKeys.Clear();
         potTargetFirstSeenUtc.Clear();
         afkVoiceNotificationTracker.Reset();
+        treasureVisibilityRangeTracker.Reset();
         magicalElixirDirectionHints.Clear();
         while (pendingMagicalElixirDirectionHints.TryDequeue(out _))
         {
