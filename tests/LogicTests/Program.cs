@@ -96,16 +96,16 @@ Assert(
         AfkVoiceStage.FiveMinutes) == "CrescentAtlas.AfkFiveMinute.en.wav",
     "AFK language and stage select the expected bundled voice files");
 Assert(
-    AtlasDetectionRanges.TreasureCandidateCheckRadius == 70.0f,
-    "the live treasure candidate check radius remains 70 yalms");
+    AtlasDetectionRanges.TreasureCandidateCheckRadius == 90.0f,
+    "treasure candidate checks start at the empirically safe 90-yalm radius");
 Assert(
     AtlasDetectionRanges.MaximumTreasureCandidateCheckRadius == 120.0f
     && AtlasDetectionRanges.TreasureVisibilitySafetyMargin == 15.0f,
     "dynamic treasure checks retain a conservative cap and safety margin");
 var treasureVisibilityTracker = new TreasureVisibilityRangeTracker();
 Assert(
-    treasureVisibilityTracker.GetCheckRadius(OccultCrescentMapLayer.Surface) == 70.0f,
-    "treasure absence checks default to the established 70-yalm radius without evidence");
+    treasureVisibilityTracker.GetCheckRadius(OccultCrescentMapLayer.Surface) == 90.0f,
+    "treasure absence checks default to 90 yalms without current-visit evidence");
 var distantSurfaceTreasure = new AtlasMarker(
     "treasure:visibility-evidence",
     AtlasMarkerKind.ActiveTreasure,
@@ -127,7 +127,7 @@ Assert(
         [distantSurfaceTreasure with { Position = new Vector3(40.0f, 0.0f, 0.0f) }]) == 95.0f,
     "nearer observations do not discard stronger visibility evidence");
 Assert(
-    treasureVisibilityTracker.GetCheckRadius(OccultCrescentMapLayer.Subterranean) == 70.0f,
+    treasureVisibilityTracker.GetCheckRadius(OccultCrescentMapLayer.Subterranean) == 90.0f,
     "surface visibility evidence is never reused underground");
 Assert(
     treasureVisibilityTracker.Observe(
@@ -137,8 +137,8 @@ Assert(
     "dynamic treasure checks never exceed the 120-yalm safety cap");
 treasureVisibilityTracker.Reset();
 Assert(
-    treasureVisibilityTracker.GetCheckRadius(OccultCrescentMapLayer.Surface) == 70.0f,
-    "visibility evidence resets when leaving the island");
+    treasureVisibilityTracker.GetCheckRadius(OccultCrescentMapLayer.Surface) == 90.0f,
+    "visibility evidence resets to 90 yalms when leaving the island");
 Assert(
     ConfirmedCarrotObjects.IsKnownDataId(2010139),
     "the Fortune Carrot EventObj is recognized without user configuration");
