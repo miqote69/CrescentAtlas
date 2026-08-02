@@ -1380,9 +1380,6 @@ public sealed class AtlasWindow : Window, IDisposable
 
     private static void DrawActiveTreasureIcon(ImDrawListPtr drawList, Vector2 point)
     {
-        var pulse = 0.72f + (0.28f * MathF.Sin(
-            (float)(DateTimeOffset.UtcNow.TimeOfDay.TotalSeconds * 4.5)));
-        var halo = ImGui.GetColorU32(new Vector4(0.22f, 0.95f, 1.00f, pulse));
         var outline = ImGui.GetColorU32(new Vector4(0.10f, 0.055f, 0.015f, 1.0f));
         var lid = ImGui.GetColorU32(new Vector4(0.76f, 0.34f, 0.08f, 1.0f));
         var lidHighlight = ImGui.GetColorU32(new Vector4(1.00f, 0.62f, 0.18f, 1.0f));
@@ -1390,8 +1387,6 @@ public sealed class AtlasWindow : Window, IDisposable
         var bodyHighlight = ImGui.GetColorU32(new Vector4(0.90f, 0.43f, 0.10f, 1.0f));
         var metal = ImGui.GetColorU32(new Vector4(1.00f, 0.78f, 0.26f, 1.0f));
         var keyhole = ImGui.GetColorU32(new Vector4(0.18f, 0.09f, 0.02f, 1.0f));
-
-        drawList.AddCircle(point, 20.0f, halo, 32, 3.0f);
 
         // Lid: a broad trapezoid remains recognizable as a chest at low map zoom.
         drawList.AddQuadFilled(
