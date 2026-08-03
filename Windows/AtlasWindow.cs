@@ -1244,7 +1244,7 @@ public sealed class AtlasWindow : Window, IDisposable
         Vector2? clipMinimum = null,
         Vector2? clipMaximum = null)
     {
-        var isSilverTreasure = marker.Kind == AtlasMarkerKind.TreasureCandidate
+        var isSilverTreasure = marker.Kind is AtlasMarkerKind.TreasureCandidate or AtlasMarkerKind.ActiveTreasure
                                && marker.TreasureType.Equals("silver", StringComparison.OrdinalIgnoreCase);
         var isBronzeTreasure = marker.Kind == AtlasMarkerKind.TreasureCandidate
                                && marker.TreasureType.Equals("bronze", StringComparison.OrdinalIgnoreCase);
@@ -1275,7 +1275,7 @@ public sealed class AtlasWindow : Window, IDisposable
 
         if (marker.Kind == AtlasMarkerKind.ActiveTreasure)
         {
-            DrawActiveTreasureIcon(drawList, point);
+            DrawActiveTreasureIcon(drawList, point, isSilverTreasure);
             return;
         }
 
@@ -1378,15 +1378,29 @@ public sealed class AtlasWindow : Window, IDisposable
         }
     }
 
-    private static void DrawActiveTreasureIcon(ImDrawListPtr drawList, Vector2 point)
+    private static void DrawActiveTreasureIcon(ImDrawListPtr drawList, Vector2 point, bool isSilverTreasure)
     {
-        var outline = ImGui.GetColorU32(new Vector4(0.10f, 0.055f, 0.015f, 1.0f));
-        var lid = ImGui.GetColorU32(new Vector4(0.76f, 0.34f, 0.08f, 1.0f));
-        var lidHighlight = ImGui.GetColorU32(new Vector4(1.00f, 0.62f, 0.18f, 1.0f));
-        var body = ImGui.GetColorU32(new Vector4(0.57f, 0.23f, 0.055f, 1.0f));
-        var bodyHighlight = ImGui.GetColorU32(new Vector4(0.90f, 0.43f, 0.10f, 1.0f));
-        var metal = ImGui.GetColorU32(new Vector4(1.00f, 0.78f, 0.26f, 1.0f));
-        var keyhole = ImGui.GetColorU32(new Vector4(0.18f, 0.09f, 0.02f, 1.0f));
+        var outline = ImGui.GetColorU32(isSilverTreasure
+            ? new Vector4(0.08f, 0.12f, 0.17f, 1.0f)
+            : new Vector4(0.10f, 0.055f, 0.015f, 1.0f));
+        var lid = ImGui.GetColorU32(isSilverTreasure
+            ? new Vector4(0.68f, 0.76f, 0.84f, 1.0f)
+            : new Vector4(0.76f, 0.34f, 0.08f, 1.0f));
+        var lidHighlight = ImGui.GetColorU32(isSilverTreasure
+            ? new Vector4(0.96f, 0.99f, 1.00f, 1.0f)
+            : new Vector4(1.00f, 0.62f, 0.18f, 1.0f));
+        var body = ImGui.GetColorU32(isSilverTreasure
+            ? new Vector4(0.38f, 0.49f, 0.61f, 1.0f)
+            : new Vector4(0.57f, 0.23f, 0.055f, 1.0f));
+        var bodyHighlight = ImGui.GetColorU32(isSilverTreasure
+            ? new Vector4(0.73f, 0.84f, 0.94f, 1.0f)
+            : new Vector4(0.90f, 0.43f, 0.10f, 1.0f));
+        var metal = ImGui.GetColorU32(isSilverTreasure
+            ? new Vector4(0.92f, 0.97f, 1.00f, 1.0f)
+            : new Vector4(1.00f, 0.78f, 0.26f, 1.0f));
+        var keyhole = ImGui.GetColorU32(isSilverTreasure
+            ? new Vector4(0.08f, 0.13f, 0.19f, 1.0f)
+            : new Vector4(0.18f, 0.09f, 0.02f, 1.0f));
 
         // Lid: a broad trapezoid remains recognizable as a chest at low map zoom.
         drawList.AddQuadFilled(
