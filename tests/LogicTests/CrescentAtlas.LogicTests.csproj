@@ -12,12 +12,14 @@
     <Compile Include="..\..\Notifications\PotAdvanceNotificationTracker.cs" Link="PotAdvanceNotificationTracker.cs" />
     <Compile Include="..\..\Notifications\PotObservationHistoryReader.cs" Link="PotObservationHistoryReader.cs" />
     <Compile Include="..\..\Notifications\AfkVoiceNotificationTracker.cs" Link="AfkVoiceNotificationTracker.cs" />
+    <Compile Include="..\..\Notifications\FateSoundNotificationPolicy.cs" Link="FateSoundNotificationPolicy.cs" />
     <Compile Include="..\..\Data\ConfirmedMagicPotLocations.cs" Link="ConfirmedMagicPotLocations.cs" />
     <Compile Include="..\..\Data\ConfirmedCarrotObjects.cs" Link="ConfirmedCarrotObjects.cs" />
     <Compile Include="..\..\Data\ConfirmedCarrotSpots.cs" Link="ConfirmedCarrotSpots.cs" />
     <Compile Include="..\..\Data\ConfirmedPotTargetObservations.cs" Link="ConfirmedPotTargetObservations.cs" />
     <Compile Include="..\..\Data\PotTargetHistoryReader.cs" Link="PotTargetHistoryReader.cs" />
     <Compile Include="..\..\Data\CarrotSpotHistoryReader.cs" Link="CarrotSpotHistoryReader.cs" />
+    <Compile Include="..\..\Data\ObservationRecord.cs" Link="ObservationRecord.cs" />
     <Compile Include="..\..\Contracts\AtlasMarker.cs" Link="AtlasMarker.cs" />
     <Compile Include="..\..\Contracts\AtlasPotPrediction.cs" Link="AtlasPotPrediction.cs" />
     <Compile Include="..\..\Contracts\OccultCrescentMapLayer.cs" Link="OccultCrescentMapLayer.cs" />
@@ -33,6 +35,10 @@
     <Compile Include="..\..\Runtime\TreasureLayerClassifier.cs" Link="TreasureLayerClassifier.cs" />
     <Compile Include="..\..\Events\DynamicEventTimeResolver.cs" Link="DynamicEventTimeResolver.cs" />
     <Compile Include="..\..\Events\DynamicEventNameMatcher.cs" Link="DynamicEventNameMatcher.cs" />
+    <Compile Include="..\..\Events\IFateSnapshotSource.cs" Link="IFateSnapshotSource.cs" />
+    <Compile Include="..\..\Events\FateSnapshot.cs" Link="FateSnapshot.cs" />
+    <Compile Include="..\..\Events\FateEventDetector.cs" Link="FateEventDetector.cs" />
+    <Compile Include="..\..\Events\EventDetectionBatch.cs" Link="EventDetectionBatch.cs" />
     <Compile Include="..\..\Data\IslandVisitRecord.cs" Link="IslandVisitRecord.cs" />
     <Compile Include="..\..\Collection\IslandVisitStore.cs" Link="IslandVisitStore.cs" />
     <Compile Include="..\..\Runtime\OccultCrescentInstanceSnapshot.cs" Link="OccultCrescentInstanceSnapshot.cs" />

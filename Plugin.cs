@@ -141,6 +141,15 @@ public sealed class Plugin : IDalamudPlugin
                 configuration.Version = 5;
                 configurationChanged = true;
             }
+            var fateSoundMigration = FateSoundConfigurationMigration.Apply(
+                configuration.Version,
+                configuration.FateSoundEnabled);
+            if (fateSoundMigration.Changed)
+            {
+                configuration.FateSoundEnabled = fateSoundMigration.Enabled;
+                configuration.Version = fateSoundMigration.Version;
+                configurationChanged = true;
+            }
             if (configuration.ConfirmedCarrotDataIds.Add(ConfirmedCarrotObjects.FortuneCarrotDataId))
                 configurationChanged = true;
             if (configurationChanged)
@@ -197,7 +206,8 @@ public sealed class Plugin : IDalamudPlugin
                 PlayChatSoundEffect,
                 PlayJapanesePotAdvanceVoice,
                 PlayEnglishPotAdvanceVoice,
-                PlayAfkVoice);
+                PlayAfkVoice,
+                PlayFateSpawnSound);
             treasureLineOverlay = new NearbyTreasureLineOverlay(GameGui, atlasData, configuration);
             windowSystem.AddWindow(atlasWindow);
             BootstrapDiagnostics.Write("atlas window and overlay initialized");
@@ -702,7 +712,17 @@ public sealed class Plugin : IDalamudPlugin
                     ? $"[Crescent Atlas] FATE発生: {observation.Name}"
                     : $"[Crescent Atlas] FATE: {observation.Name}");
 
-            if (!IsPotFate(observation.EventId, observation.Name))
+            var isPotFate = IsPotFate(observation.EventId, observation.Name);
+            if (FateSoundNotificationPolicy.ShouldPlay(
+                    OccultCrescentContext.IsActive(),
+                    configuration.FateSoundEnabled,
+                    emitInitialSnapshot,
+                    isPotFate))
+            {
+                PlayFateSpawnSound();
+            }
+
+            if (!isPotFate)
                 continue;
 
             if (configuration.PotSoundEnabled)
@@ -1493,6 +1513,25 @@ public sealed class Plugin : IDalamudPlugin
         => PlayVoiceFile(
             AfkVoiceNotificationTracker.GetFileName(language, stage),
             $"{language} AFK {stage} voice");
+
+    private void PlayFateSpawnSound()
+    {
+        try
+        {
+            var assemblyDirectory = PluginInterface.AssemblyLocation.DirectoryName;
+            var path = System.IO.Path.Combine(
+                assemblyDirectory ?? string.Empty,
+                FateSoundNotificationPolicy.AudioFileName);
+            if (NotificationAudioPlayer.TryPlayFile(path))
+                return;
+
+            Log.Warning("FATE spawn sound is unavailable at {Path}.", path);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to play FATE spawn sound.");
+        }
+    }
 
     private void PlayVoiceFile(string fileName, string description)
     {

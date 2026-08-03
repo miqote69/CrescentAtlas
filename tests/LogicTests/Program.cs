@@ -95,6 +95,79 @@ Assert(
         AfkVoiceLanguage.English,
         AfkVoiceStage.FiveMinutes) == "CrescentAtlas.AfkFiveMinute.en.wav",
     "AFK language and stage select the expected bundled voice files");
+var fateSource = new MutableFateSnapshotSource();
+var existingFate = new FateSnapshot(
+    100,
+    "Existing FATE",
+    Vector3.Zero,
+    0,
+    "Running",
+    900);
+var newFate = existingFate with
+{
+    FateId = 101,
+    Name = "New FATE",
+    Position = new Vector3(10.0f, 0.0f, 10.0f),
+};
+fateSource.Set([existingFate]);
+var fateEventDetector = new FateEventDetector(fateSource, "logic-tests");
+Assert(
+    fateEventDetector.Poll(1346, "North Horn", "island-a", origin, false).Observations.Count == 0,
+    "the first FATE snapshot establishes a baseline without reporting existing FATEs");
+fateSource.Set([existingFate, newFate]);
+var newFateBatch = fateEventDetector.Poll(
+    1346,
+    "North Horn",
+    "island-a",
+    origin.AddSeconds(1),
+    false);
+Assert(
+    newFateBatch.Observations.Count == 1
+    && newFateBatch.Observations.Single().EventId == newFate.FateId,
+    "a newly appearing FATE is reported exactly once");
+Assert(
+    fateEventDetector.Poll(
+        1346,
+        "North Horn",
+        "island-a",
+        origin.AddSeconds(2),
+        false).Observations.Count == 0,
+    "an unchanged FATE snapshot does not replay the sound event");
+fateEventDetector.Reset();
+Assert(
+    fateEventDetector.Poll(
+        1346,
+        "North Horn",
+        "island-a",
+        origin.AddSeconds(3),
+        false).Observations.Count == 0,
+    "a detector reload rebuilds its baseline without replaying existing FATEs");
+Assert(
+    FateSoundNotificationPolicy.ShouldPlay(true, true, false, false),
+    "an enabled newly appearing regular FATE inside the Crescent plays its sound");
+Assert(
+    !FateSoundNotificationPolicy.ShouldPlay(true, false, false, false),
+    "the independent FATE sound toggle suppresses playback");
+Assert(
+    !FateSoundNotificationPolicy.ShouldPlay(false, true, false, false),
+    "FATE sounds never play outside the Occult Crescent");
+Assert(
+    !FateSoundNotificationPolicy.ShouldPlay(true, true, true, false),
+    "initial FATE snapshots never play the appearance sound");
+Assert(
+    !FateSoundNotificationPolicy.ShouldPlay(true, true, false, true),
+    "Magic Pot FATEs are excluded from the regular FATE sound");
+Assert(
+    FateSoundNotificationPolicy.AudioFileName == "CrescentAtlas.FateSpawn.wav",
+    "manual preview and automatic playback select the bundled FATE sound");
+var legacyFateSoundMigration = FateSoundConfigurationMigration.Apply(5, true);
+Assert(
+    legacyFateSoundMigration == new FateSoundMigrationResult(6, false, true),
+    "configuration migration disables the new FATE sound for existing users");
+Assert(
+    FateSoundConfigurationMigration.Apply(6, true)
+        == new FateSoundMigrationResult(6, true, false),
+    "current configuration preserves the user's FATE sound choice");
 Assert(
     AtlasDetectionRanges.TreasureCandidateCheckRadius == 90.0f,
     "treasure candidate checks start at the empirically safe 90-yalm radius");
@@ -1109,4 +1182,18 @@ static void Assert(bool condition, string message)
 {
     if (!condition)
         throw new InvalidOperationException($"FAILED: {message}");
+}
+
+sealed class MutableFateSnapshotSource : IFateSnapshotSource
+{
+    private IReadOnlyList<FateSnapshot> fates = [];
+
+    public void Set(IReadOnlyList<FateSnapshot> value)
+        => fates = value;
+
+    public bool TryRead(out IReadOnlyList<FateSnapshot> current)
+    {
+        current = fates;
+        return true;
+    }
 }

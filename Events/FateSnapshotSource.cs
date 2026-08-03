@@ -2,11 +2,6 @@ using Dalamud.Plugin.Services;
 
 namespace CrescentAtlas.Events;
 
-public interface IFateSnapshotSource
-{
-    bool TryRead(out IReadOnlyList<FateSnapshot> fates);
-}
-
 /// <summary>
 /// Reads only the public Dalamud IFateTable surface.
 /// Invalid entries and transient read failures are omitted.

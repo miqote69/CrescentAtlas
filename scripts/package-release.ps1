@@ -13,6 +13,7 @@ $buildDirectory = Join-Path $projectRoot "bin\$Configuration"
 $manifestPath = Join-Path $buildDirectory 'CrescentAtlas.json'
 $assemblyPath = Join-Path $buildDirectory 'CrescentAtlas.dll'
 $dependenciesPath = Join-Path $buildDirectory 'CrescentAtlas.deps.json'
+$fateSpawnPath = Join-Path $buildDirectory 'CrescentAtlas.FateSpawn.wav'
 $japanesePotAlertPath = Join-Path $buildDirectory 'CrescentAtlas.PotAlert.ja.wav'
 $japanesePotAppearedPath = Join-Path $buildDirectory 'CrescentAtlas.PotAppeared.ja.wav'
 $japanesePotOneMinutePath = Join-Path $buildDirectory 'CrescentAtlas.PotOneMinute.ja.wav'
@@ -30,6 +31,7 @@ foreach ($requiredPath in @(
     $manifestPath,
     $assemblyPath,
     $dependenciesPath,
+    $fateSpawnPath,
     $japanesePotAlertPath,
     $japanesePotAppearedPath,
     $japanesePotOneMinutePath,
@@ -73,6 +75,7 @@ Compress-Archive -LiteralPath @(
     $assemblyPath,
     $dependenciesPath,
     $manifestPath,
+    $fateSpawnPath,
     $japanesePotAlertPath,
     $japanesePotAppearedPath,
     $japanesePotOneMinutePath,
@@ -94,6 +97,7 @@ try {
         'CrescentAtlas.dll',
         'CrescentAtlas.deps.json',
         'CrescentAtlas.json',
+        'CrescentAtlas.FateSpawn.wav',
         'CrescentAtlas.PotAlert.ja.wav',
         'CrescentAtlas.PotAppeared.ja.wav',
         'CrescentAtlas.PotOneMinute.ja.wav',

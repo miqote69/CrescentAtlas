@@ -74,6 +74,7 @@ public sealed class AtlasWindow : Window, IDisposable
     private readonly System.Action playJapanesePotAdvanceVoice;
     private readonly System.Action playEnglishPotAdvanceVoice;
     private readonly System.Action<AfkVoiceLanguage, AfkVoiceStage> playAfkVoice;
+    private readonly System.Action playFateSpawnSound;
     private readonly string versionLabel;
     private float mapZoom = MinimumMapZoom;
     private Vector2 mapCenter = new(0.5f, 0.5f);
@@ -93,7 +94,8 @@ public sealed class AtlasWindow : Window, IDisposable
         System.Action<uint> playChatSoundEffect,
         System.Action playJapanesePotAdvanceVoice,
         System.Action playEnglishPotAdvanceVoice,
-        System.Action<AfkVoiceLanguage, AfkVoiceStage> playAfkVoice)
+        System.Action<AfkVoiceLanguage, AfkVoiceStage> playAfkVoice,
+        System.Action playFateSpawnSound)
         : base("Crescent Atlas###CrescentAtlasMap")
     {
         this.dataSource = dataSource;
@@ -108,6 +110,7 @@ public sealed class AtlasWindow : Window, IDisposable
         this.playJapanesePotAdvanceVoice = playJapanesePotAdvanceVoice;
         this.playEnglishPotAdvanceVoice = playEnglishPotAdvanceVoice;
         this.playAfkVoice = playAfkVoice;
+        this.playFateSpawnSound = playFateSpawnSound;
         versionLabel = FormatVersionLabel(typeof(AtlasWindow).Assembly.GetName().Version);
         IsOpen = configuration.MapVisible;
 
@@ -513,6 +516,24 @@ public sealed class AtlasWindow : Window, IDisposable
         ImGui.TextDisabled(T(
             "Selecting a sound plays it once.",
             "音声を選択すると一度だけ再生します。"));
+
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+        ImGui.TextUnformatted(T("FATE appearance sound", "FATE出現サウンド"));
+        ImGui.TextDisabled(T(
+            "Plays the crystal ping only for newly appearing regular FATEs. Magic Pot FATEs use their existing alert.",
+            "通常FATEの新規出現時だけクリスタル音を再生します。マジックポットFATEは既存の通知を使用します。"));
+        var fateSoundEnabled = configuration.FateSoundEnabled;
+        if (ImGui.Checkbox(
+                T("Enable FATE appearance sound", "FATE出現サウンドを有効化"),
+                ref fateSoundEnabled))
+        {
+            configuration.FateSoundEnabled = fateSoundEnabled;
+            saveConfiguration();
+        }
+        if (ImGui.Button(T("Preview FATE sound", "FATEサウンドをプレビュー")))
+            playFateSpawnSound();
 
         ImGui.Spacing();
         ImGui.Separator();

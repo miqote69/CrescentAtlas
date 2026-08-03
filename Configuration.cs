@@ -7,7 +7,7 @@ namespace CrescentAtlas;
 [Serializable]
 public sealed class Configuration : IPluginConfiguration
 {
-    public int Version { get; set; } = 5;
+    public int Version { get; set; } = FateSoundConfigurationMigration.Version;
 
     public UiLanguage Language { get; set; } = UiLanguage.Japanese;
 
@@ -46,6 +46,8 @@ public sealed class Configuration : IPluginConfiguration
     public bool ShowTreasureGuideLines { get; set; } = true;
 
     public bool FateNotificationsEnabled { get; set; } = true;
+
+    public bool FateSoundEnabled { get; set; }
 
     public bool CriticalEncounterNotificationsEnabled { get; set; } = true;
 
