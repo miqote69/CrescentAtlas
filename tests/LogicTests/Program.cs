@@ -139,6 +139,68 @@ treasureVisibilityTracker.Reset();
 Assert(
     treasureVisibilityTracker.GetCheckRadius(OccultCrescentMapLayer.Surface) == 90.0f,
     "visibility evidence resets to 90 yalms when leaving the island");
+var detectedTreasureTracker = new DetectedTreasureTracker();
+var detectedSilverTreasure = new AtlasMarker(
+    "active-treasure:silver",
+    AtlasMarkerKind.ActiveTreasure,
+    "Silver treasure",
+    new Vector3(100.0f, 0.0f, 0.0f),
+    origin,
+    true,
+    1346,
+    TreasureType: "silver");
+Assert(
+    detectedTreasureTracker.Observe(
+        "island-a",
+        OccultCrescentMapLayer.Surface,
+        [detectedSilverTreasure]).Single().TreasureType == "silver",
+    "a detected treasure and its coffer type are retained");
+detectedTreasureTracker.RemoveConfirmedAbsentNearby(
+    "island-a",
+    OccultCrescentMapLayer.Surface,
+    detectedSilverTreasure.Position,
+    90.0f,
+    [detectedSilverTreasure],
+    12.0f);
+Assert(
+    detectedTreasureTracker.GetMarkers("island-a", OccultCrescentMapLayer.Surface).Count == 1,
+    "a currently loaded treasure is never removed by nearby absence confirmation");
+Assert(
+    detectedTreasureTracker.Observe(
+        "island-a",
+        OccultCrescentMapLayer.Surface,
+        []).Single().Key == detectedSilverTreasure.Key,
+    "a detected unclaimed treasure remains visible after leaving object-table range");
+detectedTreasureTracker.RemoveConfirmedAbsentNearby(
+    "island-a",
+    OccultCrescentMapLayer.Surface,
+    Vector3.Zero,
+    90.0f,
+    [],
+    12.0f);
+Assert(
+    detectedTreasureTracker.GetMarkers("island-a", OccultCrescentMapLayer.Surface).Count == 1,
+    "a retained treasure is not cleared while outside the reliable visibility radius");
+detectedTreasureTracker.RemoveConfirmedAbsentNearby(
+    "island-a",
+    OccultCrescentMapLayer.Surface,
+    new Vector3(100.0f, 0.0f, 0.0f),
+    90.0f,
+    [],
+    12.0f);
+Assert(
+    detectedTreasureTracker.GetMarkers("island-a", OccultCrescentMapLayer.Surface).Count == 0,
+    "a retained treasure clears after nearby absence confirms it was claimed or despawned");
+detectedTreasureTracker.Observe(
+    "island-a",
+    OccultCrescentMapLayer.Surface,
+    [detectedSilverTreasure]);
+Assert(
+    detectedTreasureTracker.GetMarkers("island-a", OccultCrescentMapLayer.Subterranean).Count == 0,
+    "surface treasure history is hidden on the subterranean map");
+Assert(
+    detectedTreasureTracker.GetMarkers("island-b", OccultCrescentMapLayer.Surface).Count == 0,
+    "treasure history is cleared when the island instance changes");
 Assert(
     ConfirmedCarrotObjects.IsKnownDataId(2010139),
     "the Fortune Carrot EventObj is recognized without user configuration");

@@ -81,6 +81,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly PotAdvanceNotificationTracker potOneMinuteNotificationTracker = new();
     private readonly AfkVoiceNotificationTracker afkVoiceNotificationTracker = new();
     private readonly TreasureVisibilityRangeTracker treasureVisibilityRangeTracker = new();
+    private readonly DetectedTreasureTracker detectedTreasureTracker = new();
     private readonly WindowSystem windowSystem = new("CrescentAtlas");
     private readonly AtlasWindow atlasWindow;
     private readonly NearbyTreasureLineOverlay treasureLineOverlay;
@@ -527,7 +528,7 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         var objectMarkers = objectCollector.Collect(territoryId, territoryName, now);
-        var treasures = objectMarkers.Where(marker => marker.Kind == AtlasMarkerKind.ActiveTreasure).ToArray();
+        var liveTreasures = objectMarkers.Where(marker => marker.Kind == AtlasMarkerKind.ActiveTreasure).ToArray();
         var carrotCandidates = objectMarkers.Where(marker => marker.Kind == AtlasMarkerKind.Carrot).ToArray();
         var loadedPotTargets = objectMarkers.Where(marker => marker.Kind == AtlasMarkerKind.PotTarget).ToArray();
         var mappedPotTargets = agentMapPotTargetSource.Scan(
@@ -575,7 +576,8 @@ public sealed class Plugin : IDalamudPlugin
             .ToArray();
         RememberCarrotSpots(liveCarrots);
         var carrots = BuildCarrotMarkers(territoryId, liveCarrots);
-        atlasData.ReplaceSource(AtlasMarkerKind.ActiveTreasure, treasures);
+        var displayedTreasures = detectedTreasureTracker.Observe(instanceKey, mapLayer, liveTreasures);
+        atlasData.ReplaceSource(AtlasMarkerKind.ActiveTreasure, displayedTreasures);
         atlasData.ReplaceSource(AtlasMarkerKind.Carrot, carrots);
         atlasData.ReplaceSource(AtlasMarkerKind.PotTarget, potTargets);
         if (localPlayer is not null)
@@ -583,15 +585,25 @@ public sealed class Plugin : IDalamudPlugin
             var treasureCheckRadius = treasureVisibilityRangeTracker.Observe(
                 mapLayer,
                 localPlayer.Position,
-                treasures);
+                liveTreasures);
             atlasData.MarkAbsentNearbyTreasureCandidatesChecked(
                 localPlayer.Position,
                 treasureCheckRadius,
-                treasures,
+                liveTreasures,
                 TreasureCandidateObjectMatchRadius);
+            detectedTreasureTracker.RemoveConfirmedAbsentNearby(
+                instanceKey,
+                mapLayer,
+                localPlayer.Position,
+                treasureCheckRadius,
+                liveTreasures,
+                TreasureCandidateObjectMatchRadius);
+            atlasData.ReplaceSource(
+                AtlasMarkerKind.ActiveTreasure,
+                detectedTreasureTracker.GetMarkers(instanceKey, mapLayer));
             PersistTreasureChecks();
             RecordTreasureFirstSeenDistances(
-                treasures,
+                liveTreasures,
                 localPlayer.Position,
                 mapLayer,
                 territoryName,
@@ -599,7 +611,7 @@ public sealed class Plugin : IDalamudPlugin
                 treasureCheckRadius,
                 now);
         }
-        NotifyNewObjects(treasures, liveCarrots, confirmedPotTargets);
+        NotifyNewObjects(liveTreasures, liveCarrots, confirmedPotTargets);
 
         PollFates(territoryId, territoryName, instanceKey, now, entering);
         // Prediction timing and advance notifications belong to the island
@@ -1363,6 +1375,7 @@ public sealed class Plugin : IDalamudPlugin
         potTargetFirstSeenUtc.Clear();
         afkVoiceNotificationTracker.Reset();
         treasureVisibilityRangeTracker.Reset();
+        detectedTreasureTracker.Reset();
         magicalElixirDirectionHints.Clear();
         while (pendingMagicalElixirDirectionHints.TryDequeue(out _))
         {
