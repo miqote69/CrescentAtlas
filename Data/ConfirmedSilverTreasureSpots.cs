@@ -19,7 +19,5 @@ public static class ConfirmedSilverTreasureSpots
             new DateTimeOffset(2026, 7, 30, 5, 33, 47, TimeSpan.Zero)),
         new(1346, 2010, new Vector3(634.7904f, 60.501953f, -831.81506f),
             new DateTimeOffset(2026, 7, 30, 5, 17, 42, TimeSpan.Zero)),
-        new(1346, 2047, new Vector3(-697.2915f, 34.89734f, -565.02637f),
-            new DateTimeOffset(2026, 7, 30, 5, 35, 27, TimeSpan.Zero)),
     ];
 }

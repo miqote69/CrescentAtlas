@@ -175,6 +175,17 @@ Assert(
     AtlasDetectionRanges.MaximumTreasureCandidateCheckRadius == 120.0f
     && AtlasDetectionRanges.TreasureVisibilitySafetyMargin == 15.0f,
     "dynamic treasure checks retain a conservative cap and safety margin");
+Assert(
+    TreasureCofferTypeClassifier.ResolveFromSgbId(
+        TreasureCofferTypeClassifier.BronzeCofferSgbId) == "bronze",
+    "Treasure SGB 1596 is classified as bronze");
+Assert(
+    TreasureCofferTypeClassifier.ResolveFromSgbId(
+        TreasureCofferTypeClassifier.SilverCofferSgbId) == "silver",
+    "Treasure SGB 1597 is classified as silver");
+Assert(
+    TreasureCofferTypeClassifier.ResolveFromSgbId(8125) == string.Empty,
+    "unrelated Treasure SGBs are not forced to bronze or silver");
 var treasureVisibilityTracker = new TreasureVisibilityRangeTracker();
 Assert(
     treasureVisibilityTracker.GetCheckRadius(OccultCrescentMapLayer.Surface) == 90.0f,

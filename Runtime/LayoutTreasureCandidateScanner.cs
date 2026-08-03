@@ -11,9 +11,6 @@ namespace CrescentAtlas.Runtime;
 
 public sealed class LayoutTreasureCandidateScanner(IDataManager dataManager, IPluginLog log)
 {
-    private const uint BronzeCofferSgbId = 1596;
-    private const uint SilverCofferSgbId = 1597;
-
     public unsafe IReadOnlyList<AtlasMarker> Scan(
         string sessionId,
         uint territoryId,
@@ -59,10 +56,9 @@ public sealed class LayoutTreasureCandidateScanner(IDataManager dataManager, IPl
                     continue;
 
                 var sgbId = treasureRow.SGB.RowId;
-                if (sgbId is not (BronzeCofferSgbId or SilverCofferSgbId))
+                var type = TreasureCofferTypeClassifier.ResolveFromSgbId(sgbId);
+                if (string.IsNullOrEmpty(type))
                     continue;
-
-                var type = sgbId == BronzeCofferSgbId ? "bronze" : "silver";
                 var key = FormattableString.Invariant(
                     $"layout-treasure:{territoryId}:{treasureRowId}:{position.X:F3}:{position.Y:F3}:{position.Z:F3}");
 

@@ -155,8 +155,14 @@ public sealed class Plugin : IDalamudPlugin
             if (configurationChanged)
                 SaveConfiguration();
 
-            silverTreasureDataIds.UnionWith(
-                ConfirmedSilverTreasureSpots.NorthHorn.Select(spot => spot.DataId));
+            var treasureSheet = DataManager.GetExcelSheet<Lumina.Excel.Sheets.Treasure>();
+            if (treasureSheet is not null)
+            {
+                silverTreasureDataIds.UnionWith(
+                    treasureSheet
+                        .Where(row => TreasureCofferTypeClassifier.ResolveFromSgbId(row.SGB.RowId) == "silver")
+                        .Select(row => row.RowId));
+            }
             silverTreasureDataIds.UnionWith(ConfirmedSilverTreasureSpots.EventObjectDataIds);
             potTargetDataIds.UnionWith(
                 ConfirmedPotTargetObservations.NorthHorn.Select(observation => observation.DataId));
