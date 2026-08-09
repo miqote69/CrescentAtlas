@@ -706,6 +706,34 @@ Assert(
         new Vector3(100.0f, -700.0f, 395.0f)),
     "confirmed Forked Tower treasure positions appear on tower maps");
 Assert(
+    TreasureLayerClassifier.IsCandidateForMap(
+        OccultCrescentMapLayer.ForkedTower,
+        1181,
+        1997,
+        new Vector3(600.0f, -674.0f, 686.0f)),
+    "the confirmed Map 1181 coffer remains on its own tower floor");
+Assert(
+    !TreasureLayerClassifier.IsCandidateForMap(
+        OccultCrescentMapLayer.ForkedTower,
+        1181,
+        2001,
+        new Vector3(349.2f, -698.0f, 798.8f)),
+    "a Map 1179 coffer is hidden on Map 1181");
+Assert(
+    !TreasureLayerClassifier.IsCandidateForMap(
+        OccultCrescentMapLayer.ForkedTower,
+        1183,
+        1997,
+        new Vector3(600.0f, -674.0f, 686.0f)),
+    "tower transition maps do not inherit treasure candidates from another floor");
+Assert(
+    TreasureLayerClassifier.IsCandidateForMap(
+        OccultCrescentMapLayer.Subterranean,
+        1136,
+        2013,
+        new Vector3(223.7f, -161.9f, -30.6f)),
+    "North Horn subterranean filtering remains elevation based");
+Assert(
     TreasureLayerClassifier.IsCandidateForLayer(
         OccultCrescentMapLayer.ForkedTower,
         new Vector3(-900.0f, -980.0f, 693.0f)),

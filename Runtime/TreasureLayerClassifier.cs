@@ -41,6 +41,15 @@ public static class TreasureLayerClassifier
             _ => IsSurfaceCandidate(position),
         };
 
+    public static bool IsCandidateForMap(
+        OccultCrescentMapLayer layer,
+        uint mapId,
+        uint treasureRowId,
+        Vector3 position)
+        => IsCandidateForLayer(layer, position)
+           && (layer != OccultCrescentMapLayer.ForkedTower
+               || ForkedTowerTreasureFloorPolicy.IsCandidateForMap(mapId, treasureRowId));
+
     private static bool IsValid(Vector3 position)
         => float.IsFinite(position.X)
            && float.IsFinite(position.Y)

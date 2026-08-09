@@ -35,6 +35,7 @@
     <Compile Include="..\..\Runtime\FieldNotificationPolicy.cs" Link="FieldNotificationPolicy.cs" />
     <Compile Include="..\..\Runtime\GameMapTextureProjection.cs" Link="GameMapTextureProjection.cs" />
     <Compile Include="..\..\Runtime\TreasureLayerClassifier.cs" Link="TreasureLayerClassifier.cs" />
+    <Compile Include="..\..\Runtime\ForkedTowerTreasureFloorPolicy.cs" Link="ForkedTowerTreasureFloorPolicy.cs" />
     <Compile Include="..\..\Runtime\TreasureCofferTypeClassifier.cs" Link="TreasureCofferTypeClassifier.cs" />
     <Compile Include="..\..\Events\DynamicEventTimeResolver.cs" Link="DynamicEventTimeResolver.cs" />
     <Compile Include="..\..\Events\DynamicEventNameMatcher.cs" Link="DynamicEventNameMatcher.cs" />

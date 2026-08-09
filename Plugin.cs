@@ -531,6 +531,7 @@ public sealed class Plugin : IDalamudPlugin
                 territoryId,
                 territoryName,
                 mapLayer,
+                mapId,
                 now,
                 out var candidateObservations);
             atlasData.ReplaceSource(AtlasMarkerKind.TreasureCandidate, candidates);
