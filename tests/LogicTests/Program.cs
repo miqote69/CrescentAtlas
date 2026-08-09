@@ -1210,6 +1210,48 @@ Assert(
         null) == -1,
     "CE active battle does not reuse the start countdown formula");
 
+var towerMapCenter = GameMapTextureProjection.Project(
+    new Vector3(600.0f, -674.0f, 704.0f),
+    offsetX: -600,
+    offsetY: -704,
+    sizeFactor: 200);
+Assert(
+    Vector2.Distance(towerMapCenter, new Vector2(0.5f, 0.5f)) < 0.0001f,
+    "Forked Tower world center projects to texture center");
+
+var liveTowerTreasure = GameMapTextureProjection.Project(
+    new Vector3(600.0f, -674.0063f, 685.99976f),
+    offsetX: -600,
+    offsetY: -704,
+    sizeFactor: 200);
+Assert(
+    Math.Abs(liveTowerTreasure.X - 0.5f) < 0.0001f
+    && Math.Abs(liveTowerTreasure.Y - 0.48242164f) < 0.0001f,
+    "live Map 1181 treasure projects beside the center room instead of the upper-left blank area");
+
+var standardMapQuarter = GameMapTextureProjection.Project(
+    new Vector3(512.0f, 0.0f, -512.0f),
+    offsetX: 0,
+    offsetY: 0,
+    sizeFactor: 100);
+Assert(
+    Vector2.Distance(standardMapQuarter, new Vector2(0.75f, 0.25f)) < 0.0001f,
+    "SizeFactor 100 retains direct texture-pixel projection");
+Assert(
+    GameMapTextureProjection.IsOnMap(
+        new Vector3(600.0f, -674.0f, 704.0f),
+        -600,
+        -704,
+        200),
+    "Forked Tower center is within map texture bounds");
+Assert(
+    !GameMapTextureProjection.IsOnMap(
+        new Vector3(2_000.0f, 0.0f, 2_000.0f),
+        -600,
+        -704,
+        200),
+    "remote world position is outside Forked Tower texture bounds");
+
 var visitRoot = Path.Combine(
     Path.GetTempPath(),
     $"CrescentAtlas-visit-tests-{Guid.NewGuid():N}");

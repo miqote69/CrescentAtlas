@@ -8,7 +8,6 @@ using Dalamud.Interface.Textures;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
-using Dalamud.Utility;
 using Lumina.Excel.Sheets;
 
 namespace CrescentAtlas.Windows;
@@ -1146,21 +1145,20 @@ public sealed class AtlasWindow : Window, IDisposable
         Vector2 mapMinimum,
         Vector2 mapSize)
     {
-        var coordinate = MapUtil.WorldToMap(new Vector2(world.X, world.Z), map);
-        var normalized = new Vector2(
-            Math.Clamp((coordinate.X - 1.0f) / 41.0f, 0.0f, 1.0f),
-            Math.Clamp((coordinate.Y - 1.0f) / 41.0f, 0.0f, 1.0f));
+        var normalized = GameMapTextureProjection.Project(
+            world,
+            map.OffsetX,
+            map.OffsetY,
+            map.SizeFactor);
         return mapMinimum + (normalized * mapSize);
     }
 
     private static bool IsWorldPositionOnMap(Vector3 world, Map map)
-    {
-        var coordinate = MapUtil.WorldToMap(new Vector2(world.X, world.Z), map);
-        return float.IsFinite(coordinate.X)
-               && float.IsFinite(coordinate.Y)
-               && coordinate.X is >= 1.0f and <= 42.0f
-               && coordinate.Y is >= 1.0f and <= 42.0f;
-    }
+        => GameMapTextureProjection.IsOnMap(
+            world,
+            map.OffsetX,
+            map.OffsetY,
+            map.SizeFactor);
 
     private void DrawNearbyTreasureLines(
         ImDrawListPtr drawList,

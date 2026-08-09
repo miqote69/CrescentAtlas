@@ -33,6 +33,7 @@
     <Compile Include="..\..\Runtime\MagicalElixirDirectionResolver.cs" Link="MagicalElixirDirectionResolver.cs" />
     <Compile Include="..\..\Runtime\PotPredictionDisplayPolicy.cs" Link="PotPredictionDisplayPolicy.cs" />
     <Compile Include="..\..\Runtime\FieldNotificationPolicy.cs" Link="FieldNotificationPolicy.cs" />
+    <Compile Include="..\..\Runtime\GameMapTextureProjection.cs" Link="GameMapTextureProjection.cs" />
     <Compile Include="..\..\Runtime\TreasureLayerClassifier.cs" Link="TreasureLayerClassifier.cs" />
     <Compile Include="..\..\Runtime\TreasureCofferTypeClassifier.cs" Link="TreasureCofferTypeClassifier.cs" />
     <Compile Include="..\..\Events\DynamicEventTimeResolver.cs" Link="DynamicEventTimeResolver.cs" />
