@@ -494,6 +494,9 @@ public sealed class Plugin : IDalamudPlugin
         var mapId = ClientState.MapId;
         var surfaceMapId = ResolveSurfaceMapId(territoryId);
         var mapLayer = OccultCrescentMapLayerPolicy.Resolve(mapId, surfaceMapId);
+        var treasureTrackingKey = mapLayer == OccultCrescentMapLayer.ForkedTower
+            ? $"{instanceKey}:map-{mapId}"
+            : instanceKey;
         var mapChanged = atlasData.MapId != mapId || atlasData.MapLayer != mapLayer;
         atlasData.SetContext(
             true,
@@ -545,6 +548,14 @@ public sealed class Plugin : IDalamudPlugin
 
         var objectMarkers = objectCollector.Collect(territoryId, territoryName, now);
         var liveTreasures = objectMarkers.Where(marker => marker.Kind == AtlasMarkerKind.ActiveTreasure).ToArray();
+        // The first Forked Tower coffer is observed 10-14 seconds before the
+        // client switches from map 1136 to 1178. Treat that deep live object as
+        // tower-entry evidence so field notifications stay quiet while the
+        // destination map is still catching up.
+        var emitFieldNotifications = FieldNotificationPolicy.ShouldEmit(
+            mapLayer,
+            liveTreasures.Any(marker =>
+                TreasureLayerClassifier.IsForkedTowerCandidate(marker.Position)));
         var carrotCandidates = objectMarkers.Where(marker => marker.Kind == AtlasMarkerKind.Carrot).ToArray();
         var loadedPotTargets = objectMarkers.Where(marker => marker.Kind == AtlasMarkerKind.PotTarget).ToArray();
         var mappedPotTargets = agentMapPotTargetSource.Scan(
@@ -592,7 +603,7 @@ public sealed class Plugin : IDalamudPlugin
             .ToArray();
         RememberCarrotSpots(liveCarrots);
         var carrots = BuildCarrotMarkers(territoryId, liveCarrots);
-        var displayedTreasures = detectedTreasureTracker.Observe(instanceKey, mapLayer, liveTreasures);
+        var displayedTreasures = detectedTreasureTracker.Observe(treasureTrackingKey, mapLayer, liveTreasures);
         atlasData.ReplaceSource(AtlasMarkerKind.ActiveTreasure, displayedTreasures);
         atlasData.ReplaceSource(AtlasMarkerKind.Carrot, carrots);
         atlasData.ReplaceSource(AtlasMarkerKind.PotTarget, potTargets);
@@ -608,7 +619,7 @@ public sealed class Plugin : IDalamudPlugin
                 liveTreasures,
                 TreasureCandidateObjectMatchRadius);
             detectedTreasureTracker.RemoveConfirmedAbsentNearby(
-                instanceKey,
+                treasureTrackingKey,
                 mapLayer,
                 localPlayer.Position,
                 treasureCheckRadius,
@@ -616,7 +627,7 @@ public sealed class Plugin : IDalamudPlugin
                 TreasureCandidateObjectMatchRadius);
             atlasData.ReplaceSource(
                 AtlasMarkerKind.ActiveTreasure,
-                detectedTreasureTracker.GetMarkers(instanceKey, mapLayer));
+                detectedTreasureTracker.GetMarkers(treasureTrackingKey, mapLayer));
             PersistTreasureChecks();
             RecordTreasureFirstSeenDistances(
                 liveTreasures,
@@ -627,16 +638,27 @@ public sealed class Plugin : IDalamudPlugin
                 treasureCheckRadius,
                 now);
         }
-        NotifyNewObjects(liveTreasures, liveCarrots, confirmedPotTargets);
+        NotifyNewObjects(
+            liveTreasures,
+            liveCarrots,
+            confirmedPotTargets,
+            emitFieldNotifications);
 
-        PollFates(territoryId, territoryName, instanceKey, now, entering);
+        PollFates(
+            territoryId,
+            territoryName,
+            instanceKey,
+            now,
+            entering,
+            emitFieldNotifications);
         // Prediction timing and advance notifications belong to the island
         // instance, not its current map layer. Only the visual prediction
         // marker remains surface-only.
         UpdatePotPrediction(
             instanceKey,
             now,
-            showOnMap: mapLayer == OccultCrescentMapLayer.Surface);
+            showOnMap: mapLayer == OccultCrescentMapLayer.Surface,
+            emitNotification: emitFieldNotifications);
         PollCriticalEncounters(territoryId, territoryName, instanceKey, now, entering);
 
         if (now >= nextFlushUtc)
@@ -682,7 +704,8 @@ public sealed class Plugin : IDalamudPlugin
         string territoryName,
         string instanceKey,
         DateTimeOffset now,
-        bool emitInitialSnapshot)
+        bool emitInitialSnapshot,
+        bool emitFieldNotifications)
     {
         if (!fateSource.TryRead(out var current))
             return;
@@ -713,14 +736,14 @@ public sealed class Plugin : IDalamudPlugin
 
         foreach (var observation in batch.Observations)
         {
-            if (configuration.FateNotificationsEnabled)
+            var isPotFate = IsPotFate(observation.EventId, observation.Name);
+            if (emitFieldNotifications && configuration.FateNotificationsEnabled)
                 ChatGui.Print(configuration.Language == UiLanguage.Japanese
                     ? $"[Crescent Atlas] FATE発生: {observation.Name}"
                     : $"[Crescent Atlas] FATE: {observation.Name}");
 
-            var isPotFate = IsPotFate(observation.EventId, observation.Name);
             if (FateSoundNotificationPolicy.ShouldPlay(
-                    OccultCrescentContext.IsActive(),
+                    emitFieldNotifications && OccultCrescentContext.IsActive(),
                     configuration.FateSoundEnabled,
                     emitInitialSnapshot,
                     isPotFate))
@@ -731,12 +754,6 @@ public sealed class Plugin : IDalamudPlugin
             if (!isPotFate)
                 continue;
 
-            if (configuration.PotSoundEnabled)
-                PlayPotAppearanceAlertSound();
-
-            if (!configuration.PotNotificationsEnabled)
-                continue;
-
             var prediction = potPredictionTracker.Observe(new PotObservation(
                 instanceKey,
                 observation.ObservedAtUtc,
@@ -744,6 +761,16 @@ public sealed class Plugin : IDalamudPlugin
                 new Vector3(observation.X, observation.Y, observation.Z)));
             if (configuration.CollectionEnabled)
                 observationStore.Flush();
+
+            if (!emitFieldNotifications)
+                continue;
+
+            if (configuration.PotSoundEnabled)
+                PlayPotAppearanceAlertSound();
+
+            if (!configuration.PotNotificationsEnabled)
+                continue;
+
             PrintPotPrediction(prediction);
         }
     }
@@ -825,7 +852,8 @@ public sealed class Plugin : IDalamudPlugin
     private void NotifyNewObjects(
         IReadOnlyList<AtlasMarker> treasures,
         IReadOnlyList<AtlasMarker> carrots,
-        IReadOnlyList<AtlasMarker> potTargets)
+        IReadOnlyList<AtlasMarker> potTargets,
+        bool emitFieldNotifications)
     {
         var treasureKeys = treasures.Select(marker => marker.Key).ToHashSet(StringComparer.Ordinal);
         var carrotKeys = carrots.Select(marker => marker.Key).ToHashSet(StringComparer.Ordinal);
@@ -845,7 +873,7 @@ public sealed class Plugin : IDalamudPlugin
                     : $"[Crescent Atlas] Carrot candidate: {marker.Label}");
         }
 
-        if (configuration.PotNotificationsEnabled)
+        if (emitFieldNotifications && configuration.PotNotificationsEnabled)
         {
             foreach (var marker in potTargets.Where(marker => !previousPotTargetKeys.Contains(marker.Key)))
                 ChatGui.Print(configuration.Language == UiLanguage.Japanese
@@ -1263,7 +1291,8 @@ public sealed class Plugin : IDalamudPlugin
     private void UpdatePotPrediction(
         string instanceKey,
         DateTimeOffset now,
-        bool showOnMap)
+        bool showOnMap,
+        bool emitNotification)
     {
         var prediction = potPredictionTracker.GetUpcomingPrediction(instanceKey, now);
         if (prediction.NextOccurrenceUtc is not { } next
@@ -1286,7 +1315,8 @@ public sealed class Plugin : IDalamudPlugin
                 prediction.Confidence == PotPredictionConfidence.Confirmed)
             : null);
 
-        NotifyUpcomingPot(instanceKey, next, now);
+        if (emitNotification)
+            NotifyUpcomingPot(instanceKey, next, now);
     }
 
     private void NotifyUpcomingPot(

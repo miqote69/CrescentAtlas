@@ -699,7 +699,22 @@ Assert(
     !TreasureLayerClassifier.IsCandidateForLayer(
         OccultCrescentMapLayer.Subterranean,
         new Vector3(100.0f, -700.0f, 395.0f)),
-    "deep staging treasures stay off the playable subterranean map");
+    "Forked Tower treasures stay off the North Horn subterranean map");
+Assert(
+    TreasureLayerClassifier.IsCandidateForLayer(
+        OccultCrescentMapLayer.ForkedTower,
+        new Vector3(100.0f, -700.0f, 395.0f)),
+    "confirmed Forked Tower treasure positions appear on tower maps");
+Assert(
+    TreasureLayerClassifier.IsCandidateForLayer(
+        OccultCrescentMapLayer.ForkedTower,
+        new Vector3(-900.0f, -980.0f, 693.0f)),
+    "the deepest confirmed Forked Tower coffer remains available");
+Assert(
+    !TreasureLayerClassifier.IsCandidateForLayer(
+        OccultCrescentMapLayer.ForkedTower,
+        new Vector3(-287.8f, -92.0f, 125.7f)),
+    "North Horn subterranean treasures stay off tower maps");
 Assert(
     !TreasureLayerClassifier.IsSurfaceCandidate(
         new Vector3(float.NaN, 0.0f, 0.0f)),
@@ -963,6 +978,79 @@ Assert(
 Assert(
     OccultCrescentMapLayerPolicy.Resolve(1136, 1135) == OccultCrescentMapLayer.Subterranean,
     "a different map row in the same territory is the subterranean layer");
+Assert(
+    OccultCrescentMapLayerPolicy.Resolve(1178, 1135) == OccultCrescentMapLayer.ForkedTower,
+    "the first observed Forked Tower map is recognized");
+Assert(
+    OccultCrescentMapLayerPolicy.Resolve(1191, 1135) == OccultCrescentMapLayer.ForkedTower,
+    "the final observed Forked Tower map is recognized");
+Assert(
+    !FieldNotificationPolicy.ShouldEmit(OccultCrescentMapLayer.ForkedTower),
+    "field FATE and Magic Pot notifications are suppressed inside the Forked Tower");
+Assert(
+    FieldNotificationPolicy.ShouldEmit(OccultCrescentMapLayer.Surface)
+    && FieldNotificationPolicy.ShouldEmit(OccultCrescentMapLayer.Subterranean),
+    "field notifications remain enabled elsewhere in the Occult Crescent");
+Assert(
+    !FieldNotificationPolicy.ShouldEmit(
+        OccultCrescentMapLayer.Subterranean,
+        hasForkedTowerTreasureEvidence: true),
+    "preloaded deep tower treasure suppresses field notifications before the tower map switch");
+var towerTracker = new DetectedTreasureTracker();
+var towerTreasure = new AtlasMarker(
+    "tower-detected-treasure",
+    AtlasMarkerKind.ActiveTreasure,
+    "Tower treasure",
+    new Vector3(100.0f, -700.0f, 395.0f),
+    origin,
+    true,
+    1346);
+towerTracker.Observe(
+    "island-a:map-1178",
+    OccultCrescentMapLayer.ForkedTower,
+    [towerTreasure]);
+Assert(
+    towerTracker.GetMarkers("island-a:map-1178", OccultCrescentMapLayer.ForkedTower).Count == 1,
+    "detected tower treasure remains visible on its current floor");
+Assert(
+    towerTracker.GetMarkers("island-a:map-1179", OccultCrescentMapLayer.ForkedTower).Count == 0,
+    "detected treasure from the previous tower floor is cleared on a floor change");
+Assert(
+    OccultCrescentMapLayerPolicy.IsMarkerVisible(
+        OccultCrescentMapLayer.ForkedTower,
+        new AtlasMarker(
+            "tower-treasure",
+            AtlasMarkerKind.TreasureCandidate,
+            "Tower treasure",
+            Vector3.Zero,
+            origin,
+            false,
+            1346)),
+    "Forked Tower treasure candidates remain visible");
+Assert(
+    !OccultCrescentMapLayerPolicy.IsMarkerVisible(
+        OccultCrescentMapLayer.ForkedTower,
+        new AtlasMarker(
+            "tower-field-fate",
+            AtlasMarkerKind.Fate,
+            "Surface FATE",
+            Vector3.Zero,
+            origin,
+            true,
+            1346)),
+    "surface FATE markers stay off Forked Tower maps");
+Assert(
+    !OccultCrescentMapLayerPolicy.IsMarkerVisible(
+        OccultCrescentMapLayer.ForkedTower,
+        new AtlasMarker(
+            "tower-pot-target",
+            AtlasMarkerKind.PotTarget,
+            "Magic Pot target",
+            Vector3.Zero,
+            origin,
+            true,
+            1346)),
+    "surface Magic Pot targets stay off Forked Tower maps");
 Assert(
     OccultCrescentMapLayerPolicy.IsMarkerVisible(
         OccultCrescentMapLayer.Subterranean,

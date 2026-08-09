@@ -9,10 +9,14 @@ public static class TreasureLayerClassifier
     // gap so low surface coffers are retained without leaking underground
     // layout candidates onto the surface map.
     public const float MinimumSurfaceElevation = -70.0f;
-    // Confirmed subterranean coffers occupy Y=-92 through Y=-162. The active
-    // layout also exposes staging/dummy treasures around Y=-672 through -980;
-    // reject those so they are not projected far outside the playable map.
+    // Confirmed North Horn subterranean coffers occupy Y=-92 through Y=-162.
+    // Forked Tower coffers use a much deeper coordinate band and are handled
+    // separately below.
     public const float MinimumSubterraneanElevation = -250.0f;
+    // Forked Tower rooms are separate map rows inside territory 1346. Confirmed
+    // tower coffers occupy Y=-674 through Y=-980, so keep them separate from
+    // the North Horn subterranean layer instead of treating them as dummies.
+    public const float MinimumForkedTowerElevation = -1100.0f;
 
     public static bool IsSurfaceCandidate(Vector3 position)
         => IsValid(position) && position.Y > MinimumSurfaceElevation;
@@ -22,12 +26,20 @@ public static class TreasureLayerClassifier
            && position.Y <= MinimumSurfaceElevation
            && position.Y > MinimumSubterraneanElevation;
 
+    public static bool IsForkedTowerCandidate(Vector3 position)
+        => IsValid(position)
+           && position.Y <= MinimumSubterraneanElevation
+           && position.Y > MinimumForkedTowerElevation;
+
     public static bool IsCandidateForLayer(
         OccultCrescentMapLayer layer,
         Vector3 position)
-        => layer == OccultCrescentMapLayer.Subterranean
-            ? IsSubterraneanCandidate(position)
-            : IsSurfaceCandidate(position);
+        => layer switch
+        {
+            OccultCrescentMapLayer.Subterranean => IsSubterraneanCandidate(position),
+            OccultCrescentMapLayer.ForkedTower => IsForkedTowerCandidate(position),
+            _ => IsSurfaceCandidate(position),
+        };
 
     private static bool IsValid(Vector3 position)
         => float.IsFinite(position.X)

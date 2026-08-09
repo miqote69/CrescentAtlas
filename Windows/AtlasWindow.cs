@@ -1027,6 +1027,7 @@ public sealed class AtlasWindow : Window, IDisposable
         drawList.AddRectFilled(canvasMinimum, canvasMaximum, ImGui.GetColorU32(BackgroundColor), 5.0f);
 
         Func<Vector3, Vector2> project;
+        IReadOnlyList<AtlasMarker> drawableMarkers = markers;
         if (TryGetGameMap(out var map, out var mapTexture))
         {
             var side = Math.Min(canvasSize.X, canvasSize.Y) * mapZoom;
@@ -1047,6 +1048,9 @@ public sealed class AtlasWindow : Window, IDisposable
                 ImGui.GetColorU32(new Vector4(1.0f, 0.94f, 0.72f, 1.0f)),
                 "N");
             project = position => ProjectToGameMap(position, map, mapMinimum, mapSize);
+            drawableMarkers = markers
+                .Where(marker => IsWorldPositionOnMap(marker.Position, map))
+                .ToArray();
         }
         else
         {
@@ -1056,11 +1060,11 @@ public sealed class AtlasWindow : Window, IDisposable
             project = fallback.Project;
         }
 
-        DrawNearestTreasureSpot(drawList, project, markers, playerPosition);
-        DrawNearbyTreasureLines(drawList, project, markers, playerPosition);
-        DrawElixirSearchAreas(drawList, project, markers);
+        DrawNearestTreasureSpot(drawList, project, drawableMarkers, playerPosition);
+        DrawNearbyTreasureLines(drawList, project, drawableMarkers, playerPosition);
+        DrawElixirSearchAreas(drawList, project, drawableMarkers);
 
-        foreach (var marker in markers.Where(marker => marker.Kind != AtlasMarkerKind.Player))
+        foreach (var marker in drawableMarkers.Where(marker => marker.Kind != AtlasMarkerKind.Player))
             DrawMarker(
                 drawList,
                 project(marker.Position),
@@ -1147,6 +1151,15 @@ public sealed class AtlasWindow : Window, IDisposable
             Math.Clamp((coordinate.X - 1.0f) / 41.0f, 0.0f, 1.0f),
             Math.Clamp((coordinate.Y - 1.0f) / 41.0f, 0.0f, 1.0f));
         return mapMinimum + (normalized * mapSize);
+    }
+
+    private static bool IsWorldPositionOnMap(Vector3 world, Map map)
+    {
+        var coordinate = MapUtil.WorldToMap(new Vector2(world.X, world.Z), map);
+        return float.IsFinite(coordinate.X)
+               && float.IsFinite(coordinate.Y)
+               && coordinate.X is >= 1.0f and <= 42.0f
+               && coordinate.Y is >= 1.0f and <= 42.0f;
     }
 
     private void DrawNearbyTreasureLines(
