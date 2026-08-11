@@ -61,7 +61,7 @@ public sealed class LayoutTreasureCandidateScanner(IDataManager dataManager, IPl
                     continue;
 
                 var sgbId = treasureRow.SGB.RowId;
-                var type = TreasureCofferTypeClassifier.ResolveFromSgbId(sgbId);
+                var type = TreasureCofferTypeClassifier.Resolve(treasureRowId, sgbId);
                 if (string.IsNullOrEmpty(type))
                     continue;
                 var key = FormattableString.Invariant(

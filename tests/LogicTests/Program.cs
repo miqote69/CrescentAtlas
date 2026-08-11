@@ -186,6 +186,24 @@ Assert(
 Assert(
     TreasureCofferTypeClassifier.ResolveFromSgbId(8125) == string.Empty,
     "unrelated Treasure SGBs are not forced to bronze or silver");
+Assert(
+    TreasureCofferTypeClassifier.Resolve(
+        TreasureCofferTypeClassifier.ForkedTowerFinalGoldCofferDataId,
+        0) == "gold",
+    "Forked Tower final coffer row 1999 is retained and classified as gold");
+Assert(
+    TreasureCofferTypeClassifier.ResolveActive(
+        TreasureCofferTypeClassifier.ForkedTowerFinalGoldCofferDataId,
+        false) == "gold",
+    "the active final coffer uses the gold icon instead of falling back to bronze");
+Assert(
+    ForkedTowerTreasureFloorPolicy.IsCandidateForMap(
+        1190,
+        TreasureCofferTypeClassifier.ForkedTowerFinalGoldCofferDataId),
+    "Map 1190 includes the confirmed final gold coffer point");
+Assert(
+    !ForkedTowerTreasureFloorPolicy.IsCandidateForMap(1189, 1999),
+    "the final gold coffer point is not shown on unrelated Forked Tower floors");
 var treasureVisibilityTracker = new TreasureVisibilityRangeTracker();
 Assert(
     treasureVisibilityTracker.GetCheckRadius(OccultCrescentMapLayer.Surface) == 90.0f,
@@ -886,6 +904,24 @@ Assert(
         TimeSpan.FromMinutes(3),
         TimeSpan.FromMinutes(1)),
     "three-minute notification does not fire inside the one-minute alert window");
+
+var suppressedAdvanceNotification = new PotAdvanceNotificationTracker();
+Assert(
+    suppressedAdvanceNotification.ShouldNotify(
+        "instance-suppressed",
+        advanceOccurrence,
+        origin.AddMinutes(27).AddSeconds(30),
+        TimeSpan.FromMinutes(3),
+        TimeSpan.FromMinutes(1)),
+    "the three-minute threshold is consumed while field delivery is suppressed");
+Assert(
+    !suppressedAdvanceNotification.ShouldNotify(
+        "instance-suppressed",
+        advanceOccurrence,
+        origin.AddMinutes(28).AddSeconds(30),
+        TimeSpan.FromMinutes(3),
+        TimeSpan.FromMinutes(1)),
+    "returning to the surface at 1:30 does not replay the stale three-minute alert");
 
 var oneMinuteNotification = new PotAdvanceNotificationTracker();
 Assert(

@@ -1316,14 +1316,14 @@ public sealed class Plugin : IDalamudPlugin
                 prediction.Confidence == PotPredictionConfidence.Confirmed)
             : null);
 
-        if (emitNotification)
-            NotifyUpcomingPot(instanceKey, next, now);
+        NotifyUpcomingPot(instanceKey, next, now, emitNotification);
     }
 
     private void NotifyUpcomingPot(
         string instanceKey,
         DateTimeOffset nextOccurrenceUtc,
-        DateTimeOffset now)
+        DateTimeOffset now,
+        bool emitNotification)
     {
         if (!configuration.PotNotificationsEnabled)
             return;
@@ -1336,6 +1336,19 @@ public sealed class Plugin : IDalamudPlugin
                 PotAdvanceNotificationLeadTime,
                 PotOneMinuteNotificationLeadTime);
 
+        var shouldNotifyOneMinute = configuration.PotOneMinuteNotificationEnabled
+            && potOneMinuteNotificationTracker.ShouldNotify(
+                instanceKey,
+                nextOccurrenceUtc,
+                now,
+                PotOneMinuteNotificationLeadTime);
+
+        // Thresholds are consumed even while field delivery is suppressed in
+        // the underground or Forked Tower. This prevents a stale three-minute
+        // alert from playing after the player returns to the surface.
+        if (!emitNotification)
+            return;
+
         if (shouldNotifyThreeMinutes)
         {
             ChatGui.Print(configuration.Language == UiLanguage.Japanese
@@ -1345,13 +1358,6 @@ public sealed class Plugin : IDalamudPlugin
             if (configuration.PotSoundEnabled)
                 PlayPotAdvanceAlertSound(oneMinute: false);
         }
-
-        var shouldNotifyOneMinute = configuration.PotOneMinuteNotificationEnabled
-            && potOneMinuteNotificationTracker.ShouldNotify(
-                instanceKey,
-                nextOccurrenceUtc,
-                now,
-                PotOneMinuteNotificationLeadTime);
 
         if (!shouldNotifyOneMinute)
             return;

@@ -1,6 +1,7 @@
 using System.Globalization;
 using CrescentAtlas.Contracts;
 using CrescentAtlas.Data;
+using CrescentAtlas.Runtime;
 using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Plugin.Services;
@@ -98,7 +99,9 @@ public sealed class ObjectTableCollector(
             return null;
 
         var dataId = gameObject.BaseId;
-        var treasureType = options.SilverTreasureDataIds.Contains(dataId) ? "silver" : string.Empty;
+        var treasureType = TreasureCofferTypeClassifier.ResolveActive(
+            dataId,
+            options.SilverTreasureDataIds.Contains(dataId));
         var key = ObservationIdentity.PositionKey(
             territoryId,
             "active-treasure",

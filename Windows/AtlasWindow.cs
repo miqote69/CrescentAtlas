@@ -42,6 +42,7 @@ public sealed class AtlasWindow : Window, IDisposable
     private static readonly Vector4 CheckedBronzeTreasureColor = new(0.38f, 0.20f, 0.08f, 1.0f);
     private static readonly Vector4 BronzeTreasureRingColor = new(1.00f, 0.70f, 0.30f, 1.0f);
     private static readonly Vector4 SilverTreasureColor = new(0.88f, 0.94f, 1.00f, 1.0f);
+    private static readonly Vector4 GoldTreasureColor = new(1.00f, 0.82f, 0.20f, 1.0f);
 
     private static readonly LegendEntry[] Legend =
     [
@@ -50,6 +51,7 @@ public sealed class AtlasWindow : Window, IDisposable
         new(AtlasMarkerKind.TreasureCandidate, "Checked treasure", "確認済みの宝箱", CheckedTreasureColor, LegendStyle.CheckedTreasure),
         new(AtlasMarkerKind.TreasureCandidate, "Bronze treasure", "銅箱", BronzeTreasureColor, LegendStyle.BronzeTreasure),
         new(AtlasMarkerKind.TreasureCandidate, "Silver treasure", "銀箱", SilverTreasureColor, LegendStyle.SilverTreasure),
+        new(AtlasMarkerKind.TreasureCandidate, "Gold treasure", "金箱", GoldTreasureColor, LegendStyle.GoldTreasure),
         new(AtlasMarkerKind.ActiveTreasure, "Active treasure", "出現中の宝箱", new Vector4(0.26f, 0.92f, 1.00f, 1.0f)),
         new(AtlasMarkerKind.Carrot, "Carrot", "にんじん", new Vector4(1.00f, 0.55f, 0.18f, 1.0f)),
         new(AtlasMarkerKind.Fate, "FATE", "FATE", new Vector4(0.78f, 0.42f, 1.00f, 1.0f), LegendStyle.LiveGameIcon),
@@ -1006,6 +1008,7 @@ public sealed class AtlasWindow : Window, IDisposable
             {
                 LegendStyle.BronzeTreasure => "bronze",
                 LegendStyle.SilverTreasure => "silver",
+                LegendStyle.GoldTreasure => "gold",
                 _ => string.Empty,
             });
         DrawMarker(drawList, point, marker, false);
@@ -1278,6 +1281,8 @@ public sealed class AtlasWindow : Window, IDisposable
     {
         var isSilverTreasure = marker.Kind is AtlasMarkerKind.TreasureCandidate or AtlasMarkerKind.ActiveTreasure
                                && marker.TreasureType.Equals("silver", StringComparison.OrdinalIgnoreCase);
+        var isGoldTreasure = marker.Kind is AtlasMarkerKind.TreasureCandidate or AtlasMarkerKind.ActiveTreasure
+                             && marker.TreasureType.Equals("gold", StringComparison.OrdinalIgnoreCase);
         var isBronzeTreasure = marker.Kind == AtlasMarkerKind.TreasureCandidate
                                && marker.TreasureType.Equals("bronze", StringComparison.OrdinalIgnoreCase);
         var color = isBronzeTreasure
@@ -1307,7 +1312,7 @@ public sealed class AtlasWindow : Window, IDisposable
 
         if (marker.Kind == AtlasMarkerKind.ActiveTreasure)
         {
-            DrawActiveTreasureIcon(drawList, point, isSilverTreasure);
+            DrawActiveTreasureIcon(drawList, point, marker.TreasureType);
             return;
         }
 
@@ -1351,6 +1356,8 @@ public sealed class AtlasWindow : Window, IDisposable
                     ImGui.GetColorU32(new Vector4(0.96f, 0.62f, 0.24f, 1.0f)));
             if (isSilverTreasure)
                 DrawDiamond(drawList, point, radius - 1.0f, ImGui.GetColorU32(SilverTreasureColor));
+            if (isGoldTreasure)
+                DrawDiamond(drawList, point, radius - 1.0f, ImGui.GetColorU32(GoldTreasureColor));
             if (marker.IsChecked)
             {
                 var checkColor = ImGui.GetColorU32(isBronzeTreasure
@@ -1410,28 +1417,44 @@ public sealed class AtlasWindow : Window, IDisposable
         }
     }
 
-    private static void DrawActiveTreasureIcon(ImDrawListPtr drawList, Vector2 point, bool isSilverTreasure)
+    private static void DrawActiveTreasureIcon(ImDrawListPtr drawList, Vector2 point, string treasureType)
     {
+        var isSilverTreasure = treasureType.Equals("silver", StringComparison.OrdinalIgnoreCase);
+        var isGoldTreasure = treasureType.Equals("gold", StringComparison.OrdinalIgnoreCase);
         var outline = ImGui.GetColorU32(isSilverTreasure
             ? new Vector4(0.08f, 0.12f, 0.17f, 1.0f)
+            : isGoldTreasure
+                ? new Vector4(0.20f, 0.12f, 0.015f, 1.0f)
             : new Vector4(0.10f, 0.055f, 0.015f, 1.0f));
         var lid = ImGui.GetColorU32(isSilverTreasure
             ? new Vector4(0.68f, 0.76f, 0.84f, 1.0f)
+            : isGoldTreasure
+                ? new Vector4(0.96f, 0.68f, 0.08f, 1.0f)
             : new Vector4(0.76f, 0.34f, 0.08f, 1.0f));
         var lidHighlight = ImGui.GetColorU32(isSilverTreasure
             ? new Vector4(0.96f, 0.99f, 1.00f, 1.0f)
+            : isGoldTreasure
+                ? new Vector4(1.00f, 0.94f, 0.48f, 1.0f)
             : new Vector4(1.00f, 0.62f, 0.18f, 1.0f));
         var body = ImGui.GetColorU32(isSilverTreasure
             ? new Vector4(0.38f, 0.49f, 0.61f, 1.0f)
+            : isGoldTreasure
+                ? new Vector4(0.72f, 0.43f, 0.035f, 1.0f)
             : new Vector4(0.57f, 0.23f, 0.055f, 1.0f));
         var bodyHighlight = ImGui.GetColorU32(isSilverTreasure
             ? new Vector4(0.73f, 0.84f, 0.94f, 1.0f)
+            : isGoldTreasure
+                ? new Vector4(1.00f, 0.78f, 0.20f, 1.0f)
             : new Vector4(0.90f, 0.43f, 0.10f, 1.0f));
         var metal = ImGui.GetColorU32(isSilverTreasure
             ? new Vector4(0.92f, 0.97f, 1.00f, 1.0f)
+            : isGoldTreasure
+                ? new Vector4(1.00f, 0.96f, 0.58f, 1.0f)
             : new Vector4(1.00f, 0.78f, 0.26f, 1.0f));
         var keyhole = ImGui.GetColorU32(isSilverTreasure
             ? new Vector4(0.08f, 0.13f, 0.19f, 1.0f)
+            : isGoldTreasure
+                ? new Vector4(0.24f, 0.13f, 0.015f, 1.0f)
             : new Vector4(0.18f, 0.09f, 0.02f, 1.0f));
 
         // Lid: a broad trapezoid remains recognizable as a chest at low map zoom.
@@ -1895,6 +1918,7 @@ public sealed class AtlasWindow : Window, IDisposable
         CheckedTreasure,
         BronzeTreasure,
         SilverTreasure,
+        GoldTreasure,
         LiveGameIcon,
         PotPrediction,
         ForkedTower,
