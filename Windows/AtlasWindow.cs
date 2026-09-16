@@ -176,6 +176,12 @@ public sealed class AtlasWindow : Window, IDisposable
     {
     }
 
+    public override void OnClose()
+    {
+        configuration.MapVisible = false;
+        saveConfiguration();
+    }
+
     public override void PreDraw()
     {
         IsOpen = configuration.MapVisible;
